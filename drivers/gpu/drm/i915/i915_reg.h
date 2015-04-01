@@ -1847,6 +1847,9 @@ enum skl_disp_power_wells {
 #define   MI_AGPBUSY_INT_EN			(1 << 1) /* 85x only */
 #define   MI_AGPBUSY_830_MODE			(1 << 0) /* 85x only */
 
+#define GEN8_FF_SLICE_CS_CHICKEN2		0x20e4
+#define   GEN8_THREAD_GROUP_PREEMPTION		(1<<1)
+
 #define CACHE_MODE_0	0x02120 /* 915+ only */
 #define   CM0_PIPELINED_RENDER_FLUSH_DISABLE (1<<8)
 #define   CM0_IZ_OPT_DISABLE      (1<<6)
