@@ -6472,7 +6472,8 @@ static void broadwell_init_clock_gating(struct drm_device *dev)
 	ilk_init_lp_watermarks(dev);
 
 	/* WaSwitchSolVfFArbitrationPriority:bdw */
-	I915_WRITE(GAM_ECOCHK, I915_READ(GAM_ECOCHK) | HSW_ECOCHK_ARB_PRIO_SOL);
+	I915_WRITE(GAM_ECOCHK, I915_READ(GAM_ECOCHK) | HSW_ECOCHK_ARB_PRIO_SOL |
+		   ECOCHK_PPGTT_WB_HSW);
 
 	/* WaPsrDPAMaskVBlankInSRD:bdw */
 	I915_WRITE(CHICKEN_PAR1_1,
