@@ -5947,6 +5947,7 @@ enum skl_disp_power_wells {
 #define GEN8_L3SQCREG4				0xb118
 #define  GEN8_LQSC_RO_PERF_DIS			(1<<27)
 #define  GEN8_LQSC_FLUSH_COHERENT_LINES		(1<<21)
+#define  GEN8_PIPELINE_FLUSH_COHERENT_LINES	(1<<21)
 
 /* GEN8 chicken */
 #define HDC_CHICKEN0				0x7300
