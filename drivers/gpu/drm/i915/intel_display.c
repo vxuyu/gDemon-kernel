@@ -117,6 +117,18 @@ static void skylake_pfit_enable(struct intel_crtc *crtc);
 static void ironlake_pfit_disable(struct intel_crtc *crtc, bool force);
 static void ironlake_pfit_enable(struct intel_crtc *crtc);
 static void intel_modeset_setup_hw_state(struct drm_device *dev);
+static void intel_crtc_enable_planes(struct drm_crtc *crtc);
+
+static void page_flip_completed(struct intel_crtc *intel_crtc);
+static bool page_flip_finished(struct intel_crtc *crtc);
+
+static struct intel_encoder *intel_find_encoder(struct intel_connector *connector, int pipe)
+{
+	if (!connector->mst_port)
+		return connector->encoder;
+	else
+		return &connector->mst_port->mst_encoders[pipe]->base;
+}
 
 typedef struct {
 	int	min, max;
@@ -3321,6 +3333,15 @@ static bool intel_crtc_has_pending_flip(struct drm_crtc *crtc)
 
 	spin_lock_irq(&dev->event_lock);
 	pending = to_intel_crtc(crtc)->unpin_work != NULL;
+	/* Re-check the page flip status in vgt as in suspending
+	 * process flip done interrupt may be lost due to vgt_thread
+	 * is frozen before i915_pm_suspend.
+	 */
+	if (intel_vgpu_active(dev) && pending) {
+		pending = !page_flip_finished(intel_crtc);
+		if (!pending)
+			page_flip_completed(intel_crtc);
+	}
 	spin_unlock_irq(&dev->event_lock);
 
 	return pending;
