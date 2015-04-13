@@ -6513,14 +6513,6 @@ static void broadwell_init_clock_gating(struct drm_device *dev)
 	 */
 	I915_WRITE(HSW_GTT_CACHE_EN, GTT_CACHE_EN_ALL);
 
-	I915_WRITE(GEN7_ROW_CHICKEN2,
-			_MASKED_BIT_ENABLE(DOP_CLOCK_GATING_DISABLE));
-
-	I915_WRITE(GEN6_UCGCTL1, I915_READ(GEN6_UCGCTL1) |
-			GEN6_EU_TCUNIT_CLOCK_GATE_DISABLE);
-
-	I915_WRITE(0x20e4, _MASKED_BIT_ENABLE(0x2));
-
 	lpt_init_clock_gating(dev);
 }
 
