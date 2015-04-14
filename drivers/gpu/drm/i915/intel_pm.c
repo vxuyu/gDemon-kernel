@@ -6513,6 +6513,8 @@ static void broadwell_init_clock_gating(struct drm_device *dev)
 	 */
 	I915_WRITE(HSW_GTT_CACHE_EN, GTT_CACHE_EN_ALL);
 
+	I915_WRITE(0xb10c, (I915_READ(0xb10c) & ~(0xf << 20)) | (0x8 << 20));
+
 	lpt_init_clock_gating(dev);
 }
 
