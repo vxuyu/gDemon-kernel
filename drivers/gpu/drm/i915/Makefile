@@ -3,7 +3,6 @@
 # Direct Rendering Infrastructure (DRI) in XFree86 4.1.0 and higher.
 
 subdir-ccflags-$(CONFIG_DRM_I915_WERROR) := -Werror
-ccflags-$(CONFIG_I915_VGT) += -I$(src)/vgt
 
 # Please keep these build lists sorted!
 
@@ -101,6 +100,30 @@ i915-y += i915_vgpu.o
 i915-y += i915_dma.o
 
 obj-$(CONFIG_DRM_I915)  += i915.o
-obj-$(CONFIG_I915_VGT)  += vgt/
+
+VGT := vgt
+ccflags-$(CONFIG_I915_VGT) += -I$(src)/$(VGT) -I$(src) -Wall
+i915-$(CONFIG_I915_VGT)  += $(VGT)/vgt.o	\
+			   $(VGT)/render.o \
+			   $(VGT)/mmio.o \
+			   $(VGT)/handlers.o \
+			   $(VGT)/interrupt.o \
+			   $(VGT)/sysfs.o \
+			   $(VGT)/display.o \
+			   $(VGT)/debugfs.o \
+			   $(VGT)/edid.o \
+			   $(VGT)/gtt.o \
+			   $(VGT)/aperture_gm.o \
+			   $(VGT)/utility.o \
+			   $(VGT)/klog.o \
+			   $(VGT)/dev.o \
+			   $(VGT)/cmd_parser.o \
+			   $(VGT)/sched.o \
+			   $(VGT)/instance.o \
+			   $(VGT)/cfg_space.o \
+			   $(VGT)/fb_decoder.o \
+			   $(VGT)/vbios.o \
+			   $(VGT)/host.o \
+			   $(VGT)/execlists.o
 
 CFLAGS_i915_trace_points.o := -I$(src)

@@ -1173,6 +1173,11 @@ int i915_driver_unload(struct drm_device *dev)
 
 	intel_modeset_cleanup(dev);
 
+	if (i915_host_mediate) {
+		i915_stop_vgt();
+		i915_host_mediate = false;
+	}
+
 	/*
 	 * free the memory space allocated for the child device
 	 * config parsed from VBT
