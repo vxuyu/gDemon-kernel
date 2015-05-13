@@ -1405,7 +1405,7 @@ i915_gem_do_execbuffer(struct drm_device *dev, void *data,
 	}
 
 	if (((args->flags & I915_EXEC_RING_MASK) != I915_EXEC_BSD) &&
-	    ((args->flags & I915_EXEC_BSD_MASK) != 0)) {
+		((args->flags & I915_EXEC_BSD_MASK) != 0)) {
 		DRM_DEBUG("execbuf with non bsd ring but with invalid "
 			"bsd dispatch flags: %d\n", (int)(args->flags));
 		return -EINVAL;
@@ -1430,7 +1430,7 @@ i915_gem_do_execbuffer(struct drm_device *dev, void *data,
 				break;
 			default:
 				DRM_DEBUG("execbuf with unknown bsd ring: %d\n",
-					  (int)(args->flags & I915_EXEC_BSD_MASK));
+					(int)(args->flags & I915_EXEC_BSD_MASK));
 				return -EINVAL;
 			}
 		} else
