@@ -24,6 +24,7 @@
 #include <linux/io.h>
 #include <drm/drmP.h>
 
+#include <../i915_vgpu.h>
 #include "i915_drv.h"
 #include "host.h"
 
@@ -131,7 +132,7 @@ bool vgt_host_read(u32 reg, void *val, int len, bool is_gtt, bool trace)
 	pa = is_gtt ?
 		vgt_gttmmio_pa(pdev_default, reg + gtt_offset) :
 		vgt_gttmmio_pa(pdev_default, reg);
-	return vgt_ops->mem_read(vgt_dom0, pa, val, len);
+	return vgt_ops->emulate_read(vgt_dom0, pa, val, len);
 }
 
 bool vgt_host_write(u32 reg, void *val, int len, bool is_gtt, bool trace)
@@ -143,7 +144,7 @@ bool vgt_host_write(u32 reg, void *val, int len, bool is_gtt, bool trace)
 	pa = is_gtt ?
 		vgt_gttmmio_pa(pdev_default, reg + gtt_offset) :
 		vgt_gttmmio_pa(pdev_default, reg);
-	return vgt_ops->mem_write(vgt_dom0, pa, val, len);
+	return vgt_ops->emulate_write(vgt_dom0, pa, val, len);
 }
 
 void vgt_host_irq_sync(void)
