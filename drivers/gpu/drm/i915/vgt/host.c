@@ -147,6 +147,11 @@ bool vgt_host_write(u32 reg, void *val, int len, bool is_gtt, bool trace)
 	return vgt_ops->emulate_write(vgt_dom0, pa, val, len);
 }
 
+void tmp_vgt_clear_gtt(unsigned int gtt_size)
+{
+	memset_io(dev_priv->gtt.gsm, 0, gtt_size);
+}
+
 void vgt_host_irq_sync(void)
 {
 	irq_work_sync(&dev_priv->irq_work);
@@ -167,3 +172,4 @@ void vgt_force_wake_put(void)
 {
 	intel_uncore_forcewake_put(dev_priv, FORCEWAKE_ALL);
 }
+
