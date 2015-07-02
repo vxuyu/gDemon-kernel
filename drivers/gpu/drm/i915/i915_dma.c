@@ -954,6 +954,9 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 
 	i915_check_vgpu(dev);
 
+	if (intel_vgpu_active(dev))
+		i915.enable_ips = 0;
+
 	ret = i915_gem_gtt_init(dev);
 	if (ret)
 		goto out_freecsr;
