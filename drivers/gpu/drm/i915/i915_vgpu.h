@@ -176,6 +176,16 @@ struct vgt_if {
 /* get one bit of the data, bit is starting from zeor */
 #define VGT_GET_BIT(data, bit)		VGT_GET_BITS(data, bit, bit)
 
+typedef struct {
+	int vm_id;
+	int aperture_sz; /* in MB */
+	int gm_sz;  /* in MB */
+	int fence_sz;
+
+	int vgt_primary; /* 0/1: config the vgt device as secondary/primary VGA,
+						-1: means the ioemu doesn't supply a value */
+} vgt_params_t;
+
 struct vgt_device;
 struct pgt_device;
 struct kernel_dm;
@@ -193,6 +203,7 @@ struct vgt_ops {
 	void (*panic)(void);
 	unsigned int (*pa_to_mmio_offset)(struct vgt_device *, uint64_t);
 	bool (*expand_shadow_page_mempool)(struct pgt_device *);
+	int (*del_state_sysfs)(vgt_params_t);
 };
 extern struct vgt_ops *vgt_ops;
 

@@ -573,6 +573,10 @@ struct kvm_vcpu_arch {
 	struct {
 		bool pv_unhalted;
 	} pv;
+
+#ifdef CONFIG_KVMGT
+	u32 last_cfg_addr;
+#endif
 };
 
 struct kvm_lpage_info {
