@@ -597,7 +597,7 @@ void intel_lrc_irq_handler(struct intel_engine_cs *ring)
 	I915_WRITE(RING_CONTEXT_STATUS_PTR(ring),
 		   _MASKED_FIELD(GEN8_CSB_PTR_MASK << 8,
 				 ((u32)ring->next_context_status_buffer &
-				  GEN8_CSB_PTR_MASK) << 8));
+				  GEN8_CSB_PTR_MASK) << 8) | 0x07000000);
 }
 
 static int execlists_context_queue(struct drm_i915_gem_request *request)
