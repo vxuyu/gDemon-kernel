@@ -568,18 +568,15 @@ static void parser_exec_state_dump(struct parser_exec_state *s)
 		vgt_err(" ip_va(NULL)\n");
 	} else {
 		int cnt = 0;
+		/* print the whole page to trace */
 		vgt_err("  ip_va=%p: %08x %08x %08x %08x \n",
 				s->ip_va, cmd_val(s, 0), cmd_val(s, 1), cmd_val(s, 2), cmd_val(s, 3));
 
 		vgt_print_opcode(cmd_val(s, 0), s->ring_id);
 
-		/* print the whole page to trace */
-		trace_printk("ERROR ip_va=%p: %08x %08x %08x %08x \n",
-				s->ip_va, cmd_val(s, 0), cmd_val(s, 1), cmd_val(s, 2), cmd_val(s, 3));
-
 		s->ip_va = (uint32_t*)((((u64)s->ip_va) >> 12) << 12);
 		while(cnt < 1024) {
-		trace_printk("DUMP ip_va=%p: %08x %08x %08x %08x %08x %08x %08x %08x \n",
+		vgt_err("  DUMP ip_va=%p: %08x %08x %08x %08x %08x %08x %08x %08x \n",
 				s->ip_va, cmd_val(s, 0), cmd_val(s, 1), cmd_val(s, 2), cmd_val(s, 3),
 				          cmd_val(s, 4), cmd_val(s, 5), cmd_val(s, 6), cmd_val(s, 7));
 
@@ -1428,9 +1425,6 @@ static int vgt_cmd_handler_mi_batch_buffer_start(struct parser_exec_state *s)
 		s->buf_type = BATCH_BUFFER_2ND_LEVEL;
 		s->ret_ip_gma_bb = s->ip_gma + cmd_length(s) * sizeof(uint32_t);
 	}
-
-	klog_printk("MI_BATCH_BUFFER_START: Addr=%x ClearCommandBufferEnable=%d\n",
-			cmd_val(s, 1), (cmd_val(s, 0) >> 11) & 1);
 
 	address_audit(s, 1);
 
@@ -2437,12 +2431,11 @@ static int vgt_cmd_parser_exec(struct parser_exec_state *s)
 
 	info = vgt_get_cmd_info(cmd, s->ring_id);
 	if (info == NULL) {
-		vgt_err("ERROR: unknown cmd 0x%x, opcode=0x%x\n", cmd,
+		vgt_err("ERROR: unknown cmd 0x%x, ring%d[%lx, %lx] gma[%lx] va[%p] opcode=0x%x\n", 
+				cmd, s->ring_id, s->ring_start,
+				s->ring_start + s->ring_size, s->ip_gma, s->ip_va,
 				vgt_get_opcode(cmd, s->ring_id));
 		parser_exec_state_dump(s);
-		klog_printk("ERROR: unknown cmd %x, ring%d[%lx, %lx] gma[%lx] va[%p]\n",
-				cmd, s->ring_id, s->ring_start,
-				s->ring_start + s->ring_size, s->ip_gma, s->ip_va);
 
 		return -EFAULT;
 	}
@@ -2451,19 +2444,6 @@ static int vgt_cmd_parser_exec(struct parser_exec_state *s)
 
 	vgt_cmd_addr_audit_with_bitmap(s, info->addr_bitmap);
 
-	/* Let's keep this logic here. Someone has special needs for dumping
-	 * commands can customize this code snippet.
-	 */
-#if 0
-	klog_printk("%s ip(%08lx): ",
-			s->buf_type == RING_BUFFER_INSTRUCTION ?
-			"RB" : "BB",
-			s->ip_gma);
-	for (i = 0; i < cmd_length(s); i++) {
-		klog_printk("%08x ", cmd_val(s, i));
-	}
-	klog_printk("\n");
-#endif
 	t1 = get_cycles();
 
 	if (info->handler) {
@@ -2564,8 +2544,8 @@ static int __vgt_scan_vring(struct vgt_device *vgt, int ring_id, vgt_reg_t head,
 	if (rc < 0)
 		goto out;
 
-	klog_printk("ring buffer scan start on ring %d\n", ring_id);
-	vgt_dbg(VGT_DBG_CMD, "scan_start: start=%lx end=%lx\n", gma_head, gma_tail);
+	vgt_dbg(VGT_DBG_CMD, "ring buffer scan start on ring %d: start=%lx end=%lx\n", 
+		ring_id, gma_head, gma_tail);
 	while(s.ip_gma != gma_tail){
 		s.cmd_issue_irq = false;
 		if (s.buf_type == RING_BUFFER_INSTRUCTION){
@@ -2607,8 +2587,7 @@ static int __vgt_scan_vring(struct vgt_device *vgt, int ring_id, vgt_reg_t head,
 		rs->cmd_nr++;
 	}
 
-	klog_printk("ring buffer scan end on ring %d\n", ring_id);
-	vgt_dbg(VGT_DBG_CMD, "scan_end\n");
+	vgt_dbg(VGT_DBG_CMD, "ring buffer scan end on ring %d\n", ring_id);
 out:
 	if (s.ip_buf)
 		kfree(s.ip_buf);

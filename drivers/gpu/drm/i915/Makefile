@@ -115,7 +115,6 @@ i915-$(CONFIG_I915_VGT)  += $(VGT)/vgt.o	\
 			   $(VGT)/gtt.o \
 			   $(VGT)/aperture_gm.o \
 			   $(VGT)/utility.o \
-			   $(VGT)/klog.o \
 			   $(VGT)/dev.o \
 			   $(VGT)/cmd_parser.o \
 			   $(VGT)/sched.o \

@@ -1265,7 +1265,6 @@ bool vgt_check_host(void)
 void i915_stop_vgt(void)
 {
 	vgt_destroy();
-	vgt_klog_cleanup();
 	__symbol_put(vgt_pkdm->name);
 	vgt_pkdm = NULL;
 	vgt_ops = NULL;
@@ -1297,7 +1296,6 @@ bool i915_start_vgt(struct pci_dev *pdev)
 		return false;
 
 	vgt_param_check();
-	vgt_klog_init();
 
 	return vgt_initialize(pdev) == 0;
 }
