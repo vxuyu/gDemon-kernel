@@ -877,7 +877,6 @@ static bool is_dp_port_type(enum vgt_port_type port_type)
 	return false;
 }
 
-
 /* copy the cached value into corresponding port field. Meanwhile,
  * Update system monitor state for EDID changes
  */
