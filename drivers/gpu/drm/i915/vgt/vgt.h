@@ -49,13 +49,13 @@ struct vgt_device;
 #include "edid.h"
 #include "cmd_parser.h"
 #include "hypercall.h"
-#include "execlists.h"
 #include "gtt.h"
 #include "interrupt.h"
 #include "mmio.h"
 #include "perf.h"
 #include "render.h"
 #include "sched.h"
+#include "execlists.h"
 
 extern struct vgt_device *vgt_dom0;
 extern struct pgt_device *perf_pgt;
@@ -196,39 +196,6 @@ struct vgt_mm;
 	((vgt)->rb[ring_id].execlist_slots[slot_idx].el_ctxs[ctx_idx])
 
 struct vgt_device;
-
-/* shadow context */
-
-struct shadow_ctx_page {
-	guest_page_t guest_page;
-	shadow_page_t shadow_page;
-	struct vgt_device *vgt;
-};
-
-struct execlist_context {
-	struct ctx_desc_format guest_context;
-	uint32_t shadow_lrca;
-	uint32_t error_reported;
-	enum vgt_ring_id ring_id;
-	/* below are some per-ringbuffer data. Since with execlist,
-	 * each context has its own ring buffer, here we store the
-	 * data and store them into vgt->rb[ring_id] before a
-	 * context is submitted. We will have better handling later.
-	 */
-	vgt_reg_t last_guest_head;
-	vgt_reg_t last_scan_head;
-	uint64_t request_id;
-	//uint64_t cmd_nr;
-	//vgt_reg_t uhptr;
-	//uint64_t uhptr_id;
-
-	struct vgt_mm *ppgtt_mm;
-	struct shadow_ctx_page ctx_pages[MAX_EXECLIST_CTX_PAGES];
-	/* used for lazy context shadowing optimization */
-	gtt_entry_t shadow_entry_backup[MAX_EXECLIST_CTX_PAGES];
-
-	struct hlist_node node;
-};
 
 extern bool vgt_render_init(struct pgt_device *pdev);
 extern bool idle_rendering_engines(struct pgt_device *pdev, int *id);
