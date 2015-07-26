@@ -28,7 +28,12 @@
 
 struct guest_page;
 struct vgt_device;
-enum map_type;
+
+enum map_type {
+	VGT_MAP_APERTURE,
+	VGT_MAP_OPREGION,
+};
+
 struct kernel_dm {
 	const char *name;
 	unsigned long (*g2m_pfn)(int vm_id, unsigned long g_pfn);

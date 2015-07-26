@@ -53,6 +53,9 @@ struct vgt_device;
 #include "gtt.h"
 #include "interrupt.h"
 #include "mmio.h"
+#include "perf.h"
+#include "render.h"
+#include "sched.h"
 
 extern struct vgt_device *vgt_dom0;
 extern struct pgt_device *perf_pgt;
@@ -101,12 +104,6 @@ extern bool timer_based_qos;
 extern int tbs_period_ms;
 extern bool vgt_in_xen;
 
-
-enum map_type {
-	VGT_MAP_APERTURE,
-	VGT_MAP_OPREGION,
-};
-
 #define vgt_dbg(component, fmt, s...)	\
 	do { if (vgt_debug & component) printk(KERN_DEBUG "vGT debug:(%s:%d) " fmt, __FUNCTION__, __LINE__, ##s); } while (0)
 
@@ -120,44 +117,11 @@ enum map_type {
 #define VGT_DBG_EXECLIST	(1<<7)
 #define VGT_DBG_ALL		(0xffff)
 
-/*
- * Define registers of a ring buffer per hardware register layout.
- */
-typedef struct {
-	vgt_reg_t tail;
-	vgt_reg_t head;
-	vgt_reg_t start;
-	vgt_reg_t ctl;
-} vgt_ringbuffer_t;
-
 #define SIZE_1KB		(1024UL)
 #define SIZE_1MB		(1024UL*1024UL)
 #define SIZE_PAGE		(4 * SIZE_1KB)
 
 #define VGT_RSVD_RING_SIZE	(16 * SIZE_1KB)
-struct vgt_rsvd_ring {
-	struct pgt_device *pdev;
-	void *virtual_start;
-	int start;
-	uint64_t null_context;
-	uint64_t indirect_state;
-	int id;
-
-	u32 head;
-	u32 tail;
-	int size;
-	/* whether the engine requires special context switch */
-	bool	stateless;
-	/* whether the engine requires context switch */
-	bool	need_switch;
-	/* whether the engine end with user interrupt instruction */
-	bool	need_irq;
-	/* memory offset of the user interrupt instruction */
-	u32	ip_offset;
-};
-
-#define _tail_reg_(ring_reg_off)	\
-		(ring_reg_off & ~(sizeof(vgt_ringbuffer_t)-1))
 
 #define _vgt_mmio_va(pdev, x)		((uint64_t)((char*)pdev->gttmmio_base_va+x))	/* PA to VA */
 #define _vgt_mmio_pa(pdev, x)		(pdev->gttmmio_base+x)			/* PA to VA */
@@ -210,12 +174,6 @@ typedef struct {
 	struct page *opregion_pages[VGT_OPREGION_PAGES];
 } vgt_state_t;
 
-typedef struct {
-	vgt_reg_t base;
-	vgt_reg_t cache_ctl;
-	vgt_reg_t mode;
-} vgt_ring_ppgtt_t;
-
 #define __vreg(vgt, off) (*(vgt_reg_t *)((char *)vgt->state.vReg + off))
 #define __vreg8(vgt, off) (*(char *)((char *)vgt->state.vReg + off))
 #define __vreg16(vgt, off) (*(uint16_t *)((char *)vgt->state.vReg + off))
@@ -226,63 +184,7 @@ typedef struct {
 #define vgt_vreg(vgt, off)	((vgt_reg_t *)((char *)vgt->state.vReg + off))
 #define vgt_sreg(vgt, off)	((vgt_reg_t *)((char *)vgt->state.sReg + off))
 
-#define RB_DWORDS_TO_SAVE	32
-typedef	uint32_t	rb_dword;
-
-struct execlist_context;
-enum EL_SLOT_STATUS {
-	EL_EMPTY	= 0,
-	EL_PENDING,
-	EL_SUBMITTED
-};
-
-struct vgt_exec_list {
-	enum EL_SLOT_STATUS status;
-	struct execlist_context *el_ctxs[2];
-};
-
-struct vgt_elsp_store {
-	uint32_t count;
-	uint32_t element[4];
-};
-
-#define EL_QUEUE_SLOT_NUM 3
-
 struct vgt_mm;
-
-typedef struct {
-	vgt_ringbuffer_t	vring;		/* guest view ring */
-	vgt_ringbuffer_t	sring;		/* shadow ring */
-	/* In aperture, partitioned & 4KB aligned. */
-	/* 64KB alignment requirement for walkaround. */
-	uint64_t	context_save_area;	/* VGT default context space */
-	uint32_t	active_vm_context;
-	/* ppgtt info */
-	vgt_ring_ppgtt_t	vring_ppgtt_info; /* guest view */
-	vgt_ring_ppgtt_t	sring_ppgtt_info; /* shadow info */
-	u8 has_ppgtt_base_set : 1;	/* Is PP dir base set? */
-	u8 has_ppgtt_mode_enabled : 1;	/* Is ring's mode reg PPGTT enable set? */
-	u8 has_execlist_enabled : 1;
-	struct vgt_mm *active_ppgtt_mm;
-	int ppgtt_root_pointer_type;
-	int ppgtt_page_table_level;
-
-	struct cmd_general_info	patch_list;
-	struct cmd_general_info	handler_list;
-	struct cmd_general_info	tail_list;
-
-	uint64_t cmd_nr;
-	vgt_reg_t	last_scan_head;
-	uint64_t request_id;
-
-	vgt_reg_t uhptr;
-	uint64_t uhptr_id;
-	int el_slots_head;
-	int el_slots_tail;
-	struct vgt_exec_list execlist_slots[EL_QUEUE_SLOT_NUM];
-	struct vgt_elsp_store elsp_store;
-	int csb_write_ptr;
-} vgt_state_ring_t;
 
 #define vgt_el_queue_head(vgt, ring_id) \
 	((vgt)->rb[ring_id].el_slots_head)
@@ -294,18 +196,6 @@ typedef struct {
 	((vgt)->rb[ring_id].execlist_slots[slot_idx].el_ctxs[ctx_idx])
 
 struct vgt_device;
-
-/*
- * Ring ID definition.
- */
-enum vgt_ring_id {
-	RING_BUFFER_RCS = 0,
-	RING_BUFFER_VCS,
-	RING_BUFFER_BCS,
-	RING_BUFFER_VECS,
-	RING_BUFFER_VCS2,
-	MAX_ENGINES
-};
 
 /* shadow context */
 
@@ -340,18 +230,6 @@ struct execlist_context {
 	struct hlist_node node;
 };
 
-struct pgt_device;
-
-struct vgt_render_context_ops {
-	bool (*init_null_context)(struct pgt_device *pdev, int id);
-	bool (*save_hw_context)(int id, struct vgt_device *vgt);
-	bool (*restore_hw_context)(int id, struct vgt_device *vgt);
-	bool (*ring_context_switch)(struct pgt_device *pdev,
-				enum vgt_ring_id ring_id,
-				struct vgt_device *prev,
-				struct vgt_device *next);
-};
-
 extern bool vgt_render_init(struct pgt_device *pdev);
 extern bool idle_rendering_engines(struct pgt_device *pdev, int *id);
 extern bool idle_render_engine(struct pgt_device *pdev, int id);
@@ -374,85 +252,7 @@ extern void vgt_check_pending_context_switch(struct vgt_device *vgt);
 
 struct vgt_irq_virt_state;
 
-struct vgt_mmio_accounting_reg_stat {
-	u64 r_count;
-	u64 r_cycles;
-	u64 w_count;
-	u64 w_cycles;
-};
-
-struct vgt_statistics {
-	u64	schedule_in_time;	/* TSC time when it is last scheduled in */
-	u64	allocated_cycles;
-	u64	used_cycles;
-	u64	irq_num;
-	u64	events[EVENT_MAX];
-
-	/* actually this is the number of pending
-	* interrutps, check this in vgt_check_pending_events,
-	* one injection can deliver more than one events
-	*/
-	u64	pending_events;
-	u64	last_propagation;
-	u64	last_blocked_propagation;
-	u64	last_injection;
-
-	/* mmio statistics */
-	u64	gtt_mmio_rcnt;
-	u64	gtt_mmio_wcnt;
-	u64	gtt_mmio_wcycles;
-	u64	gtt_mmio_rcycles;
-	u64	mmio_rcnt;
-	u64	mmio_wcnt;
-	u64	mmio_wcycles;
-	u64	mmio_rcycles;
-	u64	ring_mmio_rcnt;
-	u64	ring_mmio_wcnt;
-	u64	ring_tail_mmio_wcnt;
-	u64	ring_tail_mmio_wcycles;
-	u64	vring_scan_cnt;
-	u64	vring_scan_cycles;
-	u64	wp_cnt;
-	u64	wp_cycles;
-	u64	ppgtt_wp_cnt;
-	u64	ppgtt_wp_cycles;
-	u64	spt_find_hit_cnt;
-	u64	spt_find_hit_cycles;
-	u64	spt_find_miss_cnt;
-	u64	spt_find_miss_cycles;
-	u64	gpt_find_hit_cnt;
-	u64	gpt_find_hit_cycles;
-	u64	gpt_find_miss_cnt;
-	u64	gpt_find_miss_cycles;
-	u64	skip_bb_cnt;
-
-	struct vgt_mmio_accounting_reg_stat *mmio_accounting_reg_stats;
-	bool mmio_accounting;
-	struct mutex mmio_accounting_lock;
-};
-
 /* per-VM structure */
-typedef cycles_t vgt_tslice_t;
-struct vgt_sched_info {
-	vgt_tslice_t start_time;
-	vgt_tslice_t end_time;
-	vgt_tslice_t actual_end_time;
-	vgt_tslice_t rb_empty_delay;	/* cost for "wait rendering engines empty */
-
-	int32_t priority;
-	int32_t weight;
-	int64_t time_slice;
-	/* more properties and policies should be added in*/
-	u64 tbs_period;  /* default: VGT_TBS_DEFAULT_PERIOD(1ms) */
-};
-
-#define VGT_TBS_PERIOD_MAX 15
-#define VGT_TBS_PERIOD_MIN 1
-#define VGT_TBS_DEFAULT_PERIOD(x) ((x) * 1000000) /* 15 ms */
-
-struct vgt_hrtimer {
-	struct hrtimer timer;
-};
 
 #define VGT_TAILQ_RB_POLLING_PERIOD (2 * 1000000)
 #define VGT_TAILQ_SIZE (SIZE_1MB)
@@ -558,21 +358,6 @@ typedef union {
 		uint32_t rsvd_24_31 : 8;
 	};
 } vgt_virtual_event_t;
-
-struct pgt_statistics {
-	u64	irq_num;
-	u64	last_pirq;
-	u64	last_virq;
-	u64	pirq_cycles;
-	u64	virq_cycles;
-	u64	irq_delay_cycles;
-	u64	events[EVENT_MAX];
-	u64	oos_page_cur_avail_cnt;
-	u64	oos_page_min_avail_cnt;
-	u64	oos_page_steal_cnt;
-	u64	oos_page_attach_cnt;
-	u64	oos_page_detach_cnt;
-};
 
 #define PCI_BDF2(b,df)  ((((b) & 0xff) << 8) | ((df) & 0xff))
 
@@ -1979,11 +1764,6 @@ extern int vgt_klog_init(void);
 extern void vgt_klog_cleanup(void);
 extern void klog_printk(const char *fmt, ...);
 
-typedef struct {
-	char *node_name;
-	u64 *stat;
-} debug_statistics_t;
-
 extern u64 context_switch_cost;
 extern u64 context_switch_num;
 extern u64 ring_idle_wait;
@@ -2043,8 +1823,6 @@ int vgt_fb_notifier_call_chain(unsigned long val, void *data);
 void vgt_init_fb_notify(void);
 void vgt_dom0_ready(struct vgt_device *vgt);
 
-
-
 struct dump_buffer {
 	char *buffer;
 	int buf_len;
@@ -2093,150 +1871,6 @@ static inline void reset_el_structure(struct pgt_device *pdev,
 
 }
 
-extern struct kernel_dm *vgt_pkdm;
-
-static inline unsigned long hypervisor_g2m_pfn(struct vgt_device *vgt,
-	unsigned long g_pfn)
-{
-	return vgt_pkdm->g2m_pfn(vgt->vm_id, g_pfn);
-}
-
-static inline int hypervisor_pause_domain(struct vgt_device *vgt)
-{
-	return vgt_pkdm->pause_domain(vgt->vm_id);
-}
-
-static inline int hypervisor_shutdown_domain(struct vgt_device *vgt)
-{
-	return vgt_pkdm->shutdown_domain(vgt->vm_id);
-}
-
-static inline int hypervisor_map_mfn_to_gpfn(struct vgt_device *vgt,
-	unsigned long gpfn, unsigned long mfn, int nr, int map, enum map_type type)
-{
-	if (vgt_pkdm && vgt_pkdm->map_mfn_to_gpfn)
-		return vgt_pkdm->map_mfn_to_gpfn(vgt->vm_id, gpfn, mfn, nr, map, type);
-
-	return 0;
-}
-
-static inline int hypervisor_set_trap_area(struct vgt_device *vgt,
-	uint64_t start, uint64_t end, bool map)
-{
-	return vgt_pkdm->set_trap_area(vgt, start, end, map);
-}
-
-static inline int hypervisor_set_wp_pages(struct vgt_device *vgt, guest_page_t *p)
-{
-	return vgt_pkdm->set_wp_pages(vgt, p);
-}
-
-static inline int hypervisor_unset_wp_pages(struct vgt_device *vgt, guest_page_t *p)
-{
-	return vgt_pkdm->unset_wp_pages(vgt, p);
-}
-
-static inline int hypervisor_check_host(void)
-{
-	return vgt_pkdm->check_host();
-}
-
-static inline int hypervisor_virt_to_mfn(void *addr)
-{
-	return vgt_pkdm->from_virt_to_mfn(addr);
-}
-
-static inline void *hypervisor_mfn_to_virt(int mfn)
-{
-	return vgt_pkdm->from_mfn_to_virt(mfn);
-}
-
-static inline void hypervisor_inject_msi(struct vgt_device *vgt)
-{
-#define MSI_CAP_OFFSET 0x90	/* FIXME. need to get from cfg emulation */
-#define MSI_CAP_CONTROL (MSI_CAP_OFFSET + 2)
-#define MSI_CAP_ADDRESS (MSI_CAP_OFFSET + 4)
-#define MSI_CAP_DATA	(MSI_CAP_OFFSET + 8)
-#define MSI_CAP_EN 0x1
-
-	char *cfg_space = &vgt->state.cfg_space[0];
-	u16 control = *(u16 *)(cfg_space + MSI_CAP_CONTROL);
-	u32 addr = *(u32 *)(cfg_space + MSI_CAP_ADDRESS);
-	u16 data = *(u16 *)(cfg_space + MSI_CAP_DATA);
-	int r;
-
-	/* Do not generate MSI if MSIEN is disable */
-	if (!(control & MSI_CAP_EN))
-		return;
-
-	/* FIXME: currently only handle one MSI format */
-	ASSERT_NUM(!(control & 0xfffe), control);
-
-	vgt_dbg(VGT_DBG_IRQ, "vGT: VM(%d): hvm injections. address (%x) data(%x)!\n",
-			vgt->vm_id, addr, data);
-	r = vgt_pkdm->inject_msi(vgt->vm_id, addr, data);
-	if (r < 0)
-		vgt_err("vGT(%d): failed to inject vmsi\n", vgt->vgt_id);
-}
-
-static inline int hypervisor_hvm_init(struct vgt_device *vgt)
-{
-	if (vgt_pkdm && vgt_pkdm->hvm_init)
-		return vgt_pkdm->hvm_init(vgt);
-
-	return 0;
-}
-
-static inline void hypervisor_hvm_exit(struct vgt_device *vgt)
-{
-	if (vgt_pkdm && vgt_pkdm->hvm_exit)
-		vgt_pkdm->hvm_exit(vgt);
-}
-
-static inline void *hypervisor_gpa_to_va(struct vgt_device *vgt, unsigned long gpa)
-{
-	if (!vgt->vm_id)
-		return (char *)hypervisor_mfn_to_virt(gpa >> PAGE_SHIFT) + offset_in_page(gpa);
-
-	return vgt_pkdm->gpa_to_va(vgt, gpa);
-}
-
-static inline bool hypervisor_read_va(struct vgt_device *vgt, void *va,
-		void *val, int len, int atomic)
-{
-	bool ret;
-
-	if (!vgt->vm_id) {
-		memcpy(val, va, len);
-		return true;
-	}
-
-	ret = vgt_pkdm->read_va(vgt, va, val, len, atomic);
-	if (unlikely(!ret))
-		vgt_err("VM(%d): read va failed, va: 0x%p, atomic : %s\n", vgt->vm_id,
-				va, atomic ? "yes" : "no");
-
-	return ret;
-}
-
-static inline bool hypervisor_write_va(struct vgt_device *vgt, void *va,
-		void *val, int len, int atomic)
-{
-	bool ret;
-
-	if (!vgt->vm_id) {
-		memcpy(va, val, len);
-		return true;
-	}
-
-	ret = vgt_pkdm->write_va(vgt, va, val, len, atomic);
-	if (unlikely(!ret))
-		vgt_err("VM(%d): write va failed, va: 0x%p, atomic : %s\n", vgt->vm_id,
-				va, atomic ? "yes" : "no");
-
-	return ret;
-}
-
 #define ASSERT_VM(x, vgt)						\
 	do {								\
 		if (!(x)) {						\
@@ -2250,5 +1884,6 @@ static inline bool hypervisor_write_va(struct vgt_device *vgt, void *va,
 		}							\
 	} while (0)
 
+#include "mpt.h"
 
 #endif	/* _VGT_DRV_H_ */
