@@ -1464,11 +1464,11 @@ static void dp_aux_ch_trigger_interrupt_on_done(struct vgt_device *vgt, vgt_reg_
 	if (reg == DPA_AUX_CH_CTL) {
 		event = AUX_CHANNEL_A;
 	} else if (reg == PCH_DPB_AUX_CH_CTL) {
-		event = AUX_CHENNEL_B;
+		event = AUX_CHANNEL_B;
 	} else if (reg == PCH_DPC_AUX_CH_CTL) {
-		event = AUX_CHENNEL_C;
+		event = AUX_CHANNEL_C;
 	} else if (reg == PCH_DPD_AUX_CH_CTL) {
-		event = AUX_CHENNEL_D;
+		event = AUX_CHANNEL_D;
 	}
 
 	if (event != EVENT_MAX && (DP_AUX_CH_CTL_INTERRUPT & value)) {

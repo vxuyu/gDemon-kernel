@@ -163,9 +163,9 @@ char *vgt_irq_name[EVENT_MAX] = {
 	[DP_B_HOTPLUG] = "DisplayPort/HDMI/DVI B Hotplug",
 	[DP_C_HOTPLUG] = "DisplayPort/HDMI/DVI C Hotplug",
 	[DP_D_HOTPLUG] = "DisplayPort/HDMI/DVI D Hotplug",
-	[AUX_CHENNEL_B] = "AUX Channel B",
-	[AUX_CHENNEL_C] = "AUX Channel C",
-	[AUX_CHENNEL_D] = "AUX Channel D",
+	[AUX_CHANNEL_B] = "AUX Channel B",
+	[AUX_CHANNEL_C] = "AUX Channel C",
+	[AUX_CHANNEL_D] = "AUX Channel D",
 	[AUDIO_POWER_STATE_CHANGE_B] = "Audio Power State change Port B",
 	[AUDIO_POWER_STATE_CHANGE_C] = "Audio Power State change Port C",
 	[AUDIO_POWER_STATE_CHANGE_D] = "Audio Power State change Port D",
@@ -1494,9 +1494,9 @@ static void vgt_base_init_irq(
 	SET_BIT_INFO(hstate, 21, DP_B_HOTPLUG, IRQ_INFO_PCH);
 	SET_BIT_INFO(hstate, 22, DP_C_HOTPLUG, IRQ_INFO_PCH);
 	SET_BIT_INFO(hstate, 23, DP_D_HOTPLUG, IRQ_INFO_PCH);
-	SET_BIT_INFO(hstate, 25, AUX_CHENNEL_B, IRQ_INFO_PCH);
-	SET_BIT_INFO(hstate, 26, AUX_CHENNEL_C, IRQ_INFO_PCH);
-	SET_BIT_INFO(hstate, 27, AUX_CHENNEL_D, IRQ_INFO_PCH);
+	SET_BIT_INFO(hstate, 25, AUX_CHANNEL_B, IRQ_INFO_PCH);
+	SET_BIT_INFO(hstate, 26, AUX_CHANNEL_C, IRQ_INFO_PCH);
+	SET_BIT_INFO(hstate, 27, AUX_CHANNEL_D, IRQ_INFO_PCH);
 
 	SET_DEFAULT_ENABLED_EVENTS(hstate, RCS_MI_USER_INTERRUPT, IRQ_INFO_GT);
 	SET_DEFAULT_ENABLED_EVENTS(hstate, RCS_PIPE_CONTROL, IRQ_INFO_GT);
@@ -1679,9 +1679,9 @@ static void vgt_gen8_init_irq(
 	SET_BIT_INFO(hstate, 21, DP_B_HOTPLUG, IRQ_INFO_PCH);
 	SET_BIT_INFO(hstate, 22, DP_C_HOTPLUG, IRQ_INFO_PCH);
 	SET_BIT_INFO(hstate, 23, DP_D_HOTPLUG, IRQ_INFO_PCH);
-	SET_BIT_INFO(hstate, 25, AUX_CHENNEL_B, IRQ_INFO_PCH);
-	SET_BIT_INFO(hstate, 26, AUX_CHENNEL_C, IRQ_INFO_PCH);
-	SET_BIT_INFO(hstate, 27, AUX_CHENNEL_D, IRQ_INFO_PCH);
+	SET_BIT_INFO(hstate, 25, AUX_CHANNEL_B, IRQ_INFO_PCH);
+	SET_BIT_INFO(hstate, 26, AUX_CHANNEL_C, IRQ_INFO_PCH);
+	SET_BIT_INFO(hstate, 27, AUX_CHANNEL_D, IRQ_INFO_PCH);
 
 	/* GEN8 interrupt PCU events */
 	SET_BIT_INFO(hstate, 24, PCU_THERMAL, IRQ_INFO_PCU);
