@@ -6513,14 +6513,16 @@ static void broadwell_init_clock_gating(struct drm_device *dev)
 	 */
 	I915_WRITE(HSW_GTT_CACHE_EN, GTT_CACHE_EN_ALL);
 
-	/* WaOCLCoherentLineFlush:bdw */
-	I915_WRITE(GEN8_L3SQCREG4, I915_READ(GEN8_L3SQCREG4) |
-		   GEN8_PIPELINE_FLUSH_COHERENT_LINES);
+	if (i915.enable_execlists) {
+		/* WaOCLCoherentLineFlush:bdw */
+		I915_WRITE(GEN8_L3SQCREG4, I915_READ(GEN8_L3SQCREG4) |
+			   GEN8_PIPELINE_FLUSH_COHERENT_LINES);
 
-	/* WaDisableMidThreadPreempt:bdw */
-	I915_WRITE(GEN8_FF_SLICE_CS_CHICKEN2,
-		   I915_READ(GEN8_FF_SLICE_CS_CHICKEN2) |
-		   _MASKED_BIT_ENABLE(GEN8_THREAD_GROUP_PREEMPTION));
+		/* WaDisableMidThreadPreempt:bdw */
+		I915_WRITE(GEN8_FF_SLICE_CS_CHICKEN2,
+			   I915_READ(GEN8_FF_SLICE_CS_CHICKEN2) |
+			   _MASKED_BIT_ENABLE(GEN8_THREAD_GROUP_PREEMPTION));
+	}
 
 	I915_WRITE(0xb10c, (I915_READ(0xb10c) & ~(0xf << 20)) | (0x8 << 20));
 
