@@ -44,6 +44,7 @@
 #include <drm/drm_plane_helper.h>
 #include <drm/drm_rect.h>
 #include <linux/dma_remapping.h>
+#include "i915_vgpu.h"
 
 /* Primary plane formats for gen <= 3 */
 static const uint32_t i8xx_primary_formats[] = {
@@ -3682,6 +3683,9 @@ static void ivb_manual_fdi_link_train(struct drm_crtc *crtc)
 		temp &= ~FDI_RX_ENABLE;
 		I915_WRITE(reg, temp);
 
+		POSTING_READ(reg);
+		udelay(150);
+
 		/* enable CPU FDI TX and PCH FDI RX */
 		reg = FDI_TX_CTL(pipe);
 		temp = I915_READ(reg);
@@ -3723,6 +3727,9 @@ static void ivb_manual_fdi_link_train(struct drm_crtc *crtc)
 			DRM_DEBUG_KMS("FDI train 1 fail on vswing %d\n", j / 2);
 			continue;
 		}
+
+		POSTING_READ(reg);
+		udelay(150);
 
 		/* Train 2 */
 		reg = FDI_TX_CTL(pipe);
@@ -13297,6 +13304,7 @@ static int intel_atomic_commit(struct drm_device *dev,
 void intel_crtc_restore_mode(struct drm_crtc *crtc)
 {
 	struct drm_device *dev = crtc->dev;
+	struct drm_i915_private *dev_priv = dev->dev_private;
 	struct drm_atomic_state *state;
 	struct drm_crtc_state *crtc_state;
 	int ret;
@@ -13326,7 +13334,6 @@ retry:
 		drm_modeset_backoff(state->acquire_ctx);
 		goto retry;
 	}
-
 	if (ret)
 out:
 		drm_atomic_state_free(state);

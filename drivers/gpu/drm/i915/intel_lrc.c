@@ -135,6 +135,7 @@
 #include <drm/drmP.h>
 #include <drm/i915_drm.h>
 #include "i915_drv.h"
+#include "i915_vgpu.h"
 #include "intel_mocs.h"
 
 #define GEN9_LR_CONTEXT_RENDER_SIZE (22 * PAGE_SIZE)
@@ -207,6 +208,7 @@ enum {
 	ADVANCED_AD_CONTEXT,
 	LEGACY_64B_CONTEXT
 };
+#define GEN8_CTX_MODE_SHIFT 3
 #define GEN8_CTX_ADDRESSING_MODE_SHIFT 3
 #define GEN8_CTX_ADDRESSING_MODE(dev)  (USES_FULL_48BIT_PPGTT(dev) ?\
 		LEGACY_64B_CONTEXT :\
@@ -248,7 +250,7 @@ int intel_sanitize_enable_execlists(struct drm_device *dev, int enable_execlists
 	if (INTEL_INFO(dev)->gen >= 9)
 		return 1;
 
-	if (enable_execlists == 0)
+	if (enable_execlists == 0 && !intel_vgpu_active(dev))
 		return 0;
 
 	if (HAS_LOGICAL_RING_CONTEXTS(dev) && USES_PPGTT(dev) &&
@@ -287,6 +289,36 @@ static bool disable_lite_restore_wa(struct intel_engine_cs *ring)
 	return (IS_SKL_REVID(dev, 0, SKL_REVID_B0) ||
 		IS_BXT_REVID(dev, 0, BXT_REVID_A0)) &&
 	       (ring->id == VCS || ring->id == VCS2);
+}
+static uint64_t execlists_ctx_descriptor(struct intel_engine_cs *ring,
+		struct drm_i915_gem_object *ctx_obj)
+{
+	struct drm_device *dev = ring->dev;
+	uint64_t desc;
+	uint64_t lrca = i915_gem_obj_ggtt_offset(ctx_obj);
+
+	WARN_ON(lrca & 0xFFFFFFFF00000FFFULL);
+
+	desc = GEN8_CTX_VALID;
+	desc |= LEGACY_32B_CONTEXT << GEN8_CTX_MODE_SHIFT;
+	if (IS_GEN8(ctx_obj->base.dev))
+		desc |= GEN8_CTX_L3LLC_COHERENT;
+	desc |= GEN8_CTX_PRIVILEGE;
+	desc |= lrca;
+	desc |= (u64)intel_execlists_ctx_id(ctx_obj) << GEN8_CTX_ID_SHIFT;
+
+	/* TODO: WaDisableLiteRestore when we start using semaphore
+	 *          * signalling between Command Streamers */
+	/* desc |= GEN8_CTX_FORCE_RESTORE; */
+
+	/* WaEnableForceRestoreInCtxtDescForVCS:skl */
+	if (IS_GEN9(dev) &&
+			INTEL_REVID(dev) <= SKL_REVID_B0 &&
+			(ring->id == BCS || ring->id == VCS ||
+			 ring->id == VECS || ring->id == VCS2))
+		desc |= GEN8_CTX_FORCE_RESTORE;
+
+	return desc;
 }
 
 uint64_t intel_lr_context_descriptor(struct intel_context *ctx,
@@ -2225,6 +2257,23 @@ make_rpcs(struct drm_device *dev)
 	return rpcs;
 }
 
+static void intel_lr_context_notify_vgt(struct drm_i915_gem_object *ctx_obj,
+					struct intel_engine_cs *ring,
+					int msg)
+{
+	struct drm_device *dev = ring->dev;
+	struct drm_i915_private *dev_priv = dev->dev_private;
+
+	u64 tmp = execlists_ctx_descriptor(ring, ctx_obj);
+
+	I915_WRITE(vgt_info_off(execlist_context_descriptor_lo),
+			tmp & 0xffffffff);
+	I915_WRITE(vgt_info_off(execlist_context_descriptor_hi),
+			tmp >> 32);
+
+	I915_WRITE(vgt_info_off(g2v_notify), msg);
+}
+
 static int
 populate_lr_context(struct intel_context *ctx, struct drm_i915_gem_object *ctx_obj,
 		    struct intel_engine_cs *ring, struct intel_ringbuffer *ringbuf)
@@ -2356,6 +2405,19 @@ populate_lr_context(struct intel_context *ctx, struct drm_i915_gem_object *ctx_o
 		reg_state[CTX_R_PWR_CLK_STATE+1] = make_rpcs(dev);
 	}
 
+	if (intel_vgpu_active(dev)) {
+		/* Allocate VMA instantly. */
+		ret = i915_gem_obj_ggtt_pin(ctx_obj,
+				GEN8_LR_CONTEXT_ALIGN, 0);
+		if (ret) {
+			DRM_DEBUG_DRIVER("Pin LRC backing obj failed: %d\n",
+					ret);
+			return ret;
+		}
+		intel_lr_context_notify_vgt(ctx_obj, ring,
+				VGT_G2V_EXECLIST_CONTEXT_ELEMENT_CREATE);
+	}
+
 	kunmap_atomic(reg_state);
 
 	ctx_obj->dirty = 1;
@@ -2384,6 +2446,12 @@ void intel_lr_context_free(struct intel_context *ctx)
 			struct intel_ringbuffer *ringbuf =
 					ctx->engine[i].ringbuf;
 			struct intel_engine_cs *ring = ringbuf->ring;
+
+			if (intel_vgpu_active(ringbuf->ring->dev)) {
+				intel_lr_context_notify_vgt(ctx_obj, ring,
+						VGT_G2V_EXECLIST_CONTEXT_ELEMENT_DESTROY);
+				i915_gem_object_ggtt_unpin(ctx_obj);
+			}
 
 			if (ctx == ring->default_context) {
 				intel_unpin_ringbuffer_obj(ringbuf);
@@ -2489,6 +2557,9 @@ int intel_lr_context_deferred_alloc(struct intel_context *ctx,
 
 	ctx->engine[ring->id].ringbuf = ringbuf;
 	ctx->engine[ring->id].state = ctx_obj;
+
+	intel_lr_context_notify_vgt(ctx_obj, ring,
+			VGT_G2V_EXECLIST_CONTEXT_ELEMENT_CREATE);
 
 	if (ctx != ring->default_context && ring->init_context) {
 		struct drm_i915_gem_request *req;
