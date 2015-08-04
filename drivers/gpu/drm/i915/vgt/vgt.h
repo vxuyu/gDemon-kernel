@@ -1772,6 +1772,7 @@ void vgt_destroy_mmio_dev(struct vgt_device *vgt);
 extern reg_attr_t vgt_reg_info_general[];
 extern reg_attr_t vgt_reg_info_hsw[];
 extern reg_attr_t vgt_reg_info_bdw[];
+extern reg_attr_t vgt_reg_info_skl[];
 extern reg_addr_sz_t vgt_reg_addr_sz[];
 extern int vgt_get_reg_num(int type);
 extern int vgt_get_hsw_reg_num(void);

@@ -690,6 +690,13 @@ void vgt_setup_reg_info(struct pgt_device *pdev)
 		vgt_initialize_reg_attr(pdev, vgt_reg_info_bdw,
 				vgt_get_reg_num(D_BDW), true);
 
+	if(IS_SKL(pdev)) {
+		vgt_initialize_reg_attr(pdev, vgt_reg_info_bdw,
+				vgt_get_reg_num(D_BDW), true);
+		vgt_initialize_reg_attr(pdev, vgt_reg_info_skl,
+				vgt_get_reg_num(D_SKL), true);
+	}
+
 	/* GDRST can be accessed by byte */
 	mht = vgt_find_mmio_entry(GEN6_GDRST);
 	if (mht)
@@ -747,6 +754,10 @@ bool vgt_initial_mmio_setup (struct pgt_device *pdev)
 		__vgt_initial_mmio_space(pdev, vgt_reg_info_hsw, vgt_get_hsw_reg_num());
 	if(IS_BDW(pdev))
 		__vgt_initial_mmio_space(pdev, vgt_reg_info_bdw, vgt_get_reg_num(D_BDW));
+	if(IS_SKL(pdev)) {
+		__vgt_initial_mmio_space(pdev, vgt_reg_info_bdw, vgt_get_reg_num(D_BDW));
+		__vgt_initial_mmio_space(pdev, vgt_reg_info_skl, vgt_get_reg_num(D_SKL));
+	}
 
 	/* customize the initial MMIO
 	 * 1, GMBUS status

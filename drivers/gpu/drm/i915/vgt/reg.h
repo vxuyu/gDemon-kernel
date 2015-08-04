@@ -1015,4 +1015,7 @@ union _TRANS_CONFIG
 #define _REG_SBB_HEAD(ring)	__RING_REG((ring), _REG_RCS_SBB_HEAD)
 #define _REG_SBB_HEAD_U(ring)	__RING_REG((ring), _REG_RCS_SBB_HEAD_U)
 
+#define _REG_701C0(pipe, plane) (0x701c0 + pipe * 0x1000 + (plane - 1) * 0x100)
+#define _REG_701C4(pipe, plane) (0x701c4 + pipe * 0x1000 + (plane - 1) * 0x100)
+
 #endif	/* _VGT_REG_H_ */
