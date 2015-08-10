@@ -2397,6 +2397,23 @@ static bool vgt_write_ctx_status_ptr(struct vgt_device *vgt, unsigned int offset
 	return default_mmio_write(vgt, offset, p_data, bytes);
 }
 
+static bool skl_lcpll_write(struct vgt_device *vgt, unsigned int offset,
+	void *p_data, unsigned int bytes)
+{
+	u32 v = *(u32 *)p_data;
+
+	if (is_current_display_owner(vgt))
+		return default_mmio_write(vgt, offset, p_data, bytes);
+
+	/* other bits are MBZ. */
+	v &= (1 << 31) | (1 << 30);
+	v & (1 << 31) ? (v |= (1 << 30)) : (v &= ~(1 << 30));
+
+	__vreg(vgt, offset) = __sreg(vgt, offset) = v;
+
+	return true;
+}
+
 /*
  * Track policies of all captured registers
  *
@@ -3499,8 +3516,8 @@ reg_attr_t vgt_reg_info_skl[] = {
 {0x45504, 4, F_DOM0, 0, D_SKL, NULL, NULL},
 {0x45520, 4, F_DOM0, 0, D_SKL, NULL, NULL},
 {0x46000, 4, F_DPY, 0, D_SKL, NULL, NULL},
-{0x46010, 4, F_DPY, 0, D_SKL, NULL, NULL},
-{0x46014, 4, F_DPY, 0, D_SKL, NULL, NULL},
+{0x46010, 4, F_DPY, 0, D_SKL, NULL, skl_lcpll_write},
+{0x46014, 4, F_DPY, 0, D_SKL, NULL, skl_lcpll_write},
 {0x6C040, 4, F_DPY, 0, D_SKL, NULL, NULL},
 {0x6C048, 4, F_DPY, 0, D_SKL, NULL, NULL},
 {0x6C050, 4, F_DPY, 0, D_SKL, NULL, NULL},
