@@ -756,6 +756,12 @@ vgt_reg_t vgt_surf_base_range_check (struct vgt_device *vgt,
 	struct vgt_sprite_plane_format  sprite_plane;
 	struct vgt_cursor_plane_format  cursor_plane;
 
+	/*
+	 * TODO: Enable range check on SKL.
+	 */
+	if (IS_SKL(vgt->pdev))
+		return surf_base;
+
 	if (!vgt_has_pipe_enabled(vgt, pipe)) {
 		return 0;
 	}
