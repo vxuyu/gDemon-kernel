@@ -237,6 +237,7 @@ struct decode_info{
 #define OP_3DSTATE_RASTER   			OP_3D_MEDIA(0x3, 0x0, 0x50) /* BDW+ */
 #define OP_3DSTATE_SBE_SWIZ   			OP_3D_MEDIA(0x3, 0x0, 0x51) /* BDW+ */
 #define OP_3DSTATE_WM_HZ_OP   			OP_3D_MEDIA(0x3, 0x0, 0x52) /* BDW+ */
+#define OP_3DSTATE_COMPONENT_PACKING            OP_3D_MEDIA(0x3, 0x0, 0x55) /* SKL+ */
 
 #define OP_3DSTATE_DRAWING_RECTANGLE            OP_3D_MEDIA( 0x3 ,0x1, 0x00 )
 #define OP_3DSTATE_SAMPLER_PALETTE_LOAD0        OP_3D_MEDIA( 0x3 ,0x1, 0x02 )
