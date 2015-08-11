@@ -74,14 +74,14 @@ static int kvmgt_vm_getdomid(void)
 	return domid++;
 }
 
-void kvmgt_kvm_init(struct kvm *kvm)
+void kvmgt_init(struct kvm *kvm)
 {
 	kvm->domid = kvmgt_vm_getdomid();
 	kvm->vgt_enabled = false;
 	kvm->vgt = NULL;
 }
 
-void kvmgt_kvm_exit(struct kvm *kvm)
+void kvmgt_exit(struct kvm *kvm)
 {
 	vgt_params_t vp;
 
@@ -279,6 +279,7 @@ static int kvmgt_set_trap_area(struct vgt_device *vgt, uint64_t start,
 		return r;
 	}
 
+	vgt_info("VM%d: registered iodev: 0x%llx - 0x%llx\n", vgt->vm_id, start, end);
 	info->trap_mmio.set = true;
 
 	return r;
@@ -387,12 +388,10 @@ static int kvmgt_inject_msi(int vm_id, u32 addr_lo, u16 data)
 		.flags = 0,
 	};
 	struct kvm *kvm = kvmgt_find_by_domid(vm_id);
+	if (kvm == NULL)
+		return -ENOENT;
 
 	memset(info.pad, 0, sizeof(info.pad));
-	if (kvm == NULL) {
-		vgt_err("cannot find kvm for VM%d\n", vm_id);
-		return -EFAULT;
-	}
 	kvm_send_userspace_msi(kvm, &info);
 
 	return 0;
@@ -403,7 +402,7 @@ static void kvmgt_hvm_exit(struct vgt_device *vgt)
 	kfree(vgt->hvm_info);
 }
 
-static inline bool kvmgt_read_hva(struct vgt_device *vgt, void *hva,
+static bool kvmgt_read_hva(struct vgt_device *vgt, void *hva,
 			void *data, int len, int atomic)
 {
 	int rc;

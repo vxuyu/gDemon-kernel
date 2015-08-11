@@ -598,7 +598,7 @@ static struct kvm *kvm_create_vm(unsigned long type)
 	list_add(&kvm->vm_list, &vm_list);
 	spin_unlock(&kvm_lock);
 #ifdef CONFIG_KVMGT
-	kvmgt_kvm_init(kvm);
+	kvmgt_init(kvm);
 #endif
 
 	preempt_notifier_inc();
@@ -664,7 +664,7 @@ static void kvm_destroy_vm(struct kvm *kvm)
 	kvm_arch_flush_shadow_all(kvm);
 #endif
 #ifdef CONFIG_KVMGT
-	kvmgt_kvm_exit(kvm);
+	kvmgt_exit(kvm);
 #endif
 	kvm_arch_destroy_vm(kvm);
 	kvm_destroy_devices(kvm);

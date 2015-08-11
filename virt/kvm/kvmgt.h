@@ -20,8 +20,10 @@
 #define _KVMGT_H_
 
 #include <linux/kvm_host.h>
-void kvmgt_kvm_init(struct kvm *kvm);
-void kvmgt_kvm_exit(struct kvm *kvm);
+
+void kvmgt_init(struct kvm *kvm);
+void kvmgt_exit(struct kvm *kvm);
+
 void kvmgt_record_cf8(struct kvm_vcpu *vcpu, unsigned port,	unsigned long rax);
 bool kvmgt_pio_is_igd_cfg(struct kvm_vcpu *vcpu);
 bool kvmgt_pio_igd_cfg(struct kvm_vcpu *vcpu);
