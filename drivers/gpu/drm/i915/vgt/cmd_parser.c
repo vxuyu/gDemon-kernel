@@ -818,7 +818,8 @@ static int vgt_cmd_handler_lri(struct parser_exec_state *s)
 		offset = cmd_val(s, i) & BIT_RANGE_MASK(22, 2);
 		rc |= cmd_reg_handler(s, offset, i, "lri");
 
-		if (IS_BDW(s->vgt->pdev) && offset == _REG_DE_RRMR) {
+		if ((IS_BDW(s->vgt->pdev) || IS_SKL(s->vgt->pdev))
+			&& offset == _REG_DE_RRMR) {
 			rc = add_post_handle_entry(s, vgt_cmd_handler_lri_de_rrmr);
 			if (rc) {
 				vgt_err("fail to allocate post handle");
