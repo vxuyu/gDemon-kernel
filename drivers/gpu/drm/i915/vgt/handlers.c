@@ -1561,7 +1561,14 @@ static bool dp_aux_ch_ctl_mmio_write(struct vgt_device *vgt, unsigned int offset
 	if (reg_hw_access(vgt, reg))
 		return true;
 
-	if (reg != DPA_AUX_CH_CTL &&
+	if (IS_SKL(vgt->pdev)
+		&& reg != DPA_AUX_CH_CTL
+		&& reg != DPB_AUX_CH_CTL
+		&& reg != DPC_AUX_CH_CTL
+		&& reg != DPD_AUX_CH_CTL) {
+		/* SKL DPB/C/D aux ctl register changed */
+		return true;
+	} else if (reg != DPA_AUX_CH_CTL &&
 	    reg != PCH_DPB_AUX_CH_CTL &&
 	    reg != PCH_DPC_AUX_CH_CTL &&
 	    reg != PCH_DPD_AUX_CH_CTL) {
@@ -2759,9 +2766,9 @@ reg_attr_t vgt_reg_info_general[] = {
 
 {_REG_DP_BUFTRANS, 0x28, F_DPY, 0, D_ALL, NULL, NULL},
 
-{PCH_DPB_AUX_CH_CTL, 6*4, F_DPY, 0, D_ALL, NULL, dp_aux_ch_ctl_mmio_write},
-{PCH_DPC_AUX_CH_CTL, 6*4, F_DPY, 0, D_ALL, NULL, dp_aux_ch_ctl_mmio_write},
-{PCH_DPD_AUX_CH_CTL, 6*4, F_DPY, 0, D_ALL, NULL, dp_aux_ch_ctl_mmio_write},
+{PCH_DPB_AUX_CH_CTL, 6*4, F_DPY, 0, D_PRE_SKL, NULL, dp_aux_ch_ctl_mmio_write},
+{PCH_DPC_AUX_CH_CTL, 6*4, F_DPY, 0, D_PRE_SKL, NULL, dp_aux_ch_ctl_mmio_write},
+{PCH_DPD_AUX_CH_CTL, 6*4, F_DPY, 0, D_PRE_SKL, NULL, dp_aux_ch_ctl_mmio_write},
 
 {PCH_ADPA, 4, F_DPY, 0, D_ALL, NULL, pch_adpa_mmio_write},
 {_PCH_TRANSACONF, 4, F_DPY, 0, D_ALL, NULL, transaconf_mmio_write},
@@ -3453,6 +3460,9 @@ reg_attr_t vgt_reg_info_bdw[] = {
 };
 
 reg_attr_t vgt_reg_info_skl[] = {
+{DPB_AUX_CH_CTL, 6*4, F_DPY, 0, D_SKL, NULL, dp_aux_ch_ctl_mmio_write},
+{DPC_AUX_CH_CTL, 6*4, F_DPY, 0, D_SKL, NULL, dp_aux_ch_ctl_mmio_write},
+{DPD_AUX_CH_CTL, 6*4, F_DPY, 0, D_SKL, NULL, dp_aux_ch_ctl_mmio_write},
 {0xa210, 4, F_DOM0, 0, D_SKL_PLUS, NULL, NULL},
 {0x4ddc, 4, F_PT, 0, D_SKL, NULL, NULL},
 {0x42080, 4, F_PT, 0, D_SKL_PLUS, NULL, NULL},
