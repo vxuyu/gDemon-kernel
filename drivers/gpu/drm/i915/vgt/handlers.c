@@ -2414,6 +2414,31 @@ static bool skl_lcpll_write(struct vgt_device *vgt, unsigned int offset,
 	return true;
 }
 
+static bool dpll_status_read(struct vgt_device *vgt, unsigned int offset,
+	void *p_data, unsigned int bytes)
+{
+	u32 v = 0;
+
+	if (is_current_display_owner(vgt))
+		goto out;
+
+	if (__vreg(vgt, 0x46010) & (1 << 31))
+		v |= (1 << 0);
+
+	if (__vreg(vgt, 0x46014) & (1 << 31))
+		v |= (1 << 8);
+
+	if (__vreg(vgt, 0x46040) & (1 << 31))
+		v |= (1 << 16);
+
+	if (__vreg(vgt, 0x46060) & (1 << 31))
+		v |= (1 << 24);
+
+	__vreg(vgt, offset) = __sreg(vgt, offset) = v;
+out:
+	return default_mmio_read(vgt, offset, p_data, bytes);
+}
+
 /*
  * Track policies of all captured registers
  *
@@ -3526,7 +3551,7 @@ reg_attr_t vgt_reg_info_skl[] = {
 {0x6C054, 4, F_DPY, 0, D_SKL, NULL, NULL},
 {0x6c058, 4, F_DPY, 0, D_SKL, NULL, NULL},
 {0x6c05c, 4, F_DPY, 0, D_SKL, NULL, NULL},
-{0X6c060, 4, F_DPY, 0, D_SKL, NULL, NULL},
+{0X6c060, 4, F_DPY, 0, D_SKL, dpll_status_read, NULL},
 
 {SKL_PS_WIN_POS(PIPE_A, 0), 4, F_DPY, 0, D_SKL, NULL, NULL},
 {SKL_PS_WIN_POS(PIPE_A, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
