@@ -29,6 +29,9 @@
 #include "fb_decoder.h"
 #include "vgt.h"
 
+/* working for both HSW/BDW and SKL+ */
+#define OFFSET_TO_DP_AUX_PORT(offset) (((offset) & 0xF00) >> 8)
+
 
 static bool vgt_error_handler(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes)
@@ -1494,11 +1497,14 @@ static void dp_aux_ch_trigger_interrupt_on_done(struct vgt_device *vgt, vgt_reg_
 
 	if (reg == DPA_AUX_CH_CTL) {
 		event = AUX_CHANNEL_A;
-	} else if (reg == PCH_DPB_AUX_CH_CTL) {
+	} else if (reg == PCH_DPB_AUX_CH_CTL
+		|| reg == DPB_AUX_CH_CTL) {
 		event = AUX_CHANNEL_B;
-	} else if (reg == PCH_DPC_AUX_CH_CTL) {
+	} else if (reg == PCH_DPC_AUX_CH_CTL
+		|| reg == DPC_AUX_CH_CTL) {
 		event = AUX_CHANNEL_C;
-	} else if (reg == PCH_DPD_AUX_CH_CTL) {
+	} else if (reg == PCH_DPD_AUX_CH_CTL
+		|| reg == DPD_AUX_CH_CTL) {
 		event = AUX_CHANNEL_D;
 	}
 
@@ -1572,7 +1578,7 @@ static bool dp_aux_ch_ctl_mmio_write(struct vgt_device *vgt, unsigned int offset
 	vgt_reg_t value = *(vgt_reg_t *)p_data;
 	int msg, addr, ctrl, op, len;
 	struct vgt_dpcd_data *dpcd = NULL;
-	enum port port_idx = vgt_get_dp_port_idx(offset);
+	enum port port_idx = OFFSET_TO_DP_AUX_PORT(offset);
 	struct gt_port *port = NULL;
 
 	ASSERT(bytes == 4);
@@ -1586,17 +1592,16 @@ static bool dp_aux_ch_ctl_mmio_write(struct vgt_device *vgt, unsigned int offset
 	if (reg_hw_access(vgt, reg))
 		return true;
 
-	if (IS_SKL(vgt->pdev)
-		&& reg != DPA_AUX_CH_CTL
-		&& reg != DPB_AUX_CH_CTL
-		&& reg != DPC_AUX_CH_CTL
-		&& reg != DPD_AUX_CH_CTL) {
+	if (!dpy_is_valid_port(port_idx)) {
+		vgt_warn("vGT(%d): Unsupported DP port access!\n",
+				vgt->vgt_id);
+		return true;
+	}
+
+	if (IS_SKL(vgt->pdev) && reg != _REG_SKL_DP_AUX_CH_CTL(port_idx)) {
 		/* SKL DPB/C/D aux ctl register changed */
 		return true;
-	} else if (reg != DPA_AUX_CH_CTL &&
-	    reg != PCH_DPB_AUX_CH_CTL &&
-	    reg != PCH_DPC_AUX_CH_CTL &&
-	    reg != PCH_DPD_AUX_CH_CTL) {
+	} else if (IS_PRESKL(vgt->pdev) && reg != _REG_HSW_DP_AUX_CH_CTL(port_idx)) {
 		/* write to the data registers */
 		return true;
 	}
@@ -1604,12 +1609,6 @@ static bool dp_aux_ch_ctl_mmio_write(struct vgt_device *vgt, unsigned int offset
 	if (!(value & _REGBIT_DP_AUX_CH_CTL_SEND_BUSY)) {
 		/* just want to clear the sticky bits */
 		__vreg(vgt, reg) = 0;
-		return true;
-	}
-
-	if (!dpy_is_valid_port(port_idx)) {
-		vgt_warn("vGT(%d): Unsupported DP port access!\n",
-				vgt->vgt_id);
 		return true;
 	}
 

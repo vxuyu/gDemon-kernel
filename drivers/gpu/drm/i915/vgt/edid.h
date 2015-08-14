@@ -155,31 +155,4 @@ typedef enum {
 	AUX_CH_DATA5
 }AUX_CH_REGISTERS;
 
-static inline enum port vgt_get_dp_port_idx(unsigned int offset)
-{
-	enum port port_idx;
-
-	if (offset >= DPA_AUX_CH_CTL
-		&& offset <= DPA_AUX_CH_CTL +
-				AUX_REGISTER_NUM * sizeof(vgt_reg_t)) {
-		return PORT_A;
-	}
-
-	switch (((offset & 0xff00) >> 8) - 0x41) {
-	case 0:
-		port_idx = PORT_B;
-		break;
-	case 1:
-		port_idx = PORT_C;
-		break;
-	case 2:
-		port_idx = PORT_D;
-		break;
-	default:
-		port_idx = I915_MAX_PORTS;
-		break;
-	}
-	return port_idx;
-}
-
 #endif /*_VGT_EDID_H_*/
