@@ -184,8 +184,8 @@ static int kvmgt_guest_mmio_in_range(struct kvmgt_trap_info *info, gpa_t addr)
 		(addr < info->base_addr + info->len));
 }
 
-static int kvmgt_guest_mmio_read(struct kvm_io_device *this, gpa_t addr,
-			int len, void *val)
+static int kvmgt_guest_mmio_read(struct kvm_vcpu *vcpu, struct kvm_io_device *this,
+			gpa_t addr, int len, void *val)
 {
 	struct kvmgt_trap_info *info = container_of(this, struct kvmgt_trap_info,
 				iodev);
@@ -219,8 +219,8 @@ static int kvmgt_guest_mmio_read(struct kvm_io_device *this, gpa_t addr,
 	return 0;
 }
 
-static int kvmgt_guest_mmio_write(struct kvm_io_device *this, gpa_t addr,
-			int len, const void *val)
+static int kvmgt_guest_mmio_write(struct kvm_vcpu *vcpu, struct kvm_io_device *this,
+			gpa_t addr, int len, const void *val)
 {
 	struct kvmgt_trap_info *info = container_of(this, struct kvmgt_trap_info,
 				iodev);
