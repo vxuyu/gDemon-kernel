@@ -86,13 +86,14 @@ static inline void *hypervisor_mfn_to_virt(int mfn)
 
 static inline void hypervisor_inject_msi(struct vgt_device *vgt)
 {
-#define MSI_CAP_OFFSET 0x90	/* FIXME. need to get from cfg emulation */
-#define MSI_CAP_CONTROL (MSI_CAP_OFFSET + 2)
-#define MSI_CAP_ADDRESS (MSI_CAP_OFFSET + 4)
-#define MSI_CAP_DATA	(MSI_CAP_OFFSET + 8)
+#define MSI_CAP_CONTROL (msi_cap_offset + 2)
+#define MSI_CAP_ADDRESS (msi_cap_offset + 4)
+#define MSI_CAP_DATA	(msi_cap_offset + 8)
 #define MSI_CAP_EN 0x1
 
 	char *cfg_space = &vgt->state.cfg_space[0];
+	u32 msi_cap_offset = IS_SKLPLUS(vgt->pdev) ? 0xAC : 0x90;
+
 	u16 control = *(u16 *)(cfg_space + MSI_CAP_CONTROL);
 	u32 addr = *(u32 *)(cfg_space + MSI_CAP_ADDRESS);
 	u16 data = *(u16 *)(cfg_space + MSI_CAP_DATA);

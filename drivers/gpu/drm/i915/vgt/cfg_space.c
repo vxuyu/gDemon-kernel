@@ -370,10 +370,14 @@ bool vgt_emulate_cfg_write(struct vgt_device *vgt, unsigned int off,
 					vgt_hvm_set_trap_area(vgt, 1);
 			}
 			break;
-
+		/* HSW/BDW */
 		case 0x90:
 		case 0x94:
 		case 0x98:
+		/* SKL */
+		case 0xAC:
+		case 0xB0:
+		case 0xB4:
 			printk("vGT: write to MSI capa(%x) with val (%x)\n", off, *(uint32_t *)p_data);
 		default:
 			memcpy (&vgt->state.cfg_space[off], p_data, bytes);
