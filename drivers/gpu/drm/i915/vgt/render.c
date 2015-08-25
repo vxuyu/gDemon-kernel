@@ -36,9 +36,6 @@
  *	- need consider cache related issues, e.g. Linux/Windows may have different
  *	 TLB invalidation mode setting, which may impact vGT's context switch logic
  */
-u64	context_switch_cost = 0;
-u64	context_switch_num = 0;
-u64	ring_idle_wait = 0;
 
 int vgt_ctx_switch = 1;
 bool vgt_validate_ctx_switch = false;
@@ -633,9 +630,9 @@ bool vgt_do_render_context_switch(struct pgt_device *pdev)
 	
 
 	/* variable exported by debugfs */
-	context_switch_num ++;
+	pdev->stat.context_switch_num ++;
 	t1 = vgt_get_cycles();
-	ring_idle_wait += t1 - t0;
+	pdev->stat.ring_idle_wait += t1 - t0;
 
 	vgt_sched_update_prev(prev, t0);
 
@@ -697,7 +694,7 @@ bool vgt_do_render_context_switch(struct pgt_device *pdev)
 	vgt_sched_update_next(next);
 
 	t2 = vgt_get_cycles();
-	context_switch_cost += (t2-t1);
+	pdev->stat.context_switch_cost += (t2-t1);
 out:
 	vgt_unlock_dev(pdev, cpu);
 	return true;
@@ -736,8 +733,6 @@ err:
 	return false;
 }
 
-u64	ring_0_idle = 0;
-u64	ring_0_busy = 0;
 struct pgt_device *perf_pgt = NULL;
 
 void vgt_gpu_perf_sample(void)
@@ -746,9 +741,9 @@ void vgt_gpu_perf_sample(void)
 
 	if ( perf_pgt ) {
 		if ( ring_is_empty(perf_pgt, ring_id) )
-			ring_0_idle ++;
+			perf_pgt->stat.ring_0_idle ++;
 		else
-			ring_0_busy ++;
+			perf_pgt->stat.ring_0_busy ++;
 	}
 }
 

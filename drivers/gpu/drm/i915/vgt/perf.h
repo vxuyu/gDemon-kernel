@@ -96,6 +96,11 @@ struct pgt_statistics {
 	u64	oos_page_steal_cnt;
 	u64	oos_page_attach_cnt;
 	u64	oos_page_detach_cnt;
+	u64	context_switch_cost;
+	u64	context_switch_num;
+	u64	ring_idle_wait;
+	u64	ring_0_idle;
+	u64	ring_0_busy;
 };
 
 typedef struct {

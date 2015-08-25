@@ -107,15 +107,6 @@ enum vgt_debugfs_entry_t
 	VGT_DEBUGFS_ENTRY_MAX
 };
 
-static debug_statistics_t  stat_info [] = {
-	{ "context_switch_cycles", &context_switch_cost },
-	{ "context_switch_num", &context_switch_num },
-	{ "ring_idle_wait", &ring_idle_wait },
-	{ "ring_0_busy", &ring_0_busy },
-	{ "ring_0_idle", &ring_0_idle },
-	{ "", NULL}
-};
-
 #define debugfs_create_u64_node(name, perm, parent, u64_ptr) \
 	do { \
 		struct dentry *__dentry = debugfs_create_u64( \
@@ -1149,15 +1140,16 @@ struct dentry *vgt_init_debugfs(struct pgt_device *pdev)
 	if (!temp_d)
 		return NULL;
 
-	for ( i = 0; stat_info[i].stat != NULL; i++ ) {
-		temp_d = debugfs_create_u64(stat_info[i].node_name,
-			0444,
-			d_vgt_debug,
-			stat_info[i].stat);
-		if (!temp_d)
-			printk(KERN_ERR "Failed to create debugfs node %s\n",
-				stat_info[i].node_name);
-	}
+	debugfs_create_u64_node("context_switch_cycles", 0440, d_vgt_debug,
+				&pdev->stat.context_switch_cost);
+	debugfs_create_u64_node("context_switch_num", 0440, d_vgt_debug,
+				&pdev->stat.context_switch_num);
+	debugfs_create_u64_node("ring_idle_wait", 0440, d_vgt_debug,
+				&pdev->stat.ring_idle_wait);
+	debugfs_create_u64_node("ring_0_busy", 0440, d_vgt_debug,
+				&pdev->stat.ring_0_busy);
+	debugfs_create_u64_node("ring_0_idle", 0440, d_vgt_debug,
+				&pdev->stat.ring_0_idle);
 
 	temp_d = debugfs_create_file("reginfo", 0444, d_vgt_debug,
 		pdev, &reginfo_fops);
