@@ -887,8 +887,6 @@ static int vgt_initialize(struct pci_dev *dev)
 	pdev->p_thread = p_thread;
 	//show_debug(pdev, 0);
 
-	vgt_render_init(pdev);
-
 	vgt_initialize_ctx_scheduler(pdev);
 
 	list_add(&pdev->list, &pgt_devices);

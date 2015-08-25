@@ -145,4 +145,19 @@ struct vgt_render_context_ops {
 				struct vgt_device *next);
 };
 
+struct reg_mask_t {
+	u32		reg;
+	u8		mask;
+	vgt_reg_t	val;
+};
+
+bool gen7_ring_switch(struct pgt_device *pdev,
+		enum vgt_ring_id ring_id,
+		struct vgt_device *prev,
+		struct vgt_device *next);
+
+void vgt_restore_ringbuffer(struct vgt_device *vgt, int id);
+vgt_reg_t *vgt_get_extra_ctx_regs_gen7(void);
+int vgt_get_extra_ctx_regs_num_gen7(void);
+
 #endif /* _VGT_RENDER_H_ */
