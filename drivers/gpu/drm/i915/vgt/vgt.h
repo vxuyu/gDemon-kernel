@@ -1392,6 +1392,11 @@ static inline enum vgt_event_type vgt_ring_id_to_ctx_event(enum vgt_ring_id ring
 	return event;
 }
 
+static inline bool is_ring_enabled (struct pgt_device *pdev, int ring_id)
+{
+	return (VGT_MMIO_READ(pdev, RB_CTL(pdev, ring_id)) & 1);	/* bit 0: enable/disable RB */
+}
+
 static inline bool is_ring_empty(struct pgt_device *pdev, int ring_id)
 {
 	if (pdev->enable_execlist) {
@@ -1417,6 +1422,15 @@ static inline bool is_ring_empty(struct pgt_device *pdev, int ring_id)
 	}
 }
 
+static inline bool ring_is_empty(struct pgt_device *pdev,
+	int id)
+{
+	if ( is_ring_enabled(pdev, id) && !is_ring_empty(pdev, id) )
+		return false;
+
+	return true;
+}
+
 #define VGT_POST_READ(pdev, reg)		\
 	do {					\
 		vgt_reg_t val;			\
@@ -1439,10 +1453,6 @@ static inline bool is_ring_empty(struct pgt_device *pdev, int ring_id)
 #define VGT_WRITE_START(pdev, id, val) VGT_MMIO_WRITE(pdev, RB_START(pdev, id), val)
 #define VGT_POST_READ_START(pdev, id)	VGT_POST_READ(pdev, RB_START(pdev,id))
 
-static inline bool is_ring_enabled (struct pgt_device *pdev, int ring_id)
-{
-	return (VGT_MMIO_READ(pdev, RB_CTL(pdev, ring_id)) & 1);	/* bit 0: enable/disable RB */
-}
 extern void vgt_ring_init(struct pgt_device *pdev, int id);
 
 static inline u32 vgt_read_gtt(struct pgt_device *pdev, u32 index)

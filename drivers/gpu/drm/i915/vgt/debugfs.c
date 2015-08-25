@@ -1104,7 +1104,6 @@ static const struct file_operations vgt_el_context_fops = {
 struct dentry *vgt_init_debugfs(struct pgt_device *pdev)
 {
 	struct dentry *temp_d;
-	int   i;
 
 	if (!d_vgt_debug) {
 		d_vgt_debug = debugfs_create_dir("vgt", NULL);

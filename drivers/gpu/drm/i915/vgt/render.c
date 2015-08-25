@@ -52,15 +52,6 @@ void vgt_toggle_ctx_switch(bool enable)
 		vgt_ctx_switch = 0;
 }
 
-static bool ring_is_empty(struct pgt_device *pdev,
-	int id)
-{
-	if ( is_ring_enabled(pdev, id) && !is_ring_empty(pdev, id) )
-		return false;
-
-	return true;
-}
-
 static bool ring_is_xxx(struct pgt_device *pdev,
 	int id)
 {
@@ -732,19 +723,3 @@ err:
 
 	return false;
 }
-
-struct pgt_device *perf_pgt = NULL;
-
-void vgt_gpu_perf_sample(void)
-{
-	int	ring_id = 0;
-
-	if ( perf_pgt ) {
-		if ( ring_is_empty(perf_pgt, ring_id) )
-			perf_pgt->stat.ring_0_idle ++;
-		else
-			perf_pgt->stat.ring_0_busy ++;
-	}
-}
-
-EXPORT_SYMBOL_GPL(vgt_gpu_perf_sample);

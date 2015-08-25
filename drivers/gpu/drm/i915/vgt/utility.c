@@ -1323,3 +1323,19 @@ void dump_el_status(struct pgt_device *pdev)
 		}
 	}
 }
+
+struct pgt_device *perf_pgt = NULL;
+
+void vgt_gpu_perf_sample(void)
+{
+	int	ring_id = 0;
+
+	if ( perf_pgt ) {
+		if ( ring_is_empty(perf_pgt, ring_id) )
+			perf_pgt->stat.ring_0_idle ++;
+		else
+			perf_pgt->stat.ring_0_busy ++;
+	}
+}
+
+EXPORT_SYMBOL_GPL(vgt_gpu_perf_sample);
