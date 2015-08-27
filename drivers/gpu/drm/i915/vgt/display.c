@@ -348,28 +348,28 @@ void vgt_update_monitor_status(struct vgt_device *vgt)
 	if (is_current_display_owner(vgt))
 		return;
 
-	__vreg(vgt, _REG_SDEISR) &= ~(_REGBIT_DP_B_HOTPLUG |
+	__vreg(vgt, SDEISR) &= ~(_REGBIT_DP_B_HOTPLUG |
 					_REGBIT_DP_C_HOTPLUG |
 					_REGBIT_DP_D_HOTPLUG);
 
 	if (dpy_has_monitor_on_port(vgt, PORT_B)) {
 		vgt_dbg(VGT_DBG_DPY, "enable B port monitor\n");
-		__vreg(vgt, _REG_SDEISR) |= _REGBIT_DP_B_HOTPLUG;
+		__vreg(vgt, SDEISR) |= _REGBIT_DP_B_HOTPLUG;
 	}
 	if (dpy_has_monitor_on_port(vgt, PORT_C)) {
 		vgt_dbg(VGT_DBG_DPY, "enable C port monitor\n");
-		__vreg(vgt, _REG_SDEISR) |= _REGBIT_DP_C_HOTPLUG;
+		__vreg(vgt, SDEISR) |= _REGBIT_DP_C_HOTPLUG;
 	}
 	if (dpy_has_monitor_on_port(vgt, PORT_D)) {
 		vgt_dbg(VGT_DBG_DPY, "enable D port monitor\n");
-		__vreg(vgt, _REG_SDEISR) |= _REGBIT_DP_D_HOTPLUG;
+		__vreg(vgt, SDEISR) |= _REGBIT_DP_D_HOTPLUG;
 	}
 	if (dpy_has_monitor_on_port(vgt, PORT_A)) {
-		__vreg(vgt, _REG_DDI_BUF_CTL_A) |= _DDI_BUFCTL_DETECT_MASK;
+		__vreg(vgt, DDI_BUF_CTL_A) |= _DDI_BUFCTL_DETECT_MASK;
 		if (IS_PREBDW(vgt->pdev))
-			__vreg(vgt, _REG_DEISR) |= _REGBIT_DP_A_HOTPLUG_IVB;
+			__vreg(vgt, DEISR) |= _REGBIT_DP_A_HOTPLUG_IVB;
 		else
-			__vreg(vgt, _REG_DE_PORT_ISR) |= _REGBIT_PORT_DP_A_HOTPLUG; 
+			__vreg(vgt, GEN8_DE_PORT_ISR) |= GEN8_PORT_DP_A_HOTPLUG;
 	}
 }
 
@@ -402,17 +402,14 @@ enum vgt_pipe get_pipe(unsigned int reg, uint32_t wr_data)
 {
 	enum vgt_pipe pipe = I915_MAX_PIPES;
 
-	if (reg == _REG_TRANS_DDI_FUNC_CTL_A) {
+	if (reg == TRANS_DDI_FUNC_CTL_A)
 		pipe = PIPE_A;
-	}
-	else if (reg == _REG_TRANS_DDI_FUNC_CTL_B) {
+	else if (reg == TRANS_DDI_FUNC_CTL_B)
 		pipe = PIPE_B;
-	}
-	else if (reg == _REG_TRANS_DDI_FUNC_CTL_C) {
+	else if (reg == TRANS_DDI_FUNC_CTL_C)
 		pipe = PIPE_C;
-	}else if (reg == _REG_TRANS_DDI_FUNC_CTL_EDP) {
+	else if (reg == TRANS_DDI_FUNC_CTL_EDP)
 		pipe = get_edp_input (wr_data);
-	}
 
 	return pipe;
 }
@@ -420,8 +417,8 @@ enum vgt_pipe get_pipe(unsigned int reg, uint32_t wr_data)
 static void vgt_update_irq_reg(struct vgt_device *vgt)
 {
 	if (IS_PREBDW(vgt->pdev)) {
-		recalculate_and_update_ier(vgt->pdev, _REG_DEIER);
-		recalculate_and_update_imr(vgt->pdev, _REG_DEIMR);
+		recalculate_and_update_ier(vgt->pdev, DEIER);
+		recalculate_and_update_imr(vgt->pdev, DEIMR);
 	} else {
 		recalculate_and_update_ier(vgt->pdev, _REG_DE_PIPE_IER(PIPE_A));
 		recalculate_and_update_ier(vgt->pdev, _REG_DE_PIPE_IER(PIPE_B));
@@ -451,7 +448,7 @@ bool rebuild_pipe_mapping(struct vgt_device *vgt, unsigned int reg, uint32_t new
 
 	/*disable pipe case*/
 	if ((_REGBIT_TRANS_DDI_FUNC_ENABLE & new_data) == 0) {
-		if (reg == _REG_TRANS_DDI_FUNC_CTL_EDP) {
+		if (reg == TRANS_DDI_FUNC_CTL_EDP) {
 			/*for disable case, we need to get edp input from old value
 			since the new data does not contain the edp input*/
 			virtual_pipe = get_edp_input(old_data);
@@ -468,12 +465,12 @@ bool rebuild_pipe_mapping(struct vgt_device *vgt, unsigned int reg, uint32_t new
 	}
 
 	/*enable pipe case*/
-	ASSERT((reg == _REG_TRANS_DDI_FUNC_CTL_EDP) ||
+	ASSERT((reg == TRANS_DDI_FUNC_CTL_EDP) ||
 			(new_data & _REGBIT_TRANS_DDI_PORT_MASK));
 
-	if (reg == _REG_TRANS_DDI_FUNC_CTL_EDP) {
+	if (reg == TRANS_DDI_FUNC_CTL_EDP) {
 		// In such case, it is virtual PORT_A mapping to physical PORT_A
-		hw_value = VGT_MMIO_READ(vgt->pdev, _REG_TRANS_DDI_FUNC_CTL_EDP);
+		hw_value = VGT_MMIO_READ(vgt->pdev, TRANS_DDI_FUNC_CTL_EDP);
 		if (_REGBIT_TRANS_DDI_FUNC_ENABLE & hw_value)
 			physical_pipe = get_edp_input(hw_value);
 	} else {
@@ -485,7 +482,7 @@ bool rebuild_pipe_mapping(struct vgt_device *vgt, unsigned int reg, uint32_t new
 					" for not ready port!!\n");
 			physical_pipe = I915_MAX_PIPES;
 		} else if (vport_override == PORT_A) {
-			hw_value = VGT_MMIO_READ(vgt->pdev, _REG_TRANS_DDI_FUNC_CTL_EDP);
+			hw_value = VGT_MMIO_READ(vgt->pdev, TRANS_DDI_FUNC_CTL_EDP);
 			if (_REGBIT_TRANS_DDI_FUNC_ENABLE & hw_value)
 				physical_pipe = get_edp_input(hw_value);
 								
@@ -553,10 +550,10 @@ bool update_pipe_mapping(struct vgt_device *vgt, unsigned int physical_reg, uint
 	}
 
 	/*enable case*/
-	if (physical_reg == _REG_TRANS_DDI_FUNC_CTL_EDP) {
+	if (physical_reg == TRANS_DDI_FUNC_CTL_EDP) {
 		pport = PORT_A;
 		if (vgt->ports[PORT_A].port_override == PORT_A) {
-			virtual_pipe = get_edp_input(__vreg(vgt, _REG_TRANS_DDI_FUNC_CTL_EDP));
+			virtual_pipe = get_edp_input(__vreg(vgt, TRANS_DDI_FUNC_CTL_EDP));
 		}
 	} else {
 		pport = (physical_wr_data & _REGBIT_TRANS_DDI_PORT_MASK) >> _TRANS_DDI_PORT_SHIFT;
@@ -645,7 +642,7 @@ bool set_panel_fitting(struct vgt_device *vgt, enum vgt_pipe pipe)
 	h_total_reg = VGT_HTOTAL(real_pipe);
 	v_total_reg = VGT_VTOTAL(real_pipe);
 
-	edp_trans_code = VGT_MMIO_READ(vgt->pdev, _REG_TRANS_DDI_FUNC_CTL_EDP);
+	edp_trans_code = VGT_MMIO_READ(vgt->pdev, TRANS_DDI_FUNC_CTL_EDP);
 	if ((_REGBIT_TRANS_DDI_FUNC_ENABLE & edp_trans_code)) {
 		if (real_pipe == get_edp_input(edp_trans_code)) {
 			h_total_reg = _REG_HTOTAL_EDP;
@@ -679,8 +676,8 @@ bool set_panel_fitting(struct vgt_device *vgt, enum vgt_pipe pipe)
 
 	/* we need to increase Water Mark in down scaling case */
 	if (src_width > target_width || src_height > target_height) {
-		wm_reg = real_pipe == PIPE_A ? _REG_WM0_PIPEA_ILK :
-			(real_pipe == PIPE_B ? _REG_WM0_PIPEB_ILK : _REG_WM0_PIPEC_IVB);
+		wm_reg = real_pipe == PIPE_A ? WM0_PIPEA_ILK :
+			(real_pipe == PIPE_B ? WM0_PIPEB_ILK : WM0_PIPEC_IVB);
 		plane_wm = (__vreg(vgt_dom0, wm_reg) & _REGBIT_WM0_PIPE_PLANE_MASK)
 			>> _REGBIT_WM0_PIPE_PLANE_SHIFT;
 		sprite_wm = (__vreg(vgt_dom0, wm_reg) & _REGBIT_WM0_PIPE_SPRITE_MASK)
@@ -749,7 +746,7 @@ bool vgt_manage_emul_dpy_events(struct pgt_device *pdev)
 		pipeconf = __vreg(vgt, _REG_PIPE_EDP_CONF);
 		if (pipeconf & _REGBIT_PIPE_ENABLE) {
 			pipe = get_edp_input(
-				__vreg(vgt, _REG_TRANS_DDI_FUNC_CTL_EDP));
+				__vreg(vgt, TRANS_DDI_FUNC_CTL_EDP));
 			if (pipe == I915_MAX_PIPES) {
 				vgt_err("vGT(%d): "
 					"Invalid input selection for eDP\n",
@@ -839,23 +836,23 @@ void vgt_set_power_well(struct vgt_device *vgt, bool to_enable)
 	bool is_enabled, enable_requested;
 	uint32_t tmp;
 
-	tmp = VGT_MMIO_READ(vgt->pdev, _REG_HSW_PWR_WELL_CTL2);
+	tmp = VGT_MMIO_READ(vgt->pdev, HSW_PWR_WELL_DRIVER);
 	is_enabled = tmp & _REGBIT_HSW_PWR_WELL_STATE;
 	enable_requested = tmp & _REGBIT_HSW_PWR_WELL_ENABLE;
 
 	if (to_enable) {
 		if (!enable_requested)
-			VGT_MMIO_WRITE(vgt->pdev, _REG_HSW_PWR_WELL_CTL2, _REGBIT_HSW_PWR_WELL_ENABLE);
+			VGT_MMIO_WRITE(vgt->pdev, HSW_PWR_WELL_DRIVER, _REGBIT_HSW_PWR_WELL_ENABLE);
 
 		if (!is_enabled) {
-			if (wait_for_atomic((VGT_MMIO_READ(vgt->pdev, _REG_HSW_PWR_WELL_CTL2) &
+			if (wait_for_atomic((VGT_MMIO_READ(vgt->pdev, HSW_PWR_WELL_DRIVER) &
 				      _REGBIT_HSW_PWR_WELL_STATE), 20))
 				vgt_err("Timeout enabling power well\n");
 		}
 	} else {
 		if (enable_requested) {
-			VGT_MMIO_WRITE(vgt->pdev, _REG_HSW_PWR_WELL_CTL2, 0);
-			tmp = VGT_MMIO_READ(vgt->pdev, _REG_HSW_PWR_WELL_CTL2);
+			VGT_MMIO_WRITE(vgt->pdev, HSW_PWR_WELL_DRIVER, 0);
+			tmp = VGT_MMIO_READ(vgt->pdev, HSW_PWR_WELL_DRIVER);
 		}
 	}
 }
@@ -886,10 +883,10 @@ void vgt_flush_port_info(struct vgt_device *vgt, struct gt_port *port)
 	enum vgt_port_type legacy_porttype;
 	int i;
 	unsigned int reg_ddi[4] ={
-		_REG_TRANS_DDI_FUNC_CTL_A,
-		_REG_TRANS_DDI_FUNC_CTL_B,
-		_REG_TRANS_DDI_FUNC_CTL_C,
-		_REG_TRANS_DDI_FUNC_CTL_EDP,
+		TRANS_DDI_FUNC_CTL_A,
+		TRANS_DDI_FUNC_CTL_B,
+		TRANS_DDI_FUNC_CTL_C,
+		TRANS_DDI_FUNC_CTL_EDP,
 	};
 
 
@@ -1007,7 +1004,7 @@ void vgt_dpy_init_modes(vgt_reg_t *mmio_array)
 	enum vgt_pipe pipe;
 	unsigned int offset;
 
-	mmio_array[REG_INDEX(_REG_DDI_BUF_CTL_A)] &=
+	mmio_array[REG_INDEX(DDI_BUF_CTL_A)] &=
 				~_DDI_BUFCTL_DETECT_MASK;
 
 	for (port = PORT_A; port <= PORT_E; ++ port) {
@@ -1028,12 +1025,12 @@ void vgt_dpy_init_modes(vgt_reg_t *mmio_array)
 		mmio_array[REG_INDEX(offset)] &= ~_REGBIT_PF_ENABLE;
 	}
 
-	mmio_array[REG_INDEX(_REG_TRANS_DDI_FUNC_CTL_EDP)] &=
+	mmio_array[REG_INDEX(TRANS_DDI_FUNC_CTL_EDP)] &=
 				~_REGBIT_TRANS_DDI_FUNC_ENABLE;
 	mmio_array[REG_INDEX(_REG_PIPE_EDP_CONF)] &=
 				~_REGBIT_PIPE_ENABLE;
 
-	mmio_array[REG_INDEX(_REG_SPLL_CTL)] &= ~_REGBIT_SPLL_CTL_ENABLE;
-	mmio_array[REG_INDEX(_REG_WRPLL_CTL1)] &= ~_REGBIT_WRPLL_ENABLE;
-	mmio_array[REG_INDEX(_REG_WRPLL_CTL2)] &= ~_REGBIT_WRPLL_ENABLE;
+	mmio_array[REG_INDEX(SPLL_CTL)] &= ~_REGBIT_SPLL_CTL_ENABLE;
+	mmio_array[REG_INDEX(WRPLL_CTL1)] &= ~_REGBIT_WRPLL_ENABLE;
+	mmio_array[REG_INDEX(WRPLL_CTL2)] &= ~_REGBIT_WRPLL_ENABLE;
 }

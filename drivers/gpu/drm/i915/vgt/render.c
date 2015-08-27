@@ -79,9 +79,9 @@ void update_context(struct vgt_device *vgt, uint64_t context)
 
 	UPDATE_FIELD(OFF_CACHE_MODE_0, _REG_CACHE_MODE_0);
 	UPDATE_FIELD(OFF_CACHE_MODE_1, _REG_CACHE_MODE_1);
-	UPDATE_FIELD(OFF_INSTPM, _REG_RCS_INSTPM);
+	UPDATE_FIELD(OFF_INSTPM, INSTPM);
 	UPDATE_FIELD(OFF_EXCC, _REG_RCS_EXCC);
-	UPDATE_FIELD(OFF_MI_MODE, _REG_RCS_MI_MODE);
+	UPDATE_FIELD(OFF_MI_MODE, MI_MODE);
 }
 
 static bool ring_is_empty(struct pgt_device *pdev,
@@ -109,8 +109,8 @@ static bool ring_is_stopped(struct pgt_device *pdev, int id)
 	vgt_reg_t val;
 
 	val = VGT_MMIO_READ(pdev, pdev->ring_mi_mode[id]);
-	if ((val & (_REGBIT_MI_STOP_RINGS | _REGBIT_MI_RINGS_IDLE)) ==
-	    (_REGBIT_MI_STOP_RINGS | _REGBIT_MI_RINGS_IDLE))
+	if ((val & (STOP_RING | MODE_IDLE)) ==
+	    (STOP_RING | MODE_IDLE))
 		return true;
 
 	return false;
@@ -275,7 +275,7 @@ bool idle_rendering_engines(struct pgt_device *pdev, int *id)
 static inline bool stop_ring(struct pgt_device *pdev, int id)
 {
 	VGT_MMIO_WRITE(pdev, pdev->ring_mi_mode[id],
-			_REGBIT_MI_STOP_RINGS | (_REGBIT_MI_STOP_RINGS << 16));
+			STOP_RING | (STOP_RING << 16));
 
 	if (wait_for_atomic(ring_is_stopped(pdev, id), VGT_RING_TIMEOUT)) {
 		vgt_err("Timeout stop ring (%d) for %d ms\n",
@@ -289,7 +289,7 @@ static inline bool stop_ring(struct pgt_device *pdev, int id)
 static inline void start_ring(struct pgt_device *pdev, int id)
 {
 	VGT_MMIO_WRITE(pdev, pdev->ring_mi_mode[id],
-			_REGBIT_MI_STOP_RINGS << 16);
+			STOP_RING << 16);
 	VGT_POST_READ(pdev, pdev->ring_mi_mode[id]);
 }
 
@@ -427,11 +427,11 @@ void vgt_kick_off_execution(struct vgt_device *vgt)
 vgt_reg_t vgt_gen7_render_regs[] = {
 	/* Add IVB register, so they all got pass-through */
 
-	_REG_ARB_MODE,
+	ARB_MODE,
 
-	_REG_BCS_HWS_PGA_GEN7,
-	_REG_RCS_HWS_PGA,
-	_REG_VCS_HWS_PGA,
+	BLT_HWS_PGA_GEN7,
+	RENDER_HWS_PGA_GEN7,
+	BSD_HWS_PGA_GEN7,
 	_REG_VECS_HWS_PGA,
 
 	_REG_BCS_MI_MODE,
@@ -444,7 +444,7 @@ vgt_reg_t vgt_gen7_render_regs[] = {
 	_REG_BVSYNC,
 	_REG_BVESYNC,
 
-	_REG_RCS_GFX_MODE_IVB,
+	GFX_MODE_GEN7,
 	_REG_RCS_HWSTAM,
 	_REG_RCS_UHPTR,
 	_REG_RBSYNC,
@@ -494,23 +494,23 @@ vgt_reg_t vgt_gen7_render_regs[] = {
 	0xb020,
 	0xb024,
 
-	//_REG_UCG_CTL1,
-	//_REG_UCG_CTL2,
-	//_REG_DISPLAY_CHICKEN_BITS_1,
-	//_REG_DSPCLK_GATE_D,
+	//GEN6_UCGCTL1,
+	//GEN6_UCGCTL2,
+	//ILK_DISPLAY_CHICKEN1,
+	//ILK_DSPCLK_GATE_D,
 	//_REG_SUPER_QUEUE_CONFIG,
-	_REG_ECOCHK,
-	//_REG_MISC_CLOCK_GATING,
+	GAM_ECOCHK,
+	//GEN7_MISCCPCTL,
 
 	0x2450,
 	0x20dc,
-	_REG_3D_CHICKEN3,
+	_3D_CHICKEN3,
 	0x2088,
 	0x20e4,
-	_REG_GEN7_COMMON_SLICE_CHICKEN1,
-	_REG_GEN7_L3CNTLREG1,
-	_REG_GEN7_L3_CHICKEN_MODE_REGISTER,
-	_REG_GEN7_SQ_CHICKEN_MBCUNIT_CONFIG,
+	GEN7_COMMON_SLICE_CHICKEN1,
+	GEN7_L3CNTLREG1,
+	GEN7_L3_CHICKEN_MODE_REGISTER,
+	0x9030,
 	0x20a0,
 	0x20e8,
 	0xb038,
@@ -524,8 +524,8 @@ vgt_reg_t vgt_gen8_render_regs[] = {
 	0x1c080,
 	0x22080,
 
-//	_REG_GEN8_PRIVATE_PAT,
-//	_REG_GEN8_PRIVATE_PAT + 4,
+//	GEN8_PRIVATE_PAT,
+//	GEN8_PRIVATE_PAT + 4,
 
 	_REG_BCS_MI_MODE,
 	_REG_BCS_BLT_MODE_IVB,
@@ -975,7 +975,7 @@ static bool gen7_init_null_context(struct pgt_device *pdev, int id)
 		return true;
 
 	/* assume no active usage so far */
-	ccid = VGT_MMIO_READ (pdev, _REG_CCID);
+	ccid = VGT_MMIO_READ (pdev, CCID);
 	ASSERT(ccid == 0);
 	ASSERT(!VGT_READ_TAIL(pdev, id));
 
@@ -1050,11 +1050,11 @@ static bool gen7_init_null_context(struct pgt_device *pdev, int id)
 	vgt_ring_emit(ring, MI_NOOP);
 	vgt_ring_emit(ring, MI_ARB_ON_OFF | MI_ARB_ENABLE);
 	/* make sure no active context after this point */
-	vgt_ring_emit(ring, MI_LOAD_REGISTER_IMM |
+	vgt_ring_emit(ring, MI_LRI_CMD |
 			    MI_LRI_BYTE1_DISABLE |
 			    MI_LRI_BYTE2_DISABLE |
 			    MI_LRI_BYTE3_DISABLE);
-	vgt_ring_emit(ring, _REG_CCID);
+	vgt_ring_emit(ring, CCID);
 	vgt_ring_emit(ring, 0);
 	vgt_ring_emit(ring, PIPE_CONTROL(5));
 	vgt_ring_emit(ring, PIPE_CONTROL_CS_STALL |
@@ -1070,7 +1070,7 @@ static bool gen7_init_null_context(struct pgt_device *pdev, int id)
 		goto err;
 	}
 
-	ccid = VGT_MMIO_READ (pdev, _REG_CCID);
+	ccid = VGT_MMIO_READ (pdev, CCID);
 	if (ccid != 0) {
 		vgt_err("Fail to invalidate CCID after null context init\n");
 		goto err;
@@ -1135,8 +1135,8 @@ static bool gen7_save_hw_context(int id, struct vgt_device *vgt)
 	       CCID_EXTENDED_STATE_SAVE_ENABLE |
 	       CCID_EXTENDED_STATE_RESTORE_ENABLE |
 	       CCID_VALID;
-	vgt_ring_emit(ring, MI_LOAD_REGISTER_IMM);
-	vgt_ring_emit(ring, _REG_CCID);
+	vgt_ring_emit(ring, MI_LRI_CMD);
+	vgt_ring_emit(ring, CCID);
 	vgt_ring_emit(ring, ccid);
 
 	/* pipeline flush */
@@ -1162,9 +1162,9 @@ static bool gen7_save_hw_context(int id, struct vgt_device *vgt)
 		return false;
 	}
 
-	if (VGT_MMIO_READ(pdev, _REG_CCID) != ccid) {
+	if (VGT_MMIO_READ(pdev, CCID) != ccid) {
 		vgt_err("change CCID to XenGT save context: fail [%x, %x]\n",
-			VGT_MMIO_READ(pdev, _REG_CCID), ccid);
+			VGT_MMIO_READ(pdev, CCID), ccid);
 		return false;
 	}
 
@@ -1183,7 +1183,7 @@ static bool gen7_save_hw_context(int id, struct vgt_device *vgt)
 	 * fall back to original style by using guest context directly
 	 */
 	if (vgt->has_context) {
-		rb->active_vm_context = VGT_MMIO_READ(pdev, _REG_CCID);
+		rb->active_vm_context = VGT_MMIO_READ(pdev, CCID);
 		rb->active_vm_context &= 0xfffff000;
 	}
 
@@ -1223,7 +1223,7 @@ static bool gen7_save_hw_context(int id, struct vgt_device *vgt)
 		return false;
 	}
 
-	ccid = VGT_MMIO_READ (pdev, _REG_CCID);
+	ccid = VGT_MMIO_READ (pdev, CCID);
 #if 0
 	new_ccid = ring->null_context;
 #else
@@ -1376,11 +1376,11 @@ static bool gen7_restore_hw_context(int id, struct vgt_device *vgt)
 	 * we don't want to clobber the null context. so invalidate
 	 * the current context before restoring next instance
 	 */
-	vgt_ring_emit(ring, MI_LOAD_REGISTER_IMM |
+	vgt_ring_emit(ring, MI_LRI_CMD |
 			    MI_LRI_BYTE1_DISABLE |
 			    MI_LRI_BYTE2_DISABLE |
 			    MI_LRI_BYTE3_DISABLE);
-	vgt_ring_emit(ring, _REG_CCID);
+	vgt_ring_emit(ring, CCID);
 	vgt_ring_emit(ring, 0);
 
 	/* pipeline flush */
@@ -1406,9 +1406,9 @@ static bool gen7_restore_hw_context(int id, struct vgt_device *vgt)
 		return false;
 	}
 
-	if (VGT_MMIO_READ(pdev, _REG_CCID) != 0) {
+	if (VGT_MMIO_READ(pdev, CCID) != 0) {
 		vgt_err("Invalidate CCID after NULL restore: fail [%x, %x]\n",
-			VGT_MMIO_READ(pdev, _REG_CCID), 0);
+			VGT_MMIO_READ(pdev, CCID), 0);
 		return false;
 	}
 #endif
@@ -1462,8 +1462,8 @@ static bool gen7_restore_hw_context(int id, struct vgt_device *vgt)
 #if 0
 	/* then restore current context to whatever VM expects */
 	vgt_ring_emit(ring, MI_LOAD_REGISTER_IMM);
-	vgt_ring_emit(ring, _REG_CCID);
-	vgt_ring_emit(ring, __vreg(vgt, _REG_CCID));
+	vgt_ring_emit(ring, CCID);
+	vgt_ring_emit(ring, __vreg(vgt, CCID));
 
 	/* pipeline flush */
 	vgt_ring_emit(ring, PIPE_CONTROL(5));
@@ -1488,10 +1488,10 @@ static bool gen7_restore_hw_context(int id, struct vgt_device *vgt)
 		return false;
 	}
 
-	if (VGT_MMIO_READ(pdev, _REG_CCID) != __vreg(vgt, _REG_CCID)) {
+	if (VGT_MMIO_READ(pdev, CCID) != __vreg(vgt, CCID)) {
 		vgt_err("Restore VM CCID: fail [%x, %x]\n",
-			VGT_MMIO_READ(pdev, _REG_CCID),
-			__vreg(vgt, _REG_CCID));
+			VGT_MMIO_READ(pdev, CCID),
+			__vreg(vgt, CCID));
 		return false;
 	}
 #else
@@ -1689,7 +1689,7 @@ static bool gen8_reset_engine(int ring_id,
 		return false;
 	}
 
-	VGT_MMIO_WRITE(pdev, _REG_RCS_IMR, __sreg(vgt_dom0, _REG_RCS_IMR));
+	VGT_MMIO_WRITE(pdev, IMR, __sreg(vgt_dom0, IMR));
 #endif
 	for (count = 0; count < ARRAY_SIZE(gen8_rcs_reset_mmio); count++) {
 		struct reg_mask_t *r = &gen8_rcs_reset_mmio[count];

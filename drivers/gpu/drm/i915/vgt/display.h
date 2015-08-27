@@ -99,7 +99,7 @@ enum vgt_uevent_type;
 #define vgt_has_edp_enabled(vgt, pipe)							\
 		(vgt && ((pipe) >= PIPE_A) && ((pipe) < I915_MAX_PIPES) &&		\
 		(__vreg((vgt), _REG_PIPE_EDP_CONF) & _REGBIT_PIPE_ENABLE) &&		\
-		(pipe == get_edp_input(__vreg(vgt, _REG_TRANS_DDI_FUNC_CTL_EDP))))
+		(pipe == get_edp_input(__vreg(vgt, TRANS_DDI_FUNC_CTL_EDP))))
 #define vgt_has_pipe_enabled(vgt, pipe)				\
 		(vgt && ((pipe) >= PIPE_A) && ((pipe) < I915_MAX_PIPES) &&	\
 		((__vreg((vgt), VGT_PIPECONF(pipe)) & _REGBIT_PIPE_ENABLE) ||	\

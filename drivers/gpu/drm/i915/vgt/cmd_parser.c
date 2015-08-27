@@ -784,7 +784,7 @@ static int cmd_reg_handler(struct parser_exec_state *s,
 	     (!vgt->vm_id && reg_is_config(pdev, offset)) ) {
 		rc = 0;
 	}
-	else if (offset == _REG_DE_RRMR || offset == _REG_MUL_FORCEWAKE){
+	else if (offset == _REG_DE_RRMR || offset == FORCEWAKE_MT) {
 		rc = 0;
 	}/*TODO: for registers like rmrr or other tricky registers, continue using current
 		temporary exception before developing full solution for them.*/
@@ -1490,7 +1490,7 @@ static unsigned int constant_buffer_address_offset_disable(struct parser_exec_st
 	  1 - use as graphics address
 	 */
 
-	return __vreg(s->vgt, _REG_RCS_INSTPM) & INSTPM_CONS_BUF_ADDR_OFFSET_DIS;
+	return __vreg(s->vgt, INSTPM) & INSTPM_CONS_BUF_ADDR_OFFSET_DIS;
 }
 
 static int vgt_cmd_handler_3dstate_constant_hsw(struct parser_exec_state *s)

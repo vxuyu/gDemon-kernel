@@ -736,7 +736,7 @@ bool vgt_initial_mmio_setup (struct pgt_device *pdev)
 	/* GMBUS2 has an in-use bit as the hw semaphore, and we should recover
 	 * it after the snapshot.
 	 */
-	pdev->initial_mmio_state[REG_INDEX(_REG_PCH_GMBUS2)] &= ~0x8000;
+	pdev->initial_mmio_state[REG_INDEX(PCH_GMBUS2)] &= ~0x8000;
 
 	val = (DEFAULT_INV_SR_PTR << _CTXBUF_READ_PTR_SHIFT) | DEFAULT_INV_SR_PTR;
 
@@ -755,13 +755,13 @@ bool vgt_initial_mmio_setup (struct pgt_device *pdev)
 	VGT_MMIO_WRITE(pdev, _REG_VCS2_CTX_STATUS_PTR, val);
 	VGT_MMIO_WRITE(pdev, _REG_BCS_CTX_STATUS_PTR, val);
 
-	VGT_MMIO_WRITE(pdev, _REG_PCH_GMBUS2,
-			VGT_MMIO_READ(pdev, _REG_PCH_GMBUS2) | 0x8000);
+	VGT_MMIO_WRITE(pdev, PCH_GMBUS2,
+			VGT_MMIO_READ(pdev, PCH_GMBUS2) | 0x8000);
 
 	vgt_dpy_init_modes(pdev->initial_mmio_state);
 
-	pdev->initial_mmio_state[REG_INDEX(_REG_WRPLL_CTL1)] &= ~(1 << 31);
-	pdev->initial_mmio_state[REG_INDEX(_REG_WRPLL_CTL2)] &= ~(1 << 31);
+	pdev->initial_mmio_state[REG_INDEX(WRPLL_CTL1)] &= ~(1 << 31);
+	pdev->initial_mmio_state[REG_INDEX(WRPLL_CTL2)] &= ~(1 << 31);
 
 	return true;
 }
@@ -798,7 +798,7 @@ void state_vreg_init(struct vgt_device *vgt)
 		 * Clear _REGBIT_FPGA_DBG_RM_NOCLAIM for not causing DOM0
 		 * or Ubuntu HVM complains about unclaimed MMIO registers.
 		 */
-		__vreg(vgt, _REG_FPGA_DBG) &= ~_REGBIT_FPGA_DBG_RM_NOCLAIM;
+		__vreg(vgt, FPGA_DBG) &= ~_REGBIT_FPGA_DBG_RM_NOCLAIM;
 	}
 }
 

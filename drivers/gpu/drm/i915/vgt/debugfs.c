@@ -493,17 +493,17 @@ static void vgt_dump_dpy_mmio(struct seq_file *m, struct pgt_device *pdev,
 
 	seq_printf(m, "----General CTL:\n");
 
-	reg = _REG_CPU_VGACNTRL;
+	reg = CPU_VGACNTRL;
 	val = vgt_get_mmio_value(pdev, vgt, reg);
 	enabled = !(val & _REGBIT_VGA_DISPLAY_DISABLE);
 	seq_printf(m,"\tVGA_CONTROL(0x%x):0x%08x (VGA Mode %s)\n",
 		reg, val, (enabled ? "enabled" : "disabled"));
 
-	reg = _REG_HSW_FUSE_STRAP;
+	reg = FUSE_STRAP;
 	val = vgt_get_mmio_value(pdev, vgt, reg);
 	seq_printf(m,"\tFUSE_STRAP(0x%x):0x%08x(RO)\n", reg, val);
 
-	reg = _REG_SHOTPLUG_CTL;
+	reg = PCH_PORT_HOTPLUG;
 	val = vgt_get_mmio_value(pdev, vgt, reg);
 	seq_printf(m,"\tSHOTPLUG_CTL(0x%x):0x%08x\n", reg, val);
 
@@ -615,7 +615,7 @@ static void vgt_dump_dpy_mmio(struct seq_file *m, struct pgt_device *pdev,
 			reg, val, (val & 0xfff) + 1);
 	}
 
-	reg = _REG_TRANS_DDI_FUNC_CTL_EDP;
+	reg = TRANS_DDI_FUNC_CTL_EDP;
 	val = vgt_get_mmio_value(pdev, vgt, reg);
 	enabled = !!(val & _REGBIT_TRANS_DDI_FUNC_ENABLE);
 	seq_printf(m, "\tTRANS_DDI_FUNC_CTL_EDP(0x%x): 0x%08x (%s)\n",
@@ -652,7 +652,7 @@ static void vgt_dump_dpy_mmio(struct seq_file *m, struct pgt_device *pdev,
 			VGT_PORT_NAME(port));
 
 		if (port == PORT_E) {
-			reg = _REG_PCH_ADPA;
+			reg = PCH_ADPA;
 			val = vgt_get_mmio_value(pdev, vgt, reg);
 			enabled = !!(val & _REGBIT_ADPA_DAC_ENABLE);
 			seq_printf(m, "\tDAC_CTL(0x%x): 0x%08x (%s)\n",
@@ -663,7 +663,7 @@ static void vgt_dump_dpy_mmio(struct seq_file *m, struct pgt_device *pdev,
 				seq_printf(m, "\t\t Transcoder %c selected.\n",
 					VGT_PIPE_CHAR(pipe));
 			}
-			reg = _REG_TRANSACONF;
+			reg = _PCH_TRANSACONF;
 			val = vgt_get_mmio_value(pdev, vgt, reg);
 			enabled = !!(val & _REGBIT_TRANS_ENABLE);
 			seq_printf(m, "\tPCH TRANS_CONF(0x%x): 0x%08x (%s)\n",

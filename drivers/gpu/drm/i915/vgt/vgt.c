@@ -623,7 +623,7 @@ static bool vgt_initialize_platform(struct pgt_device *pdev)
 	pdev->ring_mmio_base[RING_BUFFER_VCS] = _REG_VCS_TAIL;
 	pdev->ring_mmio_base[RING_BUFFER_BCS] = _REG_BCS_TAIL;
 
-	pdev->ring_mi_mode[RING_BUFFER_RCS] = _REG_RCS_MI_MODE;
+	pdev->ring_mi_mode[RING_BUFFER_RCS] = MI_MODE;
 	pdev->ring_mi_mode[RING_BUFFER_VCS] = _REG_VCS_MI_MODE;
 	pdev->ring_mi_mode[RING_BUFFER_BCS] = _REG_BCS_MI_MODE;
 
@@ -937,7 +937,7 @@ int vgt_suspend(struct pci_dev *pdev)
 	/* ... */
 
 	pgt->saved_rrmr = VGT_MMIO_READ(pgt, _REG_DE_RRMR);
-	pgt->saved_shotplug_ctl = VGT_MMIO_READ(pgt, _REG_SHOTPLUG_CTL);
+	pgt->saved_shotplug_ctl = VGT_MMIO_READ(pgt, PCH_PORT_HOTPLUG);
 
 	/* save GTT and FENCE information */
 	vgt_save_gtt_and_fence(pgt);
@@ -978,7 +978,7 @@ int vgt_resume(struct pci_dev *pdev)
 	vgt_restore_gtt_and_fence(pgt);
 
 	VGT_MMIO_WRITE(pgt, _REG_DE_RRMR, pgt->saved_rrmr);
-	VGT_MMIO_WRITE(pgt, _REG_SHOTPLUG_CTL, pgt->saved_shotplug_ctl);
+	VGT_MMIO_WRITE(pgt, PCH_PORT_HOTPLUG, pgt->saved_shotplug_ctl);
 
 	/* redo the MMIO snapshot */
 	vgt_initial_mmio_setup(pgt);
@@ -997,21 +997,21 @@ int vgt_resume(struct pci_dev *pdev)
 
 	spin_lock(&pgt->lock);
 
-	recalculate_and_update_imr(pgt, _REG_DEIMR);
-	recalculate_and_update_imr(pgt, _REG_GTIMR);
-	recalculate_and_update_imr(pgt, _REG_PMIMR);
-	recalculate_and_update_imr(pgt, _REG_SDEIMR);
+	recalculate_and_update_imr(pgt, DEIMR);
+	recalculate_and_update_imr(pgt, GTIMR);
+	recalculate_and_update_imr(pgt, GEN6_PMIMR);
+	recalculate_and_update_imr(pgt, SDEIMR);
 
-	recalculate_and_update_imr(pgt, _REG_RCS_IMR);
+	recalculate_and_update_imr(pgt, IMR);
 	recalculate_and_update_imr(pgt, _REG_BCS_IMR);
 	recalculate_and_update_imr(pgt, _REG_VCS_IMR);
 
 	if (IS_HSW(pgt))
 		recalculate_and_update_imr(pgt, _REG_VECS_IMR);
 
-	recalculate_and_update_ier(pgt, _REG_GTIER);
-	recalculate_and_update_ier(pgt, _REG_PMIER);
-	recalculate_and_update_ier(pgt, _REG_SDEIER);
+	recalculate_and_update_ier(pgt, GTIER);
+	recalculate_and_update_ier(pgt, GEN6_PMIER);
+	recalculate_and_update_ier(pgt, SDEIER);
 
 	if (pgt->enable_execlist) {
 		enum vgt_ring_id ring_id;
@@ -1081,10 +1081,10 @@ static void do_device_reset(struct pgt_device *pdev)
 					i, head, tail, start, ctl);
 		}
 
-		ier = VGT_MMIO_READ(pdev, _REG_DEIER);
-		iir = VGT_MMIO_READ(pdev, _REG_DEIIR);
-		imr = VGT_MMIO_READ(pdev, _REG_DEIMR);
-		isr = VGT_MMIO_READ(pdev, _REG_DEISR);
+		ier = VGT_MMIO_READ(pdev, DEIER);
+		iir = VGT_MMIO_READ(pdev, DEIIR);
+		imr = VGT_MMIO_READ(pdev, DEIMR);
+		isr = VGT_MMIO_READ(pdev, DEISR);
 
 		vgt_info("DE: ier: %x iir: %x imr: %x isr: %x.\n",
 				ier, iir, imr, isr);
@@ -1139,7 +1139,7 @@ int vgt_reset_device(struct pgt_device *pdev)
 	struct vgt_irq_host_state *hstate = pdev->irq_hstate;
 	struct vgt_device *vgt;
 	struct list_head *pos, *n;
-	unsigned long ier_reg = IS_PREBDW(pdev) ? _REG_DEIER : _REG_MASTER_IRQ;
+	unsigned long ier_reg = IS_PREBDW(pdev) ? DEIER : GEN8_MASTER_IRQ;
 	unsigned long ier_value;
 	unsigned long flags;
 	int i;

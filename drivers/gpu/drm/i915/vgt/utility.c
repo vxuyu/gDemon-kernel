@@ -173,34 +173,34 @@ void show_mode_settings(struct pgt_device *pdev)
 		printk("vGT: "#reg"(%x): p(%x), 0(%x), 1(%x)\n",	\
 			reg, val, __sreg(vgt_dom0, reg), vgt1 ? __sreg(vgt1, reg) : 0);	\
 	} while (0);
-	SHOW_MODE(_REG_RCS_MI_MODE);
+	SHOW_MODE(MI_MODE);
 	SHOW_MODE(_REG_VCS_MI_MODE);
 	SHOW_MODE(_REG_BCS_MI_MODE);
 
 	if (IS_IVB(pdev) || IS_HSW(pdev)) {
-		SHOW_MODE(_REG_RCS_GFX_MODE_IVB);
+		SHOW_MODE(GFX_MODE_GEN7);
 		SHOW_MODE(_REG_BCS_BLT_MODE_IVB);
 		SHOW_MODE(_REG_VCS_MFX_MODE_IVB);
-		SHOW_MODE(_REG_CACHE_MODE_0_IVB);
-		SHOW_MODE(_REG_CACHE_MODE_1_IVB);
-		SHOW_MODE(_REG_GT_MODE_IVB);
+		SHOW_MODE(CACHE_MODE_0_GEN7);
+		SHOW_MODE(CACHE_MODE_1);
+		SHOW_MODE(GEN7_GT_MODE);
 	} else if (IS_BDWGT3(pdev)) {
 		SHOW_MODE(_REG_VCS2_MI_MODE);
 		SHOW_MODE(_REG_VCS2_MFX_MODE_BDW);
 		SHOW_MODE(_REG_VCS2_INSTPM);
 	} else if (IS_SNB(pdev)) {
-		SHOW_MODE(_REG_GFX_MODE);
-		SHOW_MODE(_REG_ARB_MODE);
-		SHOW_MODE(_REG_GT_MODE);
+		SHOW_MODE(GFX_MODE);
+		SHOW_MODE(ARB_MODE);
+		SHOW_MODE(GEN6_GT_MODE);
 		SHOW_MODE(_REG_CACHE_MODE_0);
 		SHOW_MODE(_REG_CACHE_MODE_1);
 	}
 
-	SHOW_MODE(_REG_RCS_INSTPM);
+	SHOW_MODE(INSTPM);
 	SHOW_MODE(_REG_VCS_INSTPM);
 	SHOW_MODE(_REG_BCS_INSTPM);
 
-	SHOW_MODE(_REG_TILECTL);
+	SHOW_MODE(TILECTL);
 }
 
 static void show_batchbuffer(struct pgt_device *pdev, int ring_id, u64 addr,
@@ -268,7 +268,7 @@ void common_show_ring_buffer(struct pgt_device *pdev, int ring_id, int bytes,
 			"ctl(0x%x)\n", ring_id, p_head, p_tail, p_start, p_ctl);
 	printk("ring xxx:(%d), mi_mode idle:(%d)\n",
 		VGT_MMIO_READ(pdev, pdev->ring_xxx[ring_id]) & (1 << pdev->ring_xxx_bit[ring_id]),
-		VGT_MMIO_READ(pdev, pdev->ring_mi_mode[ring_id]) & _REGBIT_MI_RINGS_IDLE);
+		VGT_MMIO_READ(pdev, pdev->ring_mi_mode[ring_id]) & MODE_IDLE);
 
 	if (!(p_ctl & _RING_CTL_ENABLE)) {
 		printk("<NO CONTENT>\n");
@@ -428,38 +428,38 @@ void show_interrupt_regs(struct pgt_device *pdev,
 
 	if (IS_PREBDW(pdev)) {
 		P("vGT: DEISR is %x, DEIIR is %x, DEIMR is %x, DEIER is %x\n",
-				VGT_MMIO_READ(pdev, _REG_DEISR),
-				VGT_MMIO_READ(pdev, _REG_DEIIR),
-				VGT_MMIO_READ(pdev, _REG_DEIMR),
-				VGT_MMIO_READ(pdev, _REG_DEIER));
+				VGT_MMIO_READ(pdev, DEISR),
+				VGT_MMIO_READ(pdev, DEIIR),
+				VGT_MMIO_READ(pdev, DEIMR),
+				VGT_MMIO_READ(pdev, DEIER));
 		P("vGT: GTISR is %x, GTIIR is %x, GTIMR is %x, GTIER is %x\n",
-				VGT_MMIO_READ(pdev, _REG_GTISR),
-				VGT_MMIO_READ(pdev, _REG_GTIIR),
-				VGT_MMIO_READ(pdev, _REG_GTIMR),
-				VGT_MMIO_READ(pdev, _REG_GTIER));
+				VGT_MMIO_READ(pdev, GTISR),
+				VGT_MMIO_READ(pdev, GTIIR),
+				VGT_MMIO_READ(pdev, GTIMR),
+				VGT_MMIO_READ(pdev, GTIER));
 		P("vGT: PMISR is %x, PMIIR is %x, PMIMR is %x, PMIER is %x\n",
-				VGT_MMIO_READ(pdev, _REG_PMISR),
-				VGT_MMIO_READ(pdev, _REG_PMIIR),
-				VGT_MMIO_READ(pdev, _REG_PMIMR),
-				VGT_MMIO_READ(pdev, _REG_PMIER));
+				VGT_MMIO_READ(pdev, GEN6_PMISR),
+				VGT_MMIO_READ(pdev, GEN6_PMIIR),
+				VGT_MMIO_READ(pdev, GEN6_PMIMR),
+				VGT_MMIO_READ(pdev, GEN6_PMIER));
 	} else {
 		P("vGT: MASTER_IRQ: %x\n",
-			VGT_MMIO_READ(pdev, _REG_MASTER_IRQ));
+			VGT_MMIO_READ(pdev, GEN8_MASTER_IRQ));
 
 #define P_GROUP_WHICH(group, w) do {\
 		P("vGT: "#group"|"#w" ISR: %x IIR: %x IMR: %x IER: %x\n", \
-			VGT_MMIO_READ(pdev, _REG_##group##_ISR(w)), \
-			VGT_MMIO_READ(pdev, _REG_##group##_IIR(w)), \
-			VGT_MMIO_READ(pdev, _REG_##group##_IMR(w)), \
-			VGT_MMIO_READ(pdev, _REG_##group##_IER(w))); \
+			VGT_MMIO_READ(pdev, GEN8_##group##_ISR(w)), \
+			VGT_MMIO_READ(pdev, GEN8_##group##_IIR(w)), \
+			VGT_MMIO_READ(pdev, GEN8_##group##_IMR(w)), \
+			VGT_MMIO_READ(pdev, GEN8_##group##_IER(w))); \
 	}while(0)
 
 #define P_GROUP(group) do {\
 		P("vGT: "#group" ISR: %x IIR: %x IMR: %x IER: %x\n", \
-			VGT_MMIO_READ(pdev, _REG_##group##_ISR), \
-			VGT_MMIO_READ(pdev, _REG_##group##_IIR), \
-			VGT_MMIO_READ(pdev, _REG_##group##_IMR), \
-			VGT_MMIO_READ(pdev, _REG_##group##_IER)); \
+			VGT_MMIO_READ(pdev, GEN8_##group##_ISR), \
+			VGT_MMIO_READ(pdev, GEN8_##group##_IIR), \
+			VGT_MMIO_READ(pdev, GEN8_##group##_IMR), \
+			VGT_MMIO_READ(pdev, GEN8_##group##_IER)); \
 	}while(0)
 
 		P_GROUP_WHICH(DE_PIPE, PIPE_A);
@@ -477,13 +477,13 @@ void show_interrupt_regs(struct pgt_device *pdev,
 	}
 
 	P("vGT: SDEISR is %x, SDEIIR is %x, SDEIMR is %x, SDEIER is %x\n",
-			VGT_MMIO_READ(pdev, _REG_SDEISR),
-			VGT_MMIO_READ(pdev, _REG_SDEIIR),
-			VGT_MMIO_READ(pdev, _REG_SDEIMR),
-			VGT_MMIO_READ(pdev, _REG_SDEIER));
+			VGT_MMIO_READ(pdev, SDEISR),
+			VGT_MMIO_READ(pdev, SDEIIR),
+			VGT_MMIO_READ(pdev, SDEIMR),
+			VGT_MMIO_READ(pdev, SDEIER));
 
 	P("vGT: RCS_IMR is %x, VCS_IMR is %x, BCS_IMR is %x\n",
-			VGT_MMIO_READ(pdev, _REG_RCS_IMR),
+			VGT_MMIO_READ(pdev, IMR),
 			VGT_MMIO_READ(pdev, _REG_VCS_IMR),
 			VGT_MMIO_READ(pdev, _REG_BCS_IMR));
 	return;
@@ -505,38 +505,38 @@ void show_virtual_interrupt_regs(struct vgt_device *vgt,
 
 	if (IS_PREBDW(vgt->pdev)) {
 		P("....vreg (deier: %x, deiir: %x, deimr: %x, deisr: %x)\n",
-				__vreg(vgt, _REG_DEIER),
-				__vreg(vgt, _REG_DEIIR),
-				__vreg(vgt, _REG_DEIMR),
-				__vreg(vgt, _REG_DEISR));
+				__vreg(vgt, DEIER),
+				__vreg(vgt, DEIIR),
+				__vreg(vgt, DEIMR),
+				__vreg(vgt, DEISR));
 		P("....vreg (gtier: %x, gtiir: %x, gtimr: %x, gtisr: %x)\n",
-				__vreg(vgt, _REG_GTIER),
-				__vreg(vgt, _REG_GTIIR),
-				__vreg(vgt, _REG_GTIMR),
-				__vreg(vgt, _REG_GTISR));
+				__vreg(vgt, GTIER),
+				__vreg(vgt, GTIIR),
+				__vreg(vgt, GTIMR),
+				__vreg(vgt, GTISR));
 		P("....vreg (pmier: %x, pmiir: %x, pmimr: %x, pmisr: %x)\n",
-				__vreg(vgt, _REG_PMIER),
-				__vreg(vgt, _REG_PMIIR),
-				__vreg(vgt, _REG_PMIMR),
-				__vreg(vgt, _REG_PMISR));
+				__vreg(vgt, GEN6_PMIER),
+				__vreg(vgt, GEN6_PMIIR),
+				__vreg(vgt, GEN6_PMIMR),
+				__vreg(vgt, GEN6_PMISR));
 	} else {
 		P("....vreg: MASTER_IRQ: %x\n",
-				__vreg(vgt, _REG_MASTER_IRQ));
+				__vreg(vgt, GEN8_MASTER_IRQ));
 
 #define P_GROUP_WHICH(group, w) do {\
 		P("....vreg "#group"|"#w" ISR: %x IIR: %x IMR: %x IER: %x\n", \
-			__vreg(vgt, _REG_##group##_ISR(w)), \
-			__vreg(vgt, _REG_##group##_IIR(w)), \
-			__vreg(vgt, _REG_##group##_IMR(w)), \
-			__vreg(vgt, _REG_##group##_IER(w))); \
+			__vreg(vgt, GEN8_##group##_ISR(w)), \
+			__vreg(vgt, GEN8_##group##_IIR(w)), \
+			__vreg(vgt, GEN8_##group##_IMR(w)), \
+			__vreg(vgt, GEN8_##group##_IER(w))); \
 	}while(0)
 
 #define P_GROUP(group) do {\
 		P("....vreg "#group" ISR: %x IIR: %x IMR: %x IER: %x\n", \
-			__vreg(vgt, _REG_##group##_ISR), \
-			__vreg(vgt, _REG_##group##_IIR), \
-			__vreg(vgt, _REG_##group##_IMR), \
-			__vreg(vgt, _REG_##group##_IER)); \
+			__vreg(vgt, GEN8_##group##_ISR), \
+			__vreg(vgt, GEN8_##group##_IIR), \
+			__vreg(vgt, GEN8_##group##_IMR), \
+			__vreg(vgt, GEN8_##group##_IER)); \
 	}while(0)
 
 		P_GROUP_WHICH(DE_PIPE, PIPE_A);
@@ -554,13 +554,13 @@ void show_virtual_interrupt_regs(struct vgt_device *vgt,
 	}
 
 	P("....vreg (sdeier: %x, sdeiir: %x, sdeimr: %x, sdeisr: %x)\n",
-			__vreg(vgt, _REG_SDEIER),
-			__vreg(vgt, _REG_SDEIIR),
-			__vreg(vgt, _REG_SDEIMR),
-			__vreg(vgt, _REG_SDEISR));
+			__vreg(vgt, SDEIER),
+			__vreg(vgt, SDEIIR),
+			__vreg(vgt, SDEIMR),
+			__vreg(vgt, SDEISR));
 
 	P("....vreg (rcs_imr: %x, vcs_imr: %x, bcs_imr: %x\n",
-			__vreg(vgt, _REG_RCS_IMR),
+			__vreg(vgt, IMR),
 			__vreg(vgt, _REG_VCS_IMR),
 			__vreg(vgt, _REG_BCS_IMR));
 

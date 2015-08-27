@@ -236,7 +236,7 @@ static u32 gen6_translate_pipe_interrupt(struct vgt_device *vgt, unsigned int re
 	u32 mapped_interrupt = interrupt;
 	u32 temp;
 
-	if (_REG_DEIMR == reg) {
+	if (DEIMR == reg) {
 		mapped_interrupt |= irq_hstate->pipe_mask;
 		mapped_interrupt |= (irq_hstate->pipe_mask << 5);
 		mapped_interrupt |= (irq_hstate->pipe_mask << 10);
@@ -254,7 +254,7 @@ static u32 gen6_translate_pipe_interrupt(struct vgt_device *vgt, unsigned int re
 			temp &= irq_hstate->pipe_mask;
 			mapped_interrupt |= temp << (vgt->pipe_mapping[i] * 5);
 		}
-	} else if (_REG_DEIER == reg) {
+	} else if (DEIER == reg) {
 		mapped_interrupt &= ~irq_hstate->pipe_mask;
 		mapped_interrupt &= ~(irq_hstate->pipe_mask<<5);
 		mapped_interrupt &= ~(irq_hstate->pipe_mask<<10);
@@ -370,32 +370,32 @@ static enum vgt_irq_type irq_reg_to_info(struct pgt_device *pdev, vgt_reg_t reg)
 	enum vgt_irq_type irq_type;
 
 	switch (reg) {
-	case _REG_GTIMR:
-	case _REG_GTIIR:
-	case _REG_GTIER:
-	case _REG_GTISR:
-	case _REG_RCS_IMR:
+	case GTIMR:
+	case GTIIR:
+	case GTIER:
+	case GTISR:
+	case IMR:
 	case _REG_BCS_IMR:
 	case _REG_VCS_IMR:
 	case _REG_VECS_IMR:
 		irq_type = IRQ_INFO_GT;
 		break;
-	case _REG_DEIMR:
-	case _REG_DEIIR:
-	case _REG_DEIER:
-	case _REG_DEISR:
+	case DEIMR:
+	case DEIIR:
+	case DEIER:
+	case DEISR:
 		irq_type = IRQ_INFO_DPY;
 		break;
-	case _REG_SDEIMR:
-	case _REG_SDEIIR:
-	case _REG_SDEIER:
-	case _REG_SDEISR:
+	case SDEIMR:
+	case SDEIIR:
+	case SDEIER:
+	case SDEISR:
 		irq_type = IRQ_INFO_PCH;
 		break;
-	case _REG_PMIMR:
-	case _REG_PMIIR:
-	case _REG_PMIER:
-	case _REG_PMISR:
+	case GEN6_PMIMR:
+	case GEN6_PMIIR:
+	case GEN6_PMIER:
+	case GEN6_PMISR:
 		irq_type = IRQ_INFO_PM;
 		break;
 	default:
@@ -455,7 +455,7 @@ bool vgt_reg_imr_handler(struct vgt_device *vgt,
 
 	/* figure out newly masked/unmasked bits */
 	changed = __vreg(vgt, reg) ^ imr;
-	if (reg == _REG_DEIMR)
+	if (reg == DEIMR)
 		changed &= ~_REGBIT_MASTER_INTERRUPT;
 	masked = (__vreg(vgt, reg) & changed) ^ changed;
 	unmasked = masked ^ changed;
@@ -493,10 +493,10 @@ void recalculate_and_update_ier(struct pgt_device *pdev, vgt_reg_t reg)
 
 	if (device_is_reseting(pdev)) {
 		if (IS_BDWPLUS(pdev)) {
-			if (reg == _REG_MASTER_IRQ)
+			if (reg == GEN8_MASTER_IRQ)
 				new_ier &= ~_REGBIT_MASTER_IRQ_CONTROL;
 		} else {
-			if (reg == _REG_DEIER)
+			if (reg == DEIER)
 				new_ier &= ~_REGBIT_MASTER_INTERRUPT;
 		}
 	}
@@ -527,7 +527,7 @@ bool vgt_reg_master_irq_handler(struct vgt_device *vgt,
 	}
 
 	/*
-	 * _REG_MASTER_IRQ is a special irq register,
+	 * GEN8_MASTER_IRQ is a special irq register,
 	 * only bit 31 is allowed to be modified
 	 * and treated as an IER bit.
 	 */
@@ -626,8 +626,8 @@ bool vgt_reg_isr_read(struct vgt_device *vgt, unsigned int reg,
 	void *p_data, unsigned int bytes)
 {
 	vgt_reg_t isr_value;
-	if (is_current_display_owner(vgt) && reg == _REG_SDEISR) {
-		isr_value = VGT_MMIO_READ(vgt->pdev, _REG_SDEISR);
+	if (is_current_display_owner(vgt) && reg == SDEISR) {
+		isr_value = VGT_MMIO_READ(vgt->pdev, SDEISR);
 		memcpy(p_data, (char *)&isr_value, bytes);
 		return true;
 	} else {
@@ -665,13 +665,13 @@ static bool process_irq(struct vgt_irq_host_state *hstate,
 
 	vgt_handle_events(hstate, &val, info);
 
-	if (reg != _REG_SDEIIR) {
+	if (reg != SDEIIR) {
 		if (info->group != IRQ_INFO_MASTER)
 			VGT_MMIO_WRITE(pdev, reg, val);
 	} else {
 		while((count < IIR_WRITE_MAX) && (val != 0)) {
-			VGT_MMIO_WRITE(pdev, _REG_SDEIIR, val);
-			val = VGT_MMIO_READ(pdev, _REG_SDEIIR);
+			VGT_MMIO_WRITE(pdev, SDEIIR, val);
+			val = VGT_MMIO_READ(pdev, SDEIIR);
 			count ++;
 		}
 	}
@@ -1022,7 +1022,7 @@ static void vgt_handle_ring_empty_notify_virt(struct vgt_irq_host_state *hstate,
 static void vgt_handle_phase_in_virt(struct vgt_irq_host_state *hstate,
 	enum vgt_event_type event, struct vgt_device *vgt)
 {
-	__vreg(vgt, _REG_BLC_PWM_CTL2) |= _REGBIT_PHASE_IN_IRQ_STATUS;
+	__vreg(vgt, BLC_PWM_CPU_CTL2) |= _REGBIT_PHASE_IN_IRQ_STATUS;
 	vgt_handle_default_event_virt(hstate, event, vgt);
 }
 
@@ -1037,13 +1037,13 @@ static void vgt_handle_crt_hotplug_virt(struct vgt_irq_host_state *hstate,
 	enum vgt_event_type event, struct vgt_device *vgt)
 {
 	/* update channel status */
-	if (__vreg(vgt, _REG_PCH_ADPA) & _REGBIT_ADPA_CRT_HOTPLUG_ENABLE) {
+	if (__vreg(vgt, PCH_ADPA) & _REGBIT_ADPA_CRT_HOTPLUG_ENABLE) {
 
 		if (!is_current_display_owner(vgt)) {
-			__vreg(vgt, _REG_PCH_ADPA) &=
+			__vreg(vgt, PCH_ADPA) &=
 				~_REGBIT_ADPA_CRT_HOTPLUG_MONITOR_MASK;
 			if (dpy_has_monitor_on_port(vgt, PORT_E))
-				__vreg(vgt, _REG_PCH_ADPA) |=
+				__vreg(vgt, PCH_ADPA) |=
 					_REGBIT_ADPA_CRT_HOTPLUG_MONITOR_MASK;
 		}
 
@@ -1068,14 +1068,14 @@ static void vgt_handle_port_hotplug_virt(struct vgt_irq_host_state *hstate,
 		status_mask = _REGBIT_DP_D_STATUS;
 	}
 
-	if (__vreg(vgt, _REG_SHOTPLUG_CTL) & enable_mask) {
+	if (__vreg(vgt, PCH_PORT_HOTPLUG) & enable_mask) {
 
-		__vreg(vgt, _REG_SHOTPLUG_CTL) &= ~status_mask;
+		__vreg(vgt, PCH_PORT_HOTPLUG) &= ~status_mask;
 		if (is_current_display_owner(vgt)) {
-			__vreg(vgt, _REG_SHOTPLUG_CTL) |=
+			__vreg(vgt, PCH_PORT_HOTPLUG) |=
 				vgt_get_event_val(hstate, event) & status_mask;
 		} else {
-			__vreg(vgt, _REG_SHOTPLUG_CTL) |= status_mask;
+			__vreg(vgt, PCH_PORT_HOTPLUG) |= status_mask;
 		}
 
 		vgt_handle_default_event_virt(hstate, event, vgt);
@@ -1213,9 +1213,9 @@ static void vgt_handle_phase_in_phys(struct vgt_irq_host_state *hstate,
 	uint32_t val;
 	struct pgt_device *pdev = hstate->pdev;
 
-	val = VGT_MMIO_READ(pdev, _REG_BLC_PWM_CTL2);
+	val = VGT_MMIO_READ(pdev, BLC_PWM_CPU_CTL2);
 	val &= ~_REGBIT_PHASE_IN_IRQ_STATUS;
-	VGT_MMIO_WRITE(pdev, _REG_BLC_PWM_CTL2, val);
+	VGT_MMIO_WRITE(pdev, BLC_PWM_CPU_CTL2, val);
 
 	vgt_handle_default_event_phys(hstate, event);
 }
@@ -1245,7 +1245,7 @@ static void vgt_handle_crt_hotplug_phys(struct vgt_irq_host_state *hstate,
 	vgt_reg_t adpa_ctrl;
 	struct pgt_device *pdev = hstate->pdev;
 
-	adpa_ctrl = VGT_MMIO_READ(pdev, _REG_PCH_ADPA);
+	adpa_ctrl = VGT_MMIO_READ(pdev, PCH_ADPA);
 	if (!(adpa_ctrl & _REGBIT_ADPA_DAC_ENABLE)) {
 		vgt_warn("IRQ: captured CRT hotplug event when CRT is disabled\n");
 	}
@@ -1295,7 +1295,7 @@ static void vgt_handle_port_hotplug_phys(struct vgt_irq_host_state *hstate,
 		detect_event = VGT_DETECT_PORT_D;
 	}
 
-	hotplug_ctrl = VGT_MMIO_READ(pdev, _REG_SHOTPLUG_CTL);
+	hotplug_ctrl = VGT_MMIO_READ(pdev, PCH_PORT_HOTPLUG);
 
 	if (!(hotplug_ctrl & enable_mask)) {
 		vgt_warn("IRQ: captured port hotplug event when HPD is disabled\n");
@@ -1306,7 +1306,7 @@ static void vgt_handle_port_hotplug_phys(struct vgt_irq_host_state *hstate,
 				_REGBIT_DP_D_STATUS);
 	tmp |= hotplug_ctrl & status_mask;
 	/* write back value to clear specific port status */
-	VGT_MMIO_WRITE(pdev, _REG_SHOTPLUG_CTL, tmp);
+	VGT_MMIO_WRITE(pdev, PCH_PORT_HOTPLUG, tmp);
 
 	if (hotplug_ctrl & status_mask) {
 		vgt_info("IRQ: detect monitor insert event on port!\n");
@@ -1349,7 +1349,7 @@ static void vgt_base_check_pending_irq(struct vgt_device *vgt)
 	struct vgt_irq_host_state *hstate = vgt->pdev->irq_hstate;
 	struct vgt_irq_info *info = hstate->info[IRQ_INFO_PCH];
 
-	if (!(__vreg(vgt, _REG_DEIER) & _REGBIT_MASTER_INTERRUPT))
+	if (!(__vreg(vgt, DEIER) & _REGBIT_MASTER_INTERRUPT))
 		return;
 
 	if ((__vreg(vgt, regbase_to_iir(info->reg_base))
@@ -1357,9 +1357,9 @@ static void vgt_base_check_pending_irq(struct vgt_device *vgt)
 		update_upstream_irq(vgt, info);
 
 	/* then check 1st level pending events */
-	if ((__vreg(vgt, _REG_DEIIR) & __vreg(vgt, _REG_DEIER)) ||
-	    (__vreg(vgt, _REG_GTIIR) & __vreg(vgt, _REG_GTIER)) ||
-	    (__vreg(vgt, _REG_PMIIR) & __vreg(vgt, _REG_PMIER))) {
+	if ((__vreg(vgt, DEIIR) & __vreg(vgt, DEIER)) ||
+	    (__vreg(vgt, GTIIR) & __vreg(vgt, GTIER)) ||
+	    (__vreg(vgt, GEN6_PMIIR) & __vreg(vgt, GEN6_PMIER))) {
 		vgt_inject_virtual_interrupt(vgt);
 	}
 }
@@ -1371,10 +1371,10 @@ static irqreturn_t vgt_base_irq_handler(struct vgt_irq_host_state *hstate)
 	bool rc = false;
 
 	vgt_dbg(VGT_DBG_IRQ, "IRQ: receive interrupt (de-%x, gt-%x, pch-%x, pm-%x)\n",
-			VGT_MMIO_READ(pdev, _REG_DEIIR),
-			VGT_MMIO_READ(pdev, _REG_GTIIR),
-			VGT_MMIO_READ(pdev, _REG_SDEIIR),
-			VGT_MMIO_READ(pdev, _REG_PMIIR));
+			VGT_MMIO_READ(pdev, DEIIR),
+			VGT_MMIO_READ(pdev, GTIIR),
+			VGT_MMIO_READ(pdev, SDEIIR),
+			VGT_MMIO_READ(pdev, GEN6_PMIIR));
 
 	rc |= process_irq(hstate, hstate->info[IRQ_INFO_GT]);
 	rc |= process_irq(hstate, hstate->info[IRQ_INFO_DPY]);
@@ -1386,25 +1386,25 @@ static irqreturn_t vgt_base_irq_handler(struct vgt_irq_host_state *hstate)
 /* SNB/IVB/HSW share the similar interrupt register scheme */
 static struct vgt_irq_info vgt_base_gt_info = {
 	.name = "GT-IRQ",
-	.reg_base = _REG_GTISR,
+	.reg_base = GTISR,
 	.bit_to_event = {[0 ... VGT_IRQ_BITWIDTH-1] = EVENT_RESERVED},
 };
 
 static struct vgt_irq_info vgt_base_dpy_info = {
 	.name = "DPY-IRQ",
-	.reg_base = _REG_DEISR,
+	.reg_base = DEISR,
 	.bit_to_event = {[0 ... VGT_IRQ_BITWIDTH-1] = EVENT_RESERVED},
 };
 
 static struct vgt_irq_info vgt_base_pch_info = {
 	.name = "PCH-IRQ",
-	.reg_base = _REG_SDEISR,
+	.reg_base = SDEISR,
 	.bit_to_event = {[0 ... VGT_IRQ_BITWIDTH-1] = EVENT_RESERVED},
 };
 
 static struct vgt_irq_info vgt_base_pm_info = {
 	.name = "PM-IRQ",
-	.reg_base = _REG_PMISR,
+	.reg_base = GEN6_PMISR,
 	.bit_to_event = {[0 ... VGT_IRQ_BITWIDTH-1] = EVENT_RESERVED},
 };
 
@@ -1513,16 +1513,16 @@ static void vgt_base_disable_irq(struct vgt_irq_host_state *hstate)
 {
 	struct pgt_device *pdev = hstate->pdev;
 
-	VGT_MMIO_WRITE(pdev, _REG_DEIER,
-			VGT_MMIO_READ(pdev, _REG_DEIER) & ~_REGBIT_MASTER_INTERRUPT);
+	VGT_MMIO_WRITE(pdev, DEIER,
+			VGT_MMIO_READ(pdev, DEIER) & ~_REGBIT_MASTER_INTERRUPT);
 }
 
 static void vgt_base_enable_irq(struct vgt_irq_host_state *hstate)
 {
 	struct pgt_device *pdev = hstate->pdev;
 
-	VGT_MMIO_WRITE(pdev, _REG_DEIER,
-			VGT_MMIO_READ(pdev, _REG_DEIER) | _REGBIT_MASTER_INTERRUPT);
+	VGT_MMIO_WRITE(pdev, DEIER,
+			VGT_MMIO_READ(pdev, DEIER) | _REGBIT_MASTER_INTERRUPT);
 }
 
 struct vgt_irq_ops vgt_base_irq_ops = {
@@ -1549,17 +1549,17 @@ DEFINE_VGT_GEN8_IRQ_INFO(gt3, _REG_GT_ISR(3));
 DEFINE_VGT_GEN8_IRQ_INFO(de_pipe_a, _REG_DE_PIPE_ISR(PIPE_A));
 DEFINE_VGT_GEN8_IRQ_INFO(de_pipe_b, _REG_DE_PIPE_ISR(PIPE_B));
 DEFINE_VGT_GEN8_IRQ_INFO(de_pipe_c, _REG_DE_PIPE_ISR(PIPE_C));
-DEFINE_VGT_GEN8_IRQ_INFO(de_port, _REG_DE_PORT_ISR);
-DEFINE_VGT_GEN8_IRQ_INFO(de_misc, _REG_DE_MISC_ISR);
-DEFINE_VGT_GEN8_IRQ_INFO(pcu, _REG_PCU_ISR);
-DEFINE_VGT_GEN8_IRQ_INFO(master, _REG_MASTER_IRQ);
+DEFINE_VGT_GEN8_IRQ_INFO(de_port, GEN8_DE_PORT_ISR);
+DEFINE_VGT_GEN8_IRQ_INFO(de_misc, GEN8_DE_MISC_ISR);
+DEFINE_VGT_GEN8_IRQ_INFO(pcu, GEN8_PCU_ISR);
+DEFINE_VGT_GEN8_IRQ_INFO(master, GEN8_MASTER_IRQ);
 
 static void vgt_gen8_check_pending_irq(struct vgt_device *vgt)
 {
 	struct vgt_irq_host_state *hstate = vgt->pdev->irq_hstate;
 	int i;
 
-	if (!(__vreg(vgt, _REG_MASTER_IRQ) &
+	if (!(__vreg(vgt, GEN8_MASTER_IRQ) &
 				_REGBIT_MASTER_IRQ_CONTROL))
 		return;
 
@@ -1574,7 +1574,7 @@ static void vgt_gen8_check_pending_irq(struct vgt_device *vgt)
 			update_upstream_irq(vgt, info);
 	}
 
-	if (__vreg(vgt, _REG_MASTER_IRQ) & ~_REGBIT_MASTER_IRQ_CONTROL)
+	if (__vreg(vgt, GEN8_MASTER_IRQ) & ~_REGBIT_MASTER_IRQ_CONTROL)
 		vgt_inject_virtual_interrupt(vgt);
 }
 
@@ -1585,7 +1585,7 @@ static irqreturn_t vgt_gen8_irq_handler(struct vgt_irq_host_state *hstate)
 	u32 master_ctl;
 	bool rc;
 
-	master_ctl = VGT_MMIO_READ(pdev, _REG_MASTER_IRQ);
+	master_ctl = VGT_MMIO_READ(pdev, GEN8_MASTER_IRQ);
 	master_ctl &= ~_REGBIT_MASTER_IRQ_CONTROL;
 
 	if (!master_ctl)
@@ -1694,20 +1694,20 @@ static void vgt_gen8_disable_irq(struct vgt_irq_host_state *hstate)
 {
 	struct pgt_device *pdev = hstate->pdev;
 
-	VGT_MMIO_WRITE(pdev, _REG_MASTER_IRQ,
-			(VGT_MMIO_READ(pdev, _REG_MASTER_IRQ)
+	VGT_MMIO_WRITE(pdev, GEN8_MASTER_IRQ,
+			(VGT_MMIO_READ(pdev, GEN8_MASTER_IRQ)
 			 & ~_REGBIT_MASTER_IRQ_CONTROL));
-	VGT_POST_READ(pdev, _REG_MASTER_IRQ);
+	VGT_POST_READ(pdev, GEN8_MASTER_IRQ);
 }
 
 static void vgt_gen8_enable_irq(struct vgt_irq_host_state *hstate)
 {
 	struct pgt_device *pdev = hstate->pdev;
 
-	VGT_MMIO_WRITE(pdev, _REG_MASTER_IRQ,
-			(VGT_MMIO_READ(pdev, _REG_MASTER_IRQ)
+	VGT_MMIO_WRITE(pdev, GEN8_MASTER_IRQ,
+			(VGT_MMIO_READ(pdev, GEN8_MASTER_IRQ)
 			 | _REGBIT_MASTER_IRQ_CONTROL));
-	VGT_POST_READ(pdev, _REG_MASTER_IRQ);
+	VGT_POST_READ(pdev, GEN8_MASTER_IRQ);
 }
 
 struct vgt_irq_ops vgt_gen8_irq_ops = {
@@ -2214,8 +2214,8 @@ void vgt_fini_irq(struct pci_dev *pdev)
 	}
 
 	/* Mask all GEN interrupts */
-	VGT_MMIO_WRITE(pgt, _REG_DEIER,
-		VGT_MMIO_READ(pgt, _REG_DEIER) & ~_REGBIT_MASTER_INTERRUPT);
+	VGT_MMIO_WRITE(pgt, DEIER,
+		VGT_MMIO_READ(pgt, DEIER) & ~_REGBIT_MASTER_INTERRUPT);
 
 	hstate->installed = false;
 }

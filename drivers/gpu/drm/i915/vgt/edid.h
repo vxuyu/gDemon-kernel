@@ -159,8 +159,8 @@ static inline enum vgt_port vgt_get_dp_port_idx(unsigned int offset)
 {
 	enum vgt_port port_idx;
 
-	if (offset >= _REG_DPA_AUX_CH_CTL
-		&& offset <= _REG_DPA_AUX_CH_CTL +
+	if (offset >= DPA_AUX_CH_CTL
+		&& offset <= DPA_AUX_CH_CTL +
 				AUX_REGISTER_NUM * sizeof(vgt_reg_t)) {
 		return PORT_A;
 	}
