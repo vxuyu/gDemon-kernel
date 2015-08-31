@@ -671,8 +671,16 @@ void vgt_setup_reg_info(struct pgt_device *pdev)
 	reg_list_t *reg_list = vgt_get_sticky_regs(pdev);
 
 	printk("vGT: setup tracked reg info\n");
-	vgt_initialize_reg_attr(pdev, vgt_base_reg_info,
-		vgt_get_base_reg_num(), true);
+	vgt_initialize_reg_attr(pdev, vgt_reg_info_general,
+		vgt_get_reg_num(D_ALL), true);
+
+	if(IS_HSW(pdev))
+		vgt_initialize_reg_attr(pdev, vgt_reg_info_hsw,
+				vgt_get_hsw_reg_num(), true);
+	
+	if(IS_BDW(pdev))
+		vgt_initialize_reg_attr(pdev, vgt_reg_info_bdw,
+				vgt_get_reg_num(D_BDW), true);
 
 	/* GDRST can be accessed by byte */
 	mht = vgt_find_mmio_entry(_REG_GEN6_GDRST);
@@ -726,7 +734,11 @@ bool vgt_initial_mmio_setup (struct pgt_device *pdev)
 		}
 	}
 
-	__vgt_initial_mmio_space(pdev, vgt_base_reg_info, vgt_get_base_reg_num());
+	__vgt_initial_mmio_space(pdev, vgt_reg_info_general, vgt_get_reg_num(D_ALL));
+	if(IS_HSW(pdev))
+		__vgt_initial_mmio_space(pdev, vgt_reg_info_hsw, vgt_get_hsw_reg_num());
+	if(IS_BDW(pdev))
+		__vgt_initial_mmio_space(pdev, vgt_reg_info_bdw, vgt_get_reg_num(D_BDW));
 
 	/* customize the initial MMIO
 	 * 1, GMBUS status

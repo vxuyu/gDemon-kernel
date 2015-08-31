@@ -107,6 +107,7 @@ i915-$(CONFIG_I915_VGT)  += $(VGT)/vgt.o	\
 			   $(VGT)/render.o \
 			   $(VGT)/mmio.o \
 			   $(VGT)/handlers.o \
+			   $(VGT)/legacy/handlers_hsw.o \
 			   $(VGT)/interrupt.o \
 			   $(VGT)/sysfs.o \
 			   $(VGT)/display.o \
