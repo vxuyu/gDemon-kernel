@@ -1828,15 +1828,10 @@ static inline void vgt_emulate_vblank(struct vgt_device *vgt,
 		ASSERT(0);
 	}
 
-	if (vgt_has_pipe_enabled(vgt, pipe)) {
-		enum vgt_pipe phys_pipe = vgt->pipe_mapping[pipe];
-		if ((phys_pipe == I915_MAX_PIPES) ||
-			!pdev_has_pipe_enabled(vgt->pdev, phys_pipe)) {
-			uint32_t delta = vgt->frmcount_delta[pipe];
-			vgt->frmcount_delta[pipe] = ((delta == 0xffffffff) ?
-						0 : ++ delta);
-			vgt_trigger_virtual_event(vgt, vblank);
-		}
+	if ((__vreg(vgt, VGT_PIPECONF(pipe)) & _REGBIT_PIPE_ENABLE) ||
+			(__vreg(vgt, _REG_PIPE_EDP_CONF) & _REGBIT_PIPE_ENABLE)) {
+		__vreg(vgt, VGT_PIPE_FRMCOUNT(pipe))++;
+		vgt_trigger_virtual_event(vgt, vblank);
 	}
 }
 
@@ -2041,8 +2036,12 @@ static void vgt_init_events(
 	SET_POLICY_DOM0(hstate, CRT_HOTPLUG);
 
 	SET_POLICY_DOM0(hstate, GMBUS);
-}
+	/* phsical vBlank only to DOM0, VM's vBlank is vir*/
+	SET_POLICY_DOM0(hstate, PIPE_A_VBLANK);
+	SET_POLICY_DOM0(hstate, PIPE_B_VBLANK);
+	SET_POLICY_DOM0(hstate, PIPE_C_VBLANK);
 
+}
 static enum hrtimer_restart vgt_dpy_timer_fn(struct hrtimer *data)
 {
 	struct vgt_emul_timer *dpy_timer;

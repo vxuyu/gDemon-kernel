@@ -515,9 +515,6 @@ static bool pipe_frmcount_mmio_read(struct vgt_device *vgt, unsigned int offset,
 	pipe = VGT_FRMCOUNTPIPE(offset);
 	ASSERT(pipe >= PIPE_A && pipe < I915_MAX_PIPES);
 
-	if (vgt_has_pipe_enabled(vgt, pipe))
-		vgt_update_frmcount(vgt, pipe);
-
 	*(vgt_reg_t *)p_data = __vreg(vgt, offset);
 
 	return true;
@@ -839,23 +836,12 @@ static bool pipe_conf_mmio_write(struct vgt_device *vgt, unsigned int offset,
 			pipe = I915_MAX_PIPES;
 	}
 
-	if (orig_pipe_enabled && !curr_pipe_enabled) {
-		if (pipe != I915_MAX_PIPES) {
-			vgt_update_frmcount(vgt, pipe);
-		} else {
-			vgt_update_frmcount(vgt, PIPE_A);
-			vgt_update_frmcount(vgt, PIPE_B);
-			vgt_update_frmcount(vgt, PIPE_C);
-		}
-	}
-
 	if (!orig_pipe_enabled && curr_pipe_enabled) {
 		if (pipe == I915_MAX_PIPES) {
 			vgt_err("VM(%d): eDP pipe does not have corresponding"
 				"mapped pipe while it is enabled!\n", vgt->vm_id);
 			return false;
 		}
-		vgt_calculate_frmcount_delta(vgt, pipe);
 
 		for (plane = PRIMARY_PLANE; plane < MAX_PLANE; plane++) {
 			vgt_surf_base_range_check(vgt, pipe, plane);

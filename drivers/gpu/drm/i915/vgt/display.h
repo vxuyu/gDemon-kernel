@@ -348,5 +348,4 @@ void vgt_flush_port_info(struct vgt_device *vgt, struct gt_port *port);
 void vgt_detect_display(struct vgt_device *vgt, int index);
 
 void vgt_dpy_init_modes(vgt_reg_t *mmio_array);
-
 #endif /*_VGT_DISPLAY_H_*/

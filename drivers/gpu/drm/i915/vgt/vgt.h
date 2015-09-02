@@ -299,8 +299,6 @@ struct vgt_device {
 	uint64_t submitted_cmds;	/* CMDs submitted in current slice */
 	uint64_t allocated_cmds;	/* CMDs allocated in current slice */
 
-	uint32_t frmcount_delta[I915_MAX_PIPES]; /* used for vblank virtualization*/
-
 	struct sbi_registers sbi_regs;
 
 	unsigned long reset_flags;
