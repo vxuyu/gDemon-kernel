@@ -2113,7 +2113,7 @@ int ring_ppgtt_mode(struct vgt_device *vgt, int ring_id, u32 off, u32 mode)
 	}
 
 	/* sanity check */
-	if ((mode & _REGBIT_PPGTT_ENABLE) && (mode & (_REGBIT_PPGTT_ENABLE << 16))) {
+	if ((mode & GFX_PPGTT_ENABLE) && (mode & (GFX_PPGTT_ENABLE << 16))) {
 		/* XXX the order of mode enable for PPGTT and PPGTT dir base
 		 * setting is not strictly defined, e.g linux driver first
 		 * enables PPGTT bit in mode reg, then write PP dir base...

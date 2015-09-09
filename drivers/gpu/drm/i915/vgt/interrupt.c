@@ -456,7 +456,7 @@ bool vgt_reg_imr_handler(struct vgt_device *vgt,
 	/* figure out newly masked/unmasked bits */
 	changed = __vreg(vgt, reg) ^ imr;
 	if (reg == DEIMR)
-		changed &= ~_REGBIT_MASTER_INTERRUPT;
+		changed &= ~MASTER_INTERRUPT_ENABLE;
 	masked = (__vreg(vgt, reg) & changed) ^ changed;
 	unmasked = masked ^ changed;
 
@@ -494,10 +494,10 @@ void recalculate_and_update_ier(struct pgt_device *pdev, vgt_reg_t reg)
 	if (device_is_reseting(pdev)) {
 		if (IS_BDWPLUS(pdev)) {
 			if (reg == GEN8_MASTER_IRQ)
-				new_ier &= ~_REGBIT_MASTER_IRQ_CONTROL;
+				new_ier &= ~GEN8_MASTER_IRQ_CONTROL;
 		} else {
 			if (reg == DEIER)
-				new_ier &= ~_REGBIT_MASTER_INTERRUPT;
+				new_ier &= ~MASTER_INTERRUPT_ENABLE;
 		}
 	}
 
@@ -531,9 +531,9 @@ bool vgt_reg_master_irq_handler(struct vgt_device *vgt,
 	 * only bit 31 is allowed to be modified
 	 * and treated as an IER bit.
 	 */
-	ier &= _REGBIT_MASTER_IRQ_CONTROL;
-	virtual_ier &= _REGBIT_MASTER_IRQ_CONTROL;
-	__vreg(vgt, reg) &= ~_REGBIT_MASTER_IRQ_CONTROL;
+	ier &= GEN8_MASTER_IRQ_CONTROL;
+	virtual_ier &= GEN8_MASTER_IRQ_CONTROL;
+	__vreg(vgt, reg) &= ~GEN8_MASTER_IRQ_CONTROL;
 	__vreg(vgt, reg) |= ier;
 
 	/* figure out newly enabled/disable bits */
@@ -1022,7 +1022,7 @@ static void vgt_handle_ring_empty_notify_virt(struct vgt_irq_host_state *hstate,
 static void vgt_handle_phase_in_virt(struct vgt_irq_host_state *hstate,
 	enum vgt_event_type event, struct vgt_device *vgt)
 {
-	__vreg(vgt, BLC_PWM_CPU_CTL2) |= _REGBIT_PHASE_IN_IRQ_STATUS;
+	__vreg(vgt, BLC_PWM_CPU_CTL2) |= BLM_PHASE_IN_INTERUPT_STATUS;
 	vgt_handle_default_event_virt(hstate, event, vgt);
 }
 
@@ -1037,14 +1037,14 @@ static void vgt_handle_crt_hotplug_virt(struct vgt_irq_host_state *hstate,
 	enum vgt_event_type event, struct vgt_device *vgt)
 {
 	/* update channel status */
-	if (__vreg(vgt, PCH_ADPA) & _REGBIT_ADPA_CRT_HOTPLUG_ENABLE) {
+	if (__vreg(vgt, PCH_ADPA) & ADPA_CRT_HOTPLUG_ENABLE) {
 
 		if (!is_current_display_owner(vgt)) {
 			__vreg(vgt, PCH_ADPA) &=
-				~_REGBIT_ADPA_CRT_HOTPLUG_MONITOR_MASK;
+				~ADPA_CRT_HOTPLUG_MONITOR_MASK;
 			if (dpy_has_monitor_on_port(vgt, PORT_E))
 				__vreg(vgt, PCH_ADPA) |=
-					_REGBIT_ADPA_CRT_HOTPLUG_MONITOR_MASK;
+					ADPA_CRT_HOTPLUG_MONITOR_MASK;
 		}
 
 		vgt_handle_default_event_virt(hstate, event, vgt);
@@ -1214,7 +1214,7 @@ static void vgt_handle_phase_in_phys(struct vgt_irq_host_state *hstate,
 	struct pgt_device *pdev = hstate->pdev;
 
 	val = VGT_MMIO_READ(pdev, BLC_PWM_CPU_CTL2);
-	val &= ~_REGBIT_PHASE_IN_IRQ_STATUS;
+	val &= ~BLM_PHASE_IN_INTERUPT_STATUS;
 	VGT_MMIO_WRITE(pdev, BLC_PWM_CPU_CTL2, val);
 
 	vgt_handle_default_event_phys(hstate, event);
@@ -1251,7 +1251,7 @@ static void vgt_handle_crt_hotplug_phys(struct vgt_irq_host_state *hstate,
 	}
 
 	/* check blue/green channel status for attachment status */
-	if (adpa_ctrl & _REGBIT_ADPA_CRT_HOTPLUG_MONITOR_MASK) {
+	if (adpa_ctrl & ADPA_CRT_HOTPLUG_MONITOR_MASK) {
 		vgt_info("IRQ: detect crt insert event!\n");
 		vgt_set_uevent(vgt_dom0, CRT_HOTPLUG_IN);
 	} else {
@@ -1349,7 +1349,7 @@ static void vgt_base_check_pending_irq(struct vgt_device *vgt)
 	struct vgt_irq_host_state *hstate = vgt->pdev->irq_hstate;
 	struct vgt_irq_info *info = hstate->info[IRQ_INFO_PCH];
 
-	if (!(__vreg(vgt, DEIER) & _REGBIT_MASTER_INTERRUPT))
+	if (!(__vreg(vgt, DEIER) & MASTER_INTERRUPT_ENABLE))
 		return;
 
 	if ((__vreg(vgt, regbase_to_iir(info->reg_base))
@@ -1514,7 +1514,7 @@ static void vgt_base_disable_irq(struct vgt_irq_host_state *hstate)
 	struct pgt_device *pdev = hstate->pdev;
 
 	VGT_MMIO_WRITE(pdev, DEIER,
-			VGT_MMIO_READ(pdev, DEIER) & ~_REGBIT_MASTER_INTERRUPT);
+			VGT_MMIO_READ(pdev, DEIER) & ~MASTER_INTERRUPT_ENABLE);
 }
 
 static void vgt_base_enable_irq(struct vgt_irq_host_state *hstate)
@@ -1522,7 +1522,7 @@ static void vgt_base_enable_irq(struct vgt_irq_host_state *hstate)
 	struct pgt_device *pdev = hstate->pdev;
 
 	VGT_MMIO_WRITE(pdev, DEIER,
-			VGT_MMIO_READ(pdev, DEIER) | _REGBIT_MASTER_INTERRUPT);
+			VGT_MMIO_READ(pdev, DEIER) | MASTER_INTERRUPT_ENABLE);
 }
 
 struct vgt_irq_ops vgt_base_irq_ops = {
@@ -1542,13 +1542,13 @@ struct vgt_irq_ops vgt_base_irq_ops = {
                .bit_to_event = {[0 ... VGT_IRQ_BITWIDTH-1] = EVENT_RESERVED}, \
        };
 
-DEFINE_VGT_GEN8_IRQ_INFO(gt0, _REG_GT_ISR(0));
-DEFINE_VGT_GEN8_IRQ_INFO(gt1, _REG_GT_ISR(1));
-DEFINE_VGT_GEN8_IRQ_INFO(gt2, _REG_GT_ISR(2));
-DEFINE_VGT_GEN8_IRQ_INFO(gt3, _REG_GT_ISR(3));
-DEFINE_VGT_GEN8_IRQ_INFO(de_pipe_a, _REG_DE_PIPE_ISR(PIPE_A));
-DEFINE_VGT_GEN8_IRQ_INFO(de_pipe_b, _REG_DE_PIPE_ISR(PIPE_B));
-DEFINE_VGT_GEN8_IRQ_INFO(de_pipe_c, _REG_DE_PIPE_ISR(PIPE_C));
+DEFINE_VGT_GEN8_IRQ_INFO(gt0, GEN8_GT_ISR(0));
+DEFINE_VGT_GEN8_IRQ_INFO(gt1, GEN8_GT_ISR(1));
+DEFINE_VGT_GEN8_IRQ_INFO(gt2, GEN8_GT_ISR(2));
+DEFINE_VGT_GEN8_IRQ_INFO(gt3, GEN8_GT_ISR(3));
+DEFINE_VGT_GEN8_IRQ_INFO(de_pipe_a, GEN8_DE_PIPE_ISR(PIPE_A));
+DEFINE_VGT_GEN8_IRQ_INFO(de_pipe_b, GEN8_DE_PIPE_ISR(PIPE_B));
+DEFINE_VGT_GEN8_IRQ_INFO(de_pipe_c, GEN8_DE_PIPE_ISR(PIPE_C));
 DEFINE_VGT_GEN8_IRQ_INFO(de_port, GEN8_DE_PORT_ISR);
 DEFINE_VGT_GEN8_IRQ_INFO(de_misc, GEN8_DE_MISC_ISR);
 DEFINE_VGT_GEN8_IRQ_INFO(pcu, GEN8_PCU_ISR);
@@ -1560,7 +1560,7 @@ static void vgt_gen8_check_pending_irq(struct vgt_device *vgt)
 	int i;
 
 	if (!(__vreg(vgt, GEN8_MASTER_IRQ) &
-				_REGBIT_MASTER_IRQ_CONTROL))
+				GEN8_MASTER_IRQ_CONTROL))
 		return;
 
 	for_each_set_bit(i, hstate->irq_info_bitmap, IRQ_INFO_MAX) {
@@ -1574,7 +1574,7 @@ static void vgt_gen8_check_pending_irq(struct vgt_device *vgt)
 			update_upstream_irq(vgt, info);
 	}
 
-	if (__vreg(vgt, GEN8_MASTER_IRQ) & ~_REGBIT_MASTER_IRQ_CONTROL)
+	if (__vreg(vgt, GEN8_MASTER_IRQ) & ~GEN8_MASTER_IRQ_CONTROL)
 		vgt_inject_virtual_interrupt(vgt);
 }
 
@@ -1586,7 +1586,7 @@ static irqreturn_t vgt_gen8_irq_handler(struct vgt_irq_host_state *hstate)
 	bool rc;
 
 	master_ctl = VGT_MMIO_READ(pdev, GEN8_MASTER_IRQ);
-	master_ctl &= ~_REGBIT_MASTER_IRQ_CONTROL;
+	master_ctl &= ~GEN8_MASTER_IRQ_CONTROL;
 
 	if (!master_ctl)
 		return IRQ_NONE;
@@ -1696,7 +1696,7 @@ static void vgt_gen8_disable_irq(struct vgt_irq_host_state *hstate)
 
 	VGT_MMIO_WRITE(pdev, GEN8_MASTER_IRQ,
 			(VGT_MMIO_READ(pdev, GEN8_MASTER_IRQ)
-			 & ~_REGBIT_MASTER_IRQ_CONTROL));
+			 & ~GEN8_MASTER_IRQ_CONTROL));
 	VGT_POST_READ(pdev, GEN8_MASTER_IRQ);
 }
 
@@ -1706,7 +1706,7 @@ static void vgt_gen8_enable_irq(struct vgt_irq_host_state *hstate)
 
 	VGT_MMIO_WRITE(pdev, GEN8_MASTER_IRQ,
 			(VGT_MMIO_READ(pdev, GEN8_MASTER_IRQ)
-			 | _REGBIT_MASTER_IRQ_CONTROL));
+			 | GEN8_MASTER_IRQ_CONTROL));
 	VGT_POST_READ(pdev, GEN8_MASTER_IRQ);
 }
 
@@ -2200,7 +2200,7 @@ void vgt_fini_irq(struct pci_dev *pdev)
 
 	/* Mask all GEN interrupts */
 	VGT_MMIO_WRITE(pgt, DEIER,
-		VGT_MMIO_READ(pgt, DEIER) & ~_REGBIT_MASTER_INTERRUPT);
+		VGT_MMIO_READ(pgt, DEIER) & ~MASTER_INTERRUPT_ENABLE);
 
 	hstate->installed = false;
 }

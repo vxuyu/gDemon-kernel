@@ -174,16 +174,16 @@ static bool vgt_gmbus0_mmio_write(struct vgt_device *vgt,
 
 	vgt->vgt_i2c_edid.gmbus.phase = GMBUS_IDLE_PHASE;
 
-	/* FIXME: never clear _GMBUS_HW_WAIT */
-	__vreg(vgt, PCH_GMBUS2) &= ~ _GMBUS_ACTIVE;
-	__vreg(vgt, PCH_GMBUS2) |= _GMBUS_HW_RDY | _GMBUS_HW_WAIT;
+	/* FIXME: never clear GMBUS_HW_WAIT_PHASE */
+	__vreg(vgt, PCH_GMBUS2) &= ~ GMBUS_ACTIVE;
+	__vreg(vgt, PCH_GMBUS2) |= GMBUS_HW_RDY | GMBUS_HW_WAIT_PHASE;
 
 	if (dpy_has_monitor_on_port(vgt, port) && !dpy_port_is_dp(vgt, port)) {
 		vgt->vgt_i2c_edid.port = port;
 		vgt->vgt_i2c_edid.edid_available = true;
-		__vreg(vgt, PCH_GMBUS2) &= ~_GMBUS_NAK;
+		__vreg(vgt, PCH_GMBUS2) &= ~GMBUS_SATOER;
 	} else {
-		__vreg(vgt, PCH_GMBUS2) |= _GMBUS_NAK;
+		__vreg(vgt, PCH_GMBUS2) |= GMBUS_SATOER;
 	}
 
 	memcpy(p_data, (char *)vgt->state.vReg + offset, bytes);
@@ -196,9 +196,9 @@ void vgt_reset_gmbus_controller(struct vgt_device *vgt)
 	/* TODO: clear gmbus0 ? */
 	//__vreg(vgt, PCH_GMBUS0) = 0;
 	//__vreg(vgt, PCH_GMBUS1) = 0;
-	__vreg(vgt, PCH_GMBUS2) = _GMBUS_HW_RDY;
+	__vreg(vgt, PCH_GMBUS2) = GMBUS_HW_RDY;
 	if (!vgt->vgt_i2c_edid.edid_available) {
-		__vreg(vgt, PCH_GMBUS2) |= _GMBUS_NAK;
+		__vreg(vgt, PCH_GMBUS2) |= GMBUS_SATOER;
 	}
 	//__vreg(vgt, PCH_GMBUS3) = 0;
 	//__vreg(vgt, PCH_GMBUS4) = 0;
@@ -214,9 +214,9 @@ void *p_data, unsigned int bytes)
 	struct vgt_i2c_edid_t *i2c_edid = &vgt->vgt_i2c_edid;
 
 	vgt_reg_t wvalue = *(vgt_reg_t *)p_data;
-	if (__vreg(vgt, offset) & _GMBUS_SW_CLR_INT) {
-		if (!(wvalue & _GMBUS_SW_CLR_INT)) {
-			__vreg(vgt, offset) &= ~_GMBUS_SW_CLR_INT;
+	if (__vreg(vgt, offset) & GMBUS_SW_CLR_INT) {
+		if (!(wvalue & GMBUS_SW_CLR_INT)) {
+			__vreg(vgt, offset) &= ~GMBUS_SW_CLR_INT;
 			vgt_reset_gmbus_controller(vgt);
 		}
 		/* TODO: "This bit is cleared to zero when an event
@@ -226,16 +226,16 @@ void *p_data, unsigned int bytes)
 		 1) INT status bit cleared
 		 2) HW_RDY bit asserted
 		 */
-		if (wvalue & _GMBUS_SW_CLR_INT) {
-			__vreg(vgt, PCH_GMBUS2) &= ~_GMBUS_INT_STAT;
-			__vreg(vgt, PCH_GMBUS2) |= _GMBUS_HW_RDY;
+		if (wvalue & GMBUS_SW_CLR_INT) {
+			__vreg(vgt, PCH_GMBUS2) &= ~GMBUS_INT;
+			__vreg(vgt, PCH_GMBUS2) |= GMBUS_HW_RDY;
 		}
 
 		/* For virtualization, we suppose that HW is always ready,
-		 * so _GMBUS_SW_RDY should always be cleared
+		 * so GMBUS_SW_RDY should always be cleared
 		 */
-		if (wvalue & _GMBUS_SW_RDY)
-			wvalue &= ~_GMBUS_SW_RDY;
+		if (wvalue & GMBUS_SW_RDY)
+			wvalue &= ~GMBUS_SW_RDY;
 
 		i2c_edid->gmbus.total_byte_count =
 			gmbus1_total_byte_count(wvalue);
@@ -251,7 +251,7 @@ void *p_data, unsigned int bytes)
 					vgt->vgt_id, slave_addr);
 		}
 
-		if (wvalue & _GMBUS_CYCLE_INDEX) {
+		if (wvalue & GMBUS_CYCLE_INDEX) {
 			i2c_edid->current_edid_read = gmbus1_slave_index(wvalue);
 		}
 
@@ -276,11 +276,11 @@ void *p_data, unsigned int bytes)
 					 */
 					i2c_edid->gmbus.phase = GMBUS_IDLE_PHASE;
 					/*
-					FIXME: never clear _GMBUS_WAIT
+					FIXME: never clear GMBUS_WAIT
 					__vreg(vgt, PCH_GMBUS2) &=
-						~(_GMBUS_ACTIVE | _GMBUS_HW_WAIT);
+						~(GMBUS_ACTIVE | GMBUS_HW_WAIT_PHASE);
 					*/
-					__vreg(vgt, PCH_GMBUS2) &= ~_GMBUS_ACTIVE;
+					__vreg(vgt, PCH_GMBUS2) &= ~GMBUS_ACTIVE;
 				}
 				break;
 			case NIDX_NS_W:
@@ -292,9 +292,9 @@ void *p_data, unsigned int bytes)
 				 * START (-->INDEX) -->DATA
 				 */
 				i2c_edid->gmbus.phase = GMBUS_DATA_PHASE;
-				__vreg(vgt, PCH_GMBUS2) |= _GMBUS_ACTIVE;
-				/* FIXME: never clear _GMBUS_WAIT */
-				//__vreg(vgt, PCH_GMBUS2) &= ~_GMBUS_HW_WAIT;
+				__vreg(vgt, PCH_GMBUS2) |= GMBUS_ACTIVE;
+				/* FIXME: never clear GMBUS_WAIT */
+				//__vreg(vgt, PCH_GMBUS2) &= ~GMBUS_HW_WAIT_PHASE;
 				break;
 			default:
 				vgt_err("Unknown/reserved GMBUS cycle detected!");
@@ -305,9 +305,9 @@ void *p_data, unsigned int bytes)
 		 * (1) in a new GMBUS cycle
 		 * (2) by generating a stop
 		 */
-		/* FIXME: never clear _GMBUS_WAIT
+		/* FIXME: never clear GMBUS_WAIT
 		if (gmbus1_bus_cycle(wvalue) != GMBUS_NOCYCLE)
-			__vreg(vgt, PCH_GMBUS2) &= ~_GMBUS_HW_WAIT;
+			__vreg(vgt, PCH_GMBUS2) &= ~GMBUS_HW_WAIT_PHASE;
 		*/
 
 		__vreg(vgt, offset) = wvalue;
@@ -334,7 +334,7 @@ bool vgt_gmbus3_mmio_read(struct vgt_device *vgt, unsigned int offset,
 	vgt_reg_t reg_data = 0;
 
 	/* Data can only be recevied if previous settings correct */
-	if (__vreg(vgt, PCH_GMBUS1) & _GMBUS_SLAVE_READ) {
+	if (__vreg(vgt, PCH_GMBUS1) & GMBUS_SLAVE_READ) {
 		if (byte_left <= 0) {
 			memcpy((char *)p_data, (char *)vgt->state.vReg + offset, bytes);
 			return true;
@@ -363,7 +363,7 @@ bool vgt_gmbus3_mmio_read(struct vgt_device *vgt, unsigned int offset,
 					break;
 			}
 			//if (i2c_bus->gmbus.phase == GMBUS_WAIT_PHASE)
-			//__vreg(vgt, PCH_GMBUS2) |= _GMBUS_HW_WAIT;
+			//__vreg(vgt, PCH_GMBUS2) |= GMBUS_HW_WAIT_PHASE;
 
 			vgt_init_i2c_edid(vgt);
 		}
@@ -382,8 +382,8 @@ static bool vgt_gmbus2_mmio_read(struct vgt_device *vgt, unsigned int offset,
 		void *p_data, unsigned int bytes)
 {
 	vgt_reg_t value = __vreg(vgt, offset);
-	if (!(__vreg(vgt, offset) & _GMBUS_IN_USE)) {
-		__vreg(vgt, offset) |= _GMBUS_IN_USE;
+	if (!(__vreg(vgt, offset) & GMBUS_INUSE)) {
+		__vreg(vgt, offset) |= GMBUS_INUSE;
 	}
 
 	memcpy(p_data, (void *)&value, bytes);
@@ -394,8 +394,8 @@ bool vgt_gmbus2_mmio_write(struct vgt_device *vgt, unsigned int offset,
 		void *p_data, unsigned int bytes)
 {
 	vgt_reg_t wvalue = *(vgt_reg_t *)p_data;
-	if (wvalue & _GMBUS_IN_USE)
-		__vreg(vgt, offset) &= ~_GMBUS_IN_USE;
+	if (wvalue & GMBUS_INUSE)
+		__vreg(vgt, offset) &= ~GMBUS_INUSE;
 	/* All other bits are read-only */
 	return true;
 }

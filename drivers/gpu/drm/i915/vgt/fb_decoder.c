@@ -54,13 +54,13 @@ int vgt_decode_primary_plane_format(struct vgt_device *vgt,
 	u32	val, fmt;
 
 	val = __vreg(vgt, VGT_DSPCNTR(pipe));
-	plane->enabled = !!(val & _PRI_PLANE_ENABLE);
+	plane->enabled = !!(val & DISPLAY_PLANE_ENABLE);
 	if (!plane->enabled)
 		return 0;
 
-	plane->tiled = !!(val & _PRI_PLANE_TILE_MASK);
+	plane->tiled = !!(val & DISPPLANE_TILED);
 
-	fmt = (val & _PRI_PLANE_FMT_MASK) >> _PRI_PLANE_FMT_SHIFT;
+	fmt = (val & DISPPLANE_PIXFORMAT_MASK) >> _PRI_PLANE_FMT_SHIFT;
 	if (!hsw_pixel_formats[fmt].bpp) {
 		vgt_err("Non-supported pixel format (0x%x)\n", fmt);
 		return -EINVAL;
@@ -170,16 +170,16 @@ int vgt_decode_sprite_plane_format(struct vgt_device *vgt,
 	int drm_format;
 
 	val = __vreg(vgt, VGT_SPRCTL(pipe));
-	plane->enabled = !!(val & _SPRITE_ENABLE);
+	plane->enabled = !!(val & SPRITE_ENABLE);
 	if (!plane->enabled)
 		return 0;
 
-	plane->tiled = !!(val & _SPRITE_TILED);
-	color_order = !!(val & _SPRITE_COLOR_ORDER_MASK);
-	yuv_order = (val & _SPRITE_YUV_ORDER_MASK) >>
+	plane->tiled = !!(val & SPRITE_TILED);
+	color_order = !!(val & SPRITE_RGB_ORDER_RGBX);
+	yuv_order = (val & SPRITE_YUV_BYTE_ORDER_MASK) >>
 				_SPRITE_YUV_ORDER_SHIFT;
 
-	fmt = (val & _SPRITE_FMT_MASK) >> _SPRITE_FMT_SHIFT;
+	fmt = (val & SPRITE_PIXFORMAT_MASK) >> _SPRITE_FMT_SHIFT;
 	if (!hsw_pixel_formats_sprite[fmt].bpp) {
 		vgt_err("Non-supported pixel format (0x%x)\n", fmt);
 		return -EINVAL;
@@ -418,11 +418,11 @@ int vgt_decode_fb_format(int vmid, struct vgt_fb_format *fb)
 		struct vgt_pipe_format *pipe = &fb->pipes[i];
 		vgt_reg_t ddi_func_ctl = __vreg(vgt, _VGT_TRANS_DDI_FUNC_CTL(i));
 
-		if (!(ddi_func_ctl & _TRANS_DDI_PORT_SHIFT)) {
+		if (!(ddi_func_ctl & TRANS_DDI_PORT_SHIFT)) {
 			pipe->ddi_port = DDI_PORT_NONE;
 		} else {
-			vgt_reg_t port = (ddi_func_ctl & _REGBIT_TRANS_DDI_PORT_MASK) >>
-						_TRANS_DDI_PORT_SHIFT;
+			vgt_reg_t port = (ddi_func_ctl & TRANS_DDI_PORT_MASK) >>
+						TRANS_DDI_PORT_SHIFT;
 			if (port <= DDI_PORT_E)
 				pipe->ddi_port = port;
 			else

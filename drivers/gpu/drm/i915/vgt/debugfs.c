@@ -505,7 +505,7 @@ static void vgt_dump_dpy_mmio(struct seq_file *m, struct pgt_device *pdev,
 		char P = VGT_PIPE_CHAR(pipe);
 		reg = VGT_DSPCNTR(pipe);
 		val = vgt_get_mmio_value(pdev, vgt, reg);
-		enabled = !!(val & _PRI_PLANE_ENABLE);
+		enabled = !!(val & DISPLAY_PLANE_ENABLE);
 		seq_printf(m, "\tDSPCTL_%c(0x%x): 0x%08x (%s)\n",
 			P, reg, val, (enabled ? "enabled" : "disabled"));
 		if (enabled) {
@@ -544,17 +544,17 @@ static void vgt_dump_dpy_mmio(struct seq_file *m, struct pgt_device *pdev,
 
 		reg = _VGT_TRANS_DDI_FUNC_CTL(pipe);
 		val = vgt_get_mmio_value(pdev, vgt, reg);
-		enabled = !!(val & _REGBIT_TRANS_DDI_FUNC_ENABLE);
+		enabled = !!(val & TRANS_DDI_FUNC_ENABLE);
 		seq_printf(m, "\tTRANS_DDI_FUNC_CTL_%c(0x%x): 0x%08x (%s)\n",
 			P, reg, val, (enabled ? "enabled" : "disabled"));
 
 		if (enabled) {
 			vgt_reg_t ddi_select, mode_select;
 
-			ddi_select = val & _REGBIT_TRANS_DDI_PORT_MASK;
-			mode_select = val & _REGBIT_TRANS_DDI_MODE_SELECT_MASK;
+			ddi_select = val & TRANS_DDI_PORT_MASK;
+			mode_select = val & TRANS_DDI_MODE_SELECT_MASK;
 
-			switch (ddi_select >> _TRANS_DDI_PORT_SHIFT) {
+			switch (ddi_select >> TRANS_DDI_PORT_SHIFT) {
 				case 0:
 					str = "No Port Connected"; break;
 				case 1:
@@ -608,11 +608,11 @@ static void vgt_dump_dpy_mmio(struct seq_file *m, struct pgt_device *pdev,
 
 	reg = TRANS_DDI_FUNC_CTL_EDP;
 	val = vgt_get_mmio_value(pdev, vgt, reg);
-	enabled = !!(val & _REGBIT_TRANS_DDI_FUNC_ENABLE);
+	enabled = !!(val & TRANS_DDI_FUNC_ENABLE);
 	seq_printf(m, "\tTRANS_DDI_FUNC_CTL_EDP(0x%x): 0x%08x (%s)\n",
 		reg, val, (enabled ? "enabled" : "disabled"));
 	if (enabled) {
-		vgt_reg_t edp_input = val &_REGBIT_TRANS_DDI_EDP_INPUT_MASK;
+		vgt_reg_t edp_input = val &TRANS_DDI_EDP_INPUT_MASK;
 		switch (edp_input >> _TRANS_DDI_EDP_INPUT_SHIFT) {
 			case 0:
 				str = "Plane A 0"; break;
@@ -656,7 +656,7 @@ static void vgt_dump_dpy_mmio(struct seq_file *m, struct pgt_device *pdev,
 			}
 			reg = _PCH_TRANSACONF;
 			val = vgt_get_mmio_value(pdev, vgt, reg);
-			enabled = !!(val & _REGBIT_TRANS_ENABLE);
+			enabled = !!(val & TRANS_ENABLE);
 			seq_printf(m, "\tPCH TRANS_CONF(0x%x): 0x%08x (%s)\n",
 				reg, val, (enabled ? "enabled" : "disabled"));
 		}

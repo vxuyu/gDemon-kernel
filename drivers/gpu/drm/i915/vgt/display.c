@@ -129,7 +129,7 @@ void do_vgt_fast_display_switch(struct pgt_device *pdev)
 
 	for (pipe = PIPE_A; pipe < I915_MAX_PIPES; ++ pipe) {
 		vgt_restore_state(to_vgt, pipe);
-		if (_PRI_PLANE_ENABLE & __vreg(to_vgt, VGT_DSPCNTR(pipe))) {
+		if (DISPLAY_PLANE_ENABLE & __vreg(to_vgt, VGT_DSPCNTR(pipe))) {
 			set_panel_fitting(to_vgt, pipe);
 		}
 	}
@@ -367,7 +367,7 @@ void vgt_update_monitor_status(struct vgt_device *vgt)
 	if (dpy_has_monitor_on_port(vgt, PORT_A)) {
 		__vreg(vgt, DDI_BUF_CTL_A) |= _DDI_BUFCTL_DETECT_MASK;
 		if (IS_PREBDW(vgt->pdev))
-			__vreg(vgt, DEISR) |= _REGBIT_DP_A_HOTPLUG_IVB;
+			__vreg(vgt, DEISR) |= DE_DP_A_HOTPLUG_IVB;
 		else
 			__vreg(vgt, GEN8_DE_PORT_ISR) |= GEN8_PORT_DP_A_HOTPLUG;
 	}
@@ -377,19 +377,19 @@ enum vgt_pipe get_edp_input(uint32_t wr_data)
 {
 	enum vgt_pipe pipe = I915_MAX_PIPES;
 
-	if ((_REGBIT_TRANS_DDI_FUNC_ENABLE & wr_data) == 0) {
+	if ((TRANS_DDI_FUNC_ENABLE & wr_data) == 0) {
 		return I915_MAX_PIPES;
 	}
 
-	switch (wr_data & _REGBIT_TRANS_DDI_EDP_INPUT_MASK) {
-		case _REGBIT_TRANS_DDI_EDP_INPUT_A_ON:
-		case _REGBIT_TRANS_DDI_EDP_INPUT_A_ONOFF:
+	switch (wr_data & TRANS_DDI_EDP_INPUT_MASK) {
+		case TRANS_DDI_EDP_INPUT_A_ON:
+		case TRANS_DDI_EDP_INPUT_A_ONOFF:
 			pipe = PIPE_A;
 			break;
-		case _REGBIT_TRANS_DDI_EDP_INPUT_B_ONOFF:
+		case TRANS_DDI_EDP_INPUT_B_ONOFF:
 			pipe = PIPE_B;
 			break;
-		case _REGBIT_TRANS_DDI_EDP_INPUT_C_ONOFF:
+		case TRANS_DDI_EDP_INPUT_C_ONOFF:
 			pipe = PIPE_C;
 			break;
 		default:
@@ -420,13 +420,13 @@ static void vgt_update_irq_reg(struct vgt_device *vgt)
 		recalculate_and_update_ier(vgt->pdev, DEIER);
 		recalculate_and_update_imr(vgt->pdev, DEIMR);
 	} else {
-		recalculate_and_update_ier(vgt->pdev, _REG_DE_PIPE_IER(PIPE_A));
-		recalculate_and_update_ier(vgt->pdev, _REG_DE_PIPE_IER(PIPE_B));
-		recalculate_and_update_ier(vgt->pdev, _REG_DE_PIPE_IER(PIPE_C));
+		recalculate_and_update_ier(vgt->pdev, GEN8_DE_PIPE_IER(PIPE_A));
+		recalculate_and_update_ier(vgt->pdev, GEN8_DE_PIPE_IER(PIPE_B));
+		recalculate_and_update_ier(vgt->pdev, GEN8_DE_PIPE_IER(PIPE_C));
 
-		recalculate_and_update_imr(vgt->pdev, _REG_DE_PIPE_IMR(PIPE_A));
-		recalculate_and_update_imr(vgt->pdev, _REG_DE_PIPE_IMR(PIPE_B));
-		recalculate_and_update_imr(vgt->pdev, _REG_DE_PIPE_IMR(PIPE_C));
+		recalculate_and_update_imr(vgt->pdev, GEN8_DE_PIPE_IMR(PIPE_A));
+		recalculate_and_update_imr(vgt->pdev, GEN8_DE_PIPE_IMR(PIPE_B));
+		recalculate_and_update_imr(vgt->pdev, GEN8_DE_PIPE_IMR(PIPE_C));
 	}
 
 	return;
@@ -447,7 +447,7 @@ bool rebuild_pipe_mapping(struct vgt_device *vgt, unsigned int reg, uint32_t new
 	virtual_pipe = get_pipe(reg, new_data);
 
 	/*disable pipe case*/
-	if ((_REGBIT_TRANS_DDI_FUNC_ENABLE & new_data) == 0) {
+	if ((TRANS_DDI_FUNC_ENABLE & new_data) == 0) {
 		if (reg == TRANS_DDI_FUNC_CTL_EDP) {
 			/*for disable case, we need to get edp input from old value
 			since the new data does not contain the edp input*/
@@ -463,16 +463,16 @@ bool rebuild_pipe_mapping(struct vgt_device *vgt, unsigned int reg, uint32_t new
 
 	/*enable pipe case*/
 	ASSERT((reg == TRANS_DDI_FUNC_CTL_EDP) ||
-			(new_data & _REGBIT_TRANS_DDI_PORT_MASK));
+			(new_data & TRANS_DDI_PORT_MASK));
 
 	if (reg == TRANS_DDI_FUNC_CTL_EDP) {
 		// In such case, it is virtual PORT_A mapping to physical PORT_A
 		hw_value = VGT_MMIO_READ(vgt->pdev, TRANS_DDI_FUNC_CTL_EDP);
-		if (_REGBIT_TRANS_DDI_FUNC_ENABLE & hw_value)
+		if (TRANS_DDI_FUNC_ENABLE & hw_value)
 			physical_pipe = get_edp_input(hw_value);
 	} else {
 		enum vgt_port vport, vport_override;
-		vport = (new_data & _REGBIT_TRANS_DDI_PORT_MASK) >> _TRANS_DDI_PORT_SHIFT;
+		vport = (new_data & TRANS_DDI_PORT_MASK) >> TRANS_DDI_PORT_SHIFT;
 		vport_override = vgt->ports[vport].port_override;
 		if (vport_override == I915_MAX_PORTS) {
 			vgt_warn("Unexpected driver behavior to enable TRANS_DDI"
@@ -480,21 +480,21 @@ bool rebuild_pipe_mapping(struct vgt_device *vgt, unsigned int reg, uint32_t new
 			physical_pipe = I915_MAX_PIPES;
 		} else if (vport_override == PORT_A) {
 			hw_value = VGT_MMIO_READ(vgt->pdev, TRANS_DDI_FUNC_CTL_EDP);
-			if (_REGBIT_TRANS_DDI_FUNC_ENABLE & hw_value)
+			if (TRANS_DDI_FUNC_ENABLE & hw_value)
 				physical_pipe = get_edp_input(hw_value);
 								
 		} else {
 			for (i = 0; i <= TRANSCODER_C; i++) {
 				enum vgt_port pport;
 				hw_value = VGT_MMIO_READ(vgt->pdev, _VGT_TRANS_DDI_FUNC_CTL(i));
-				pport = (hw_value & _REGBIT_TRANS_DDI_PORT_MASK) >>
-						_TRANS_DDI_PORT_SHIFT;
+				pport = (hw_value & TRANS_DDI_PORT_MASK) >>
+						TRANS_DDI_PORT_SHIFT;
 
 				printk("%s: Enable. pport = %d, vport = %d, "
 					"hw_value = 0x%08x, new_data = 0x%08x\n",
 			       		__FUNCTION__, pport, vport, hw_value, new_data);
 
-				if (!(_REGBIT_TRANS_DDI_FUNC_ENABLE & hw_value)) {
+				if (!(TRANS_DDI_FUNC_ENABLE & hw_value)) {
 					continue;
 				}
 
@@ -529,7 +529,7 @@ bool update_pipe_mapping(struct vgt_device *vgt, unsigned int physical_reg, uint
 	physical_pipe = get_pipe(physical_reg, physical_wr_data);
 
 	/*disable pipe case*/
-	if ((_REGBIT_TRANS_DDI_FUNC_ENABLE & physical_wr_data) == 0) {
+	if ((TRANS_DDI_FUNC_ENABLE & physical_wr_data) == 0) {
 		for (i = 0; i < I915_MAX_PIPES; i ++) {
 			if(vgt->pipe_mapping[i] == physical_pipe) {
 				vgt_set_pipe_mapping(vgt, i, I915_MAX_PIPES);
@@ -547,19 +547,19 @@ bool update_pipe_mapping(struct vgt_device *vgt, unsigned int physical_reg, uint
 			virtual_pipe = get_edp_input(__vreg(vgt, TRANS_DDI_FUNC_CTL_EDP));
 		}
 	} else {
-		pport = (physical_wr_data & _REGBIT_TRANS_DDI_PORT_MASK) >> _TRANS_DDI_PORT_SHIFT;
+		pport = (physical_wr_data & TRANS_DDI_PORT_MASK) >> TRANS_DDI_PORT_SHIFT;
 	}
 
 	for (i = 0; i <= TRANSCODER_C; i++) {
 		enum vgt_port vport, vport_override;
 		virtual_wr_data = __vreg(vgt, _VGT_TRANS_DDI_FUNC_CTL(i));
-		vport = (virtual_wr_data & _REGBIT_TRANS_DDI_PORT_MASK) >>
-				_TRANS_DDI_PORT_SHIFT;
+		vport = (virtual_wr_data & TRANS_DDI_PORT_MASK) >>
+				TRANS_DDI_PORT_SHIFT;
 		vport_override = vgt->ports[vport].port_override;
 
 		printk("%s: Enable. pport = %d, vport = %d\n", __FUNCTION__, pport, vport);
 
-		if (!(_REGBIT_TRANS_DDI_FUNC_ENABLE & virtual_wr_data) ||
+		if (!(TRANS_DDI_FUNC_ENABLE & virtual_wr_data) ||
 			(vport_override == I915_MAX_PORTS)) {
 			continue;
 		}
@@ -578,7 +578,7 @@ bool update_pipe_mapping(struct vgt_device *vgt, unsigned int physical_reg, uint
 
 	if (current_foreground_vm(vgt->pdev) == vgt &&
 		virtual_pipe != I915_MAX_PIPES &&
-		(_PRI_PLANE_ENABLE & VGT_MMIO_READ(vgt->pdev, VGT_DSPCNTR(physical_pipe)))) {
+		(DISPLAY_PLANE_ENABLE & VGT_MMIO_READ(vgt->pdev, VGT_DSPCNTR(physical_pipe)))) {
 		vgt_restore_state(vgt, virtual_pipe);
 	}
 
@@ -616,8 +616,8 @@ bool set_panel_fitting(struct vgt_device *vgt, enum vgt_pipe pipe)
 		vgt_dbg(VGT_DBG_DPY, "try to set panel fitting before pipe is mapped!\n");
 		return false;
 	}
-	if (((_PRI_PLANE_ENABLE & __vreg(vgt, VGT_DSPCNTR(pipe))) == 0) ||
-		(_PRI_PLANE_ENABLE & VGT_MMIO_READ(vgt->pdev, VGT_DSPCNTR(real_pipe))) == 0) {
+	if (((DISPLAY_PLANE_ENABLE & __vreg(vgt, VGT_DSPCNTR(pipe))) == 0) ||
+		(DISPLAY_PLANE_ENABLE & VGT_MMIO_READ(vgt->pdev, VGT_DSPCNTR(real_pipe))) == 0) {
 		return false;
 	}
 	src_width = (__vreg(vgt, VGT_PIPESRC(pipe)) & 0xffff0000) >> 16;
@@ -631,7 +631,7 @@ bool set_panel_fitting(struct vgt_device *vgt, enum vgt_pipe pipe)
 	v_total_reg = VGT_VTOTAL(real_pipe);
 
 	edp_trans_code = VGT_MMIO_READ(vgt->pdev, TRANS_DDI_FUNC_CTL_EDP);
-	if ((_REGBIT_TRANS_DDI_FUNC_ENABLE & edp_trans_code)) {
+	if ((TRANS_DDI_FUNC_ENABLE & edp_trans_code)) {
 		if (real_pipe == get_edp_input(edp_trans_code)) {
 			h_total_reg = _REG_HTOTAL_EDP;
 			v_total_reg = _REG_VTOTAL_EDP;
@@ -649,15 +649,15 @@ bool set_panel_fitting(struct vgt_device *vgt, enum vgt_pipe pipe)
 	/*fixed panel fitting mode to 3x3 mode, Restriction : A 3x3 capable filter must not be enabled
 		when the pipe horizontal source size is greater than 2048 pixels*/
 	if (IS_HSW(vgt->pdev))
-		pf_ctl =  _REGBIT_PF_FILTER_MED_3x3 | _REGBIT_PF_PIPE_SEL(real_pipe);
+		pf_ctl =  PF_FILTER_MED_3x3 | PF_PIPE_SEL_IVB(real_pipe);
 	else /*after BDW the panel fitter is on the pipe, no need to assign.*/
-		pf_ctl =  _REGBIT_PF_FILTER_MED_3x3;
+		pf_ctl =  PF_FILTER_MED_3x3;
 
 	/*enable panel fitting only when the source mode does not eqaul to the target mode*/
 	if (src_width != target_width || src_height != target_height ) {
 		vgt_dbg(VGT_DBG_DPY, "enable panel fitting for VM %d, pipe %d, src_width:%d, src_height: %d, tgt_width:%d, tgt_height:%d!\n",
 			vgt->vm_id, real_pipe, src_width, src_height, target_width, target_height);
-		pf_ctl = pf_ctl | _REGBIT_PF_ENABLE;
+		pf_ctl = pf_ctl | PF_ENABLE;
 	} else {
 		vgt_dbg(VGT_DBG_DPY, "disable panel fitting for VM %d, for pipe %d!\n", vgt->vm_id, real_pipe);
 	}
@@ -685,11 +685,11 @@ bool set_panel_fitting(struct vgt_device *vgt, enum vgt_pipe pipe)
 	}
 
 	VGT_MMIO_WRITE(vgt->pdev, VGT_PIPESRC(real_pipe),  ((src_width -1) << 16) | (src_height - 1));
-	VGT_MMIO_WRITE(vgt->pdev, VGT_PF_WIN_POS(real_pipe), 0);
-	VGT_MMIO_WRITE(vgt->pdev, VGT_PF_CTL(real_pipe), pf_ctl);
+	VGT_MMIO_WRITE(vgt->pdev, PF_WIN_POS(real_pipe), 0);
+	VGT_MMIO_WRITE(vgt->pdev, PF_CTL(real_pipe), pf_ctl);
 	/* PF ctrl is a double buffered registers and gets updated when window
 	 size registered is updated*/
-	VGT_MMIO_WRITE(vgt->pdev, VGT_PF_WIN_SZ(real_pipe),  (target_width << 16) | target_height);
+	VGT_MMIO_WRITE(vgt->pdev, PF_WIN_SZ(real_pipe),  (target_width << 16) | target_height);
 	return true;
 }
 
@@ -741,16 +741,16 @@ void vgt_set_power_well(struct vgt_device *vgt, bool to_enable)
 	uint32_t tmp;
 
 	tmp = VGT_MMIO_READ(vgt->pdev, HSW_PWR_WELL_DRIVER);
-	is_enabled = tmp & _REGBIT_HSW_PWR_WELL_STATE;
-	enable_requested = tmp & _REGBIT_HSW_PWR_WELL_ENABLE;
+	is_enabled = tmp & HSW_PWR_WELL_STATE_ENABLED;
+	enable_requested = tmp & HSW_PWR_WELL_ENABLE_REQUEST;
 
 	if (to_enable) {
 		if (!enable_requested)
-			VGT_MMIO_WRITE(vgt->pdev, HSW_PWR_WELL_DRIVER, _REGBIT_HSW_PWR_WELL_ENABLE);
+			VGT_MMIO_WRITE(vgt->pdev, HSW_PWR_WELL_DRIVER, HSW_PWR_WELL_ENABLE_REQUEST);
 
 		if (!is_enabled) {
 			if (wait_for_atomic((VGT_MMIO_READ(vgt->pdev, HSW_PWR_WELL_DRIVER) &
-				      _REGBIT_HSW_PWR_WELL_STATE), 20))
+				      HSW_PWR_WELL_STATE_ENABLED), 20))
 				vgt_err("Timeout enabling power well\n");
 		}
 	} else {
@@ -865,7 +865,7 @@ void vgt_flush_port_info(struct vgt_device *vgt, struct gt_port *port)
 		for (i = 0; i <= 3; i++) {
 			unsigned int ddi_value;
 			ddi_value = VGT_MMIO_READ(vgt->pdev, reg_ddi[i]);
-			if (_REGBIT_TRANS_DDI_FUNC_ENABLE & ddi_value) {
+			if (TRANS_DDI_FUNC_ENABLE & ddi_value) {
 				update_pipe_mapping(vgt, reg_ddi[i], ddi_value);
 			}
 		}
@@ -912,29 +912,29 @@ void vgt_dpy_init_modes(vgt_reg_t *mmio_array)
 				~_DDI_BUFCTL_DETECT_MASK;
 
 	for (port = PORT_A; port <= PORT_E; ++ port) {
-		offset = VGT_DDI_BUF_CTL(port);
+		offset = DDI_BUF_CTL(port);
 		mmio_array[REG_INDEX(offset)] &= ~_REGBIT_DDI_BUF_ENABLE;
-		offset = VGT_DP_TP_CTL(port);
-		mmio_array[REG_INDEX(offset)] &= ~_REGBIT_DP_TP_ENABLE;
+		offset =VGT_DP_TP_CTL(port);
+		mmio_array[REG_INDEX(offset)] &= ~DP_TP_CTL_ENABLE;
 	}
 
 	for (pipe = PIPE_A; pipe <= PIPE_C; ++ pipe) {
 		offset = _VGT_TRANS_DDI_FUNC_CTL(pipe);
-		mmio_array[REG_INDEX(offset)] &= ~_REGBIT_TRANS_DDI_FUNC_ENABLE;
+		mmio_array[REG_INDEX(offset)] &= ~TRANS_DDI_FUNC_ENABLE;
 		offset = VGT_PIPECONF(pipe);
 		mmio_array[REG_INDEX(offset)] &= ~_REGBIT_PIPE_ENABLE;
 		offset = VGT_TRANSCONF(pipe);
-		mmio_array[REG_INDEX(offset)] &= ~_REGBIT_TRANS_ENABLE;
-		offset = VGT_PF_CTL(pipe);
-		mmio_array[REG_INDEX(offset)] &= ~_REGBIT_PF_ENABLE;
+		mmio_array[REG_INDEX(offset)] &= ~TRANS_ENABLE;
+		offset = PF_CTL(pipe);
+		mmio_array[REG_INDEX(offset)] &= ~PF_ENABLE;
 	}
 
 	mmio_array[REG_INDEX(TRANS_DDI_FUNC_CTL_EDP)] &=
-				~_REGBIT_TRANS_DDI_FUNC_ENABLE;
+				~TRANS_DDI_FUNC_ENABLE;
 	mmio_array[REG_INDEX(_REG_PIPE_EDP_CONF)] &=
 				~_REGBIT_PIPE_ENABLE;
 
 	mmio_array[REG_INDEX(SPLL_CTL)] &= ~_REGBIT_SPLL_CTL_ENABLE;
-	mmio_array[REG_INDEX(WRPLL_CTL1)] &= ~_REGBIT_WRPLL_ENABLE;
-	mmio_array[REG_INDEX(WRPLL_CTL2)] &= ~_REGBIT_WRPLL_ENABLE;
+	mmio_array[REG_INDEX(WRPLL_CTL1)] &= ~WRPLL_PLL_ENABLE;
+	mmio_array[REG_INDEX(WRPLL_CTL2)] &= ~WRPLL_PLL_ENABLE;
 }

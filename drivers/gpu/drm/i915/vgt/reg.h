@@ -29,13 +29,8 @@
 /*
  * Definition of MMIO registers.
  */
-
 #define _VGT_MMIO_THROUGH_OFFSET(index, a, b)	((a) + (index)*((b)-(a)))
 #define _VGT_MMIO_GET_INDEX(reg, a, b)		(((reg)-(a))/((b)-(a)))
-
-#define _VGT_PIPE(pipe, a, b)	_VGT_MMIO_THROUGH_OFFSET(pipe, a, b)
-#define _VGT_PORT(port, a, b)	_VGT_MMIO_THROUGH_OFFSET(port, a, b)
-#define _VGT_TRANSCODER(tran, a, b)	_VGT_MMIO_THROUGH_OFFSET(tran, a, b)
 
 #define _VGT_GET_PIPE(reg, a, b)	_VGT_MMIO_GET_INDEX(reg, a, b)
 #define _VGT_GET_PORT(reg, a, b)	_VGT_MMIO_GET_INDEX(reg, a, b)
@@ -104,12 +99,10 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 #define RB_TAIL_SIZE_MASK	((1U << 21) - (1U << 12))	/* bit 12 to 20 */
 #define _RING_CTL_BUF_SIZE(ctl)	(((ctl) & RB_TAIL_SIZE_MASK) + GTT_PAGE_SIZE)
 #define _RING_CTL_ENABLE	0x1	/* bit 0 */
-#define _RING_CTL_RB_WAIT	(1 << 11)
 
 #define CCID_MBO_BITS		(1 << 8)	/* bit 8 must be one */
 #define CCID_EXTENDED_STATE_SAVE_ENABLE		(1 << 3)
 #define CCID_EXTENDED_STATE_RESTORE_ENABLE	(1 << 2)
-#define CCID_VALID		(1 << 0)
 #define _REG_VECS_CXT_SIZE	0x1A1A8
 
 #define	_REGBIT_MI_ASYNC_FLIP_PERFORMANCE_MODE	(1 << 14)
@@ -120,9 +113,6 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 #define _REG_VCS2_MI_MODE	0x1c09C
 #define _REG_BCS_MI_MODE	0x2209C
 #define _REG_VECS_MI_MODE	0x1A09c
-#define        _REGBIT_FLUSH_TLB_INVALIDATION_MODE	(1 << 13)
-#define        _REGBIT_REPLAY_MODE			(1 << 11)
-#define        _REGBIT_PPGTT_ENABLE			(1 << 9)
 #define        _REGBIT_PPGTT64_ENABLE                   (1 << 7)
 #define        _REGBIT_ADDRESS_SWIZZLING		(3 << 4)
 
@@ -285,7 +275,6 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 #define  _CTXBUF_WRITE_PTR_MASK		(0x7)
 
 #define _REG_FENCE_0_LOW	0x100000
-#define _REGBIT_FENCE_VALID	(1 << 0)
 
 #define _CURSOR_MODE	0x3f
 #define _CURSOR_MODE_DISABLE	0x00
@@ -297,7 +286,7 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 #define _CURSOR_POS_X_MASK	(0x1fff << _CURSOR_POS_X_SHIFT)
 #define _CURSOR_SIGN_X_SHIFT	15
 #define _CURSOR_SIGN_X_MASK	(1 << _CURSOR_SIGN_X_SHIFT)
-#define _CURSOR_POS_Y_SHIFT	16
+#define _CURSOR_POS_Y_SHIFT		16
 #define _CURSOR_POS_Y_MASK	(0xfff << _CURSOR_POS_Y_SHIFT)
 #define _CURSOR_SIGN_Y_SHIFT	31
 #define _CURSOR_SIGN_Y_MASK	(1 << _CURSOR_SIGN_Y_SHIFT)
@@ -315,21 +304,16 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 #define _REG_CURCPOS	0x72088
 #define _REG_CURCSURFLIVE	0x720AC
 
-#define VGT_CURCNTR_SNB(pipe)	_VGT_PIPE(pipe, _CURACNTR, _CURBCNTR)
-#define VGT_CURBASE_SNB(pipe)	_VGT_PIPE(pipe, _CURABASE, _CURBBASE)
-#define VGT_CURPOS_SNB(pipe)	_VGT_PIPE(pipe, _CURAPOS, _CURBPOS)
+#define VGT_CURCNTR_SNB(pipe)	_PIPE(pipe, _CURACNTR, _CURBCNTR)
+#define VGT_CURBASE_SNB(pipe)	_PIPE(pipe, _CURABASE, _CURBBASE)
+#define VGT_CURPOS_SNB(pipe)	_PIPE(pipe, _CURAPOS, _CURBPOS)
 
-#define VGT_CURCNTR(pipe)	_VGT_PIPE(pipe, _CURACNTR, _CURBCNTR_IVB)
-#define VGT_CURBASE(pipe)	_VGT_PIPE(pipe, _CURABASE, _CURBBASE_IVB)
-#define VGT_CURPOS(pipe)	_VGT_PIPE(pipe, _CURAPOS, _CURBPOS_IVB)
+#define VGT_CURCNTR(pipe)	_PIPE(pipe, _CURACNTR, _CURBCNTR_IVB)
+#define VGT_CURBASE(pipe)	_PIPE(pipe, _CURABASE, _CURBBASE_IVB)
+#define VGT_CURPOS(pipe)	_PIPE(pipe, _CURAPOS, _CURBPOS_IVB)
 
-#define _PRI_PLANE_ENABLE	(1 << 31)
-#define	_PRI_PLANE_GAMMA_ENABLE	(1 << 30)
 #define	_PRI_PLANE_FMT_SHIFT	26
-#define	_PRI_PLANE_FMT_MASK	(0xf << _PRI_PLANE_FMT_SHIFT)
-#define	_PRI_PLANE_TRICKLE_FEED_DISABLE	(1 << 14)
 #define	_PRI_PLANE_TILE_SHIFT	10
-#define	_PRI_PLANE_TILE_MASK	(1 << _PRI_PLANE_TILE_SHIFT)
 
 #define	_PRI_PLANE_STRIDE_SHIFT	6
 #define	_PRI_PLANE_STRIDE_MASK	(0x3ff << _PRI_PLANE_STRIDE_SHIFT)
@@ -349,32 +333,26 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 #define _REG_DSPBSURFLIVE	0x711AC
 
 
-#define VGT_DSPSURF(pipe)	_VGT_PIPE(pipe, _DSPASURF, _REG_DSPBSURF)
-#define VGT_DSPCNTR(pipe)	_VGT_PIPE(pipe, _DSPACNTR, _REG_DSPBCNTR)
+#define VGT_DSPSURF(pipe)	_PIPE(pipe, _DSPASURF, _REG_DSPBSURF)
+#define VGT_DSPCNTR(pipe)	_PIPE(pipe, _DSPACNTR, _REG_DSPBCNTR)
 #define VGT_DSPCNTRPIPE(dspcntr)	_VGT_GET_PIPE(dspcntr, _DSPACNTR,_REG_DSPBCNTR)
 
-#define VGT_DSPLINOFF(plane) _VGT_PIPE(plane, _DSPAADDR, _REG_DSPBLINOFF)
-#define VGT_DSPSTRIDE(plane) _VGT_PIPE(plane, _DSPASTRIDE, _REG_DSPBSTRIDE)
-#define VGT_DSPTILEOFF(plane) _VGT_PIPE(plane, _DSPATILEOFF, _REG_DSPBTILEOFF)
+#define VGT_DSPLINOFF(plane) _PIPE(plane, _DSPAADDR, _REG_DSPBLINOFF)
+#define VGT_DSPSTRIDE(plane) _PIPE(plane, _DSPASTRIDE, _REG_DSPBSTRIDE)
+#define VGT_DSPTILEOFF(plane) _PIPE(plane, _DSPATILEOFF, _REG_DSPBTILEOFF)
 
 #define VGT_DSPSURFPIPE(dspsurf) _VGT_GET_PIPE(dspsurf, _DSPASURF,_REG_DSPBSURF)
 #define VGT_DSPSURFLIVEPIPE(dspsurf) _VGT_GET_PIPE(dspsurf, _DSPASURFLIVE, \
 							_REG_DSPBSURFLIVE)
-#define VGT_DSPSURFLIVE(pipe)	_VGT_PIPE(pipe, _DSPASURFLIVE, _REG_DSPBSURFLIVE)
+#define VGT_DSPSURFLIVE(pipe)	_PIPE(pipe, _DSPASURFLIVE, _REG_DSPBSURFLIVE)
 
 #define VGT_CURSURFPIPE(cursurf)	_VGT_GET_PIPE(cursurf, _CURABASE, _CURBBASE_IVB)
-#define VGT_CURSURF(pipe)	_VGT_PIPE(pipe, _CURABASE, _CURBBASE_IVB)
+#define VGT_CURSURF(pipe)	_PIPE(pipe, _CURABASE, _CURBBASE_IVB)
 
 /* sprite */
-
-#define	_SPRITE_ENABLE	(1 << 31)
 #define	_SPRITE_FMT_SHIFT	25
-#define	_SPRITE_FMT_MASK	(0x7 << _SPRITE_FMT_SHIFT)
 #define	_SPRITE_COLOR_ORDER_SHIFT	20
-#define	_SPRITE_COLOR_ORDER_MASK	(0x1 << _SPRITE_COLOR_ORDER_SHIFT)
 #define	_SPRITE_YUV_ORDER_SHIFT	16
-#define	_SPRITE_YUV_ORDER_MASK	(0x3 << _SPRITE_YUV_ORDER_SHIFT)
-#define	_SPRITE_TILED	(1 << 10)
 
 #define	_SPRITE_STRIDE_SHIFT	6
 #define	_SPRITE_STRIDE_MASK	(0x1ff << _SPRITE_STRIDE_SHIFT)
@@ -399,40 +377,18 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 #define _REG_SPRCSURFLIVE			0x722AC
 #define _REG_SPRC_SCALE				0x72304
 
-#define VGT_SPRCTL(pipe)	_VGT_PIPE(pipe, _SPRA_CTL, _PLANE_CTL_2_B)
-#define VGT_SPRSTRIDE(pipe)	_VGT_PIPE(pipe, _SPRA_STRIDE, _PLANE_STRIDE_2_B)
-#define VGT_SPRPOS(pipe)	_VGT_PIPE(pipe, _PLANE_POS_2_A, _PLANE_POS_2_B)
-#define VGT_SPRSIZE(pipe)	_VGT_PIPE(pipe, _PLANE_SIZE_2_A, _PLANE_SIZE_2_B)
-#define VGT_SPRSURF(pipe)	_VGT_PIPE(pipe, _SPRA_SURF, _PLANE_SURF_2_B)
+#define VGT_SPRCTL(pipe)	_PIPE(pipe, _SPRA_CTL, _PLANE_CTL_2_B)
+#define VGT_SPRSTRIDE(pipe)	_PIPE(pipe, _SPRA_STRIDE, _PLANE_STRIDE_2_B)
+#define VGT_SPRPOS(pipe)	_PIPE(pipe, _PLANE_POS_2_A, _PLANE_POS_2_B)
+#define VGT_SPRSIZE(pipe)	_PIPE(pipe, _PLANE_SIZE_2_A, _PLANE_SIZE_2_B)
+#define VGT_SPRSURF(pipe)	_PIPE(pipe, _SPRA_SURF, _PLANE_SURF_2_B)
 #define VGT_SPRSURFPIPE(sprsurf) _VGT_GET_PIPE(sprsurf, _SPRA_SURF, _PLANE_SURF_2_B)
-#define VGT_SPRSURFLIVE(pipe)	_VGT_PIPE(pipe, _REG_SPRASURFLIVE, _SPRBSURFLIVE)
-#define VGT_SPROFFSET(pipe)	_VGT_PIPE(pipe, _PLANE_OFFSET_2_A, _PLANE_OFFSET_2_B)
+#define VGT_SPRSURFLIVE(pipe)	_PIPE(pipe, _REG_SPRASURFLIVE, _SPRBSURFLIVE)
+#define VGT_SPROFFSET(pipe)	_PIPE(pipe, _PLANE_OFFSET_2_A, _PLANE_OFFSET_2_B)
 
 #define VGT_SPRCNTRPIPE(sprcntr) _VGT_GET_PIPE(sprcntr, _SPRA_CTL,_PLANE_CTL_2_B)
 #define VGT_CURCNTRPIPE(curcntr) _VGT_GET_PIPE(curcntr, _CURACNTR,_CURBCNTR_IVB)
 
-#define _REGBIT_DP_AUX_CH_CTL_SEND_BUSY		(1 << 31)
-#define _REGBIT_DP_AUX_CH_CTL_DONE		(1 << 30)
-#define _REGBIT_DP_AUX_CH_CTL_INTERRUPT		(1 << 29)
-#define _REGBIT_DP_AUX_CH_CTL_TIME_OUT_ERR	(1 << 28)
-#define _REGBIT_DP_AUX_CH_CTL_RECV_ERR		(1 << 25)
-#define _REGBIT_DP_AUX_CH_CTL_MESSAGE_SIZE_MASK	(0x1f << 20)
-#define _REGBIT_DP_AUX_CH_CTL_MESSAGE_SIZE_SHIFT	20
-#define _REGBIT_DP_AUX_CH_CTL_TIME_OUT_400us	(0 << 26)
-#define _DP_DETECTED				(1 << 2)
-#define _DP_AUX_CH_CTL_BIT_CLOCK_2X_SHIFT	0
-#define _DP_AUX_CH_CTL_PRECHARGE_2US_SHIFT	16
-
-#define        ECOBUS_FORCEWAKE_MT_ENABLE	(1<<5)
-#define _REGBIT_MUL_FORCEWAKE_ENABLE		(1<<5)
-#define _REG_MULFORECEWAKE_ACK			0x130040
-#define _REG_GEN6_GDRST	0x941c
-#define    _REGBIT_GEN6_GRDOM_FULL		(1 << 0)
-#define    _REGBIT_GEN6_GRDOM_RENDER		(1 << 1)
-#define    _REGBIT_GEN6_GRDOM_MEDIA		(1 << 2)
-#define    _REGBIT_GEN6_GRDOM_BLT		(1 << 3)
-
-#define _REG_GT_THREAD_STATUS	0x13805C
 #define _REG_GT_CORE_STATUS	0x138060
 
 #define _REGBIT_RC_HW_CTRL_ENABLE	(1<<31)
@@ -462,35 +418,9 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 #define   MI_WAIT_FOR_SPRITE_B_FLIP_PENDING      (1<<10)
 #define   MI_WAIT_FOR_SPRITE_A_FLIP_PENDING      (1<<2)
 
-#define PIPE_CONTROL(len)		((0x3<<29)|(0x3<<27)|(0x2<<24)|(len-2))
-#define   PIPE_CONTROL_POST_SYNC_GLOBAL_GTT		(1<<24)
-#define   PIPE_CONTROL_POST_SYNC			(1<<23)
-#define   PIPE_CONTROL_CS_STALL				(1<<20)
-#define   PIPE_CONTROL_TLB_INVALIDATE			(1<<18)
-#define   PIPE_CONTROL_MEDIA_STATE_CLEAR		(1<<16)
-#define   PIPE_CONTROL_POST_SYNC_IMM			(1<<14)
-#define   PIPE_CONTROL_DEPTH_STALL			(1<<13)
-#define   PIPE_CONTROL_RENDER_TARGET_CACHE_FLUSH	(1<<12)
-#define   PIPE_CONTROL_INSTRUCTION_CACHE_INVALIDATE	(1<<11) /* MBZ on Ironlake */
-#define   PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE		(1<<10) /* GM45+ only */
-#define   PIPE_CONTROL_INDIRECT_STATE_DISABLE		(1<<9)
-#define   PIPE_CONTROL_NOTIFY				(1<<8)
-#define   PIPE_CONTROL_FLUSH_ENABLE			(1<<7)
-#define   PIPE_CONTROL_DC_FLUSH_ENABLE			(1<<5)
-#define   PIPE_CONTROL_VF_CACHE_INVALIDATE		(1<<4)
-#define   PIPE_CONTROL_CONST_CACHE_INVALIDATE		(1<<3)
-#define   PIPE_CONTROL_STATE_CACHE_INVALIDATE		(1<<2)
-#define   PIPE_CONTROL_STALL_AT_SCOREBOARD		(1<<1)
-#define   PIPE_CONTROL_DEPTH_CACHE_FLUSH		(1<<0)
-
+#define	PIPE_CONTROL_DC_FLUSH_ENABLE			(1<<5)
 #define DUMMY_3D		(0x6d800005)
 #define PRIM_TRILIST		(0x4)
-/* PCI config space */
-#define _REG_LBB	PCI_LBPC
-/* VGA stuff */
-
-#define    VGA_MSR_CGA_MODE	(1<<0)
-
 /*
  * Display engine regs
  */
@@ -503,11 +433,7 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 #define     _PIPE_V_SRCSZ_MASK	(0xfff << _PIPE_V_SRCSZ_SHIFT)
 #define     _PIPE_H_SRCSZ_SHIFT	16
 #define     _PIPE_H_SRCSZ_MASK	(0x1fff << _PIPE_H_SRCSZ_SHIFT)
-/*#define _REG_BCLRPAT_A		_BCLRPAT_A
-#define _REG_VSYNCSHIFT_A	_VSYNCSHIFT_A
-*/
 
-/* Pipe B timing regs */
 /* Pipe C timing regs */
 #define _REG_HTOTAL_C		0x62000
 #define _REG_HBLANK_C		0x62004
@@ -529,71 +455,21 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 #define _REG_VSYNCSHIFT_EDP	0x6F028
 
 
-#define VGT_HTOTAL(pipe)	_VGT_PIPE(pipe, _HTOTAL_A, _HTOTAL_B)
-#define VGT_HBLANK(pipe)	_VGT_PIPE(pipe, _HBLANK_A, _HBLANK_B)
-#define VGT_HSYNC(pipe)		_VGT_PIPE(pipe, _HSYNC_A, _HSYNC_B)
-#define VGT_VTOTAL(pipe)	_VGT_PIPE(pipe, _VTOTAL_A, _VTOTAL_B)
-#define VGT_VBLANK(pipe)	_VGT_PIPE(pipe, _VBLANK_A, _VBLANK_B)
-#define VGT_VSYNC(pipe)		_VGT_PIPE(pipe, _VSYNC_A, _VSYNC_B)
+#define VGT_HTOTAL(pipe)	_PIPE(pipe, _HTOTAL_A, _HTOTAL_B)
+#define VGT_HBLANK(pipe)	_PIPE(pipe, _HBLANK_A, _HBLANK_B)
+#define VGT_HSYNC(pipe)		_PIPE(pipe, _HSYNC_A, _HSYNC_B)
+#define VGT_VTOTAL(pipe)	_PIPE(pipe, _VTOTAL_A, _VTOTAL_B)
+#define VGT_VBLANK(pipe)	_PIPE(pipe, _VBLANK_A, _VBLANK_B)
+#define VGT_VSYNC(pipe)		_PIPE(pipe, _VSYNC_A, _VSYNC_B)
 
-#define VGT_BCLRPAT(pipe)	_VGT_PIPE(pipe, _BCLRPAT_A, _BCLRPAT_B)
-#define VGT_VSYNCSHIFT(pipe)	_VGT_PIPE(pipe, _VSYNCSHIFT_A, _VSYNCSHIFT_B)
-#define VGT_PIPESRC(pipe)	_VGT_PIPE(pipe, _PIPEASRC, _PIPEBSRC)
+#define VGT_BCLRPAT(pipe)	_PIPE(pipe, _BCLRPAT_A, _BCLRPAT_B)
+#define VGT_VSYNCSHIFT(pipe)	_PIPE(pipe, _VSYNCSHIFT_A, _VSYNCSHIFT_B)
+#define VGT_PIPESRC(pipe)	_PIPE(pipe, _PIPEASRC, _PIPEBSRC)
 
+#define VGT_PCH_DPLL(pipe)	_PIPE(pipe, _REG_PCH_DPLL_A, _REG_PCH_DPLL_B)
 
-/* PCH */
-#define    _REGBIT_DREF_CPU_SOURCE_OUTPUT_DISABLE	(0<<13)
-#define    _REGBIT_DREF_CPU_SOURCE_OUTPUT_DOWNSPREAD	(2<<13)
-#define    _REGBIT_DREF_CPU_SOURCE_OUTPUT_NONSPREAD	(3<<13)
-#define    _REGBIT_DREF_CPU_SOURCE_OUTPUT_MASK		(3<<13)
-#define    _REGBIT_DREF_SSC_SOURCE_DISABLE		(0<<11)
-#define    _REGBIT_DREF_SSC_SOURCE_ENABLE		(2<<11)
-#define    _REGBIT_DREF_SSC_SOURCE_MASK			(3<<11)
-#define    _REGBIT_DREF_NONSPREAD_SOURCE_DISABLE	(0<<9)
-#define    _REGBIT_DREF_NONSPREAD_CK505_ENABLE		(1<<9)
-#define    _REGBIT_DREF_NONSPREAD_SOURCE_ENABLE		(2<<9)
-#define    _REGBIT_DREF_NONSPREAD_SOURCE_MASK		(3<<9)
-#define    _REGBIT_DREF_SUPERSPREAD_SOURCE_DISABLE	(0<<7)
-#define    _REGBIT_DREF_SUPERSPREAD_SOURCE_ENABLE	(2<<7)
-#define    _REGBIT_DREF_SUPERSPREAD_SOURCE_MASK		(3<<7)
-#define    _REGBIT_DREF_SSC4_DOWNSPREAD			(0<<6)
-#define    _REGBIT_DREF_SSC4_CENTERSPREAD		(1<<6)
-#define    _REGBIT_DREF_SSC1_DISABLE			(0<<1)
-#define    _REGBIT_DREF_SSC1_ENABLE			(1<<1)
-#define    _REGBIT_DREF_SSC4_DISABLE			(0)
-#define    _REGBIT_DREF_SSC4_ENABLE			(1)
-
-/*
- * digital port hotplug
- */
-
-
-#define _REGBIT_DPLL_VCO_ENABLE		(1 << 31)
-#define VGT_PCH_DPLL(pipe)	_VGT_PIPE(pipe, _REG_PCH_DPLL_A, _REG_PCH_DPLL_B)
-
-#define    FP_CB_TUNE				(0x3<<22)
-
-#define VGT_PCH_FP0(pipe)	_VGT_PIPE(pipe, _REG_PCH_FPA0, _REG_PCH_FPB0)
-#define VGT_PCH_FP1(pipe)	_VGT_PIPE(pipe, _REG_PCH_FPA1, _REG_PCH_FPB1)
-
-#define _REGBIT_TRANSA_DPLL_ENABLE		(1 << 3)
-#define    _REGBIT_TRANSA_DPLLB_SEL		(1 << 0)
-#define    _REGBIT_TRANSA_DPLLA_SEL		0
-#define _REGBIT_TRANSB_DPLL_ENABLE		(1 << 7)
-#define    _REGBIT_TRANSB_DPLLB_SEL		(1 << 4)
-#define    _REGBIT_TRANSB_DPLLA_SEL		0
-#define _REGBIT_TRANSC_DPLL_ENABLE		(1 << 11)
-#define    _REGBIT_TRANSC_DPLLB_SEL		(1 << 8)
-#define    _REGBIT_TRANSC_DPLLA_SEL		0
-
-/*
- * Clock control & power management
- */
-
-
-/* refresh rate hardware control */
-
-/* PIPE B timing regs are same start from 0x61000 */
+#define VGT_PCH_FP0(pipe)	_PIPE(pipe, _REG_PCH_FPA0, _REG_PCH_FPB0)
+#define VGT_PCH_FP1(pipe)	_PIPE(pipe, _REG_PCH_FPA1, _REG_PCH_FPB1)
 
 /* PIPE C timing regs are same start from 0x61000 */
 #define _REG_PIPEC_DATA_M1		0x62030
@@ -606,36 +482,26 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 #define _REG_PIPEC_LINK_M2		0x62048
 #define _REG_PIPEC_LINK_N2		0x6204c
 
-#define VGT_PIPE_DATA_M1(pipe) _VGT_PIPE(pipe, _REG_PIPEA_DATA_M1, _REG_PIPEB_DATA_M1)
-#define VGT_PIPE_DATA_N1(pipe) _VGT_PIPE(pipe, _REG_PIPEA_DATA_N1, _REG_PIPEB_DATA_N1)
-#define VGT_PIPE_DATA_M2(pipe) _VGT_PIPE(pipe, _REG_PIPEA_DATA_M2, _REG_PIPEB_DATA_M2)
-#define VGT_PIPE_DATA_N2(pipe) _VGT_PIPE(pipe, _REG_PIPEA_DATA_N2, _REG_PIPEB_DATA_N2)
-#define VGT_PIPE_LINK_M1(pipe) _VGT_PIPE(pipe, _REG_PIPEA_LINK_M1, _REG_PIPEB_LINK_M1)
-#define VGT_PIPE_LINK_N1(pipe) _VGT_PIPE(pipe, _REG_PIPEA_LINK_N1, _REG_PIPEB_LINK_N1)
-#define VGT_PIPE_LINK_M2(pipe) _VGT_PIPE(pipe, _REG_PIPEA_LINK_M2, _REG_PIPEB_LINK_M2)
-#define VGT_PIPE_LINK_N2(pipe) _VGT_PIPE(pipe, _REG_PIPEA_LINK_N2, _REG_PIPEB_LINK_N2)
+#define VGT_PIPE_DATA_M1(pipe) _PIPE(pipe, _REG_PIPEA_DATA_M1, _REG_PIPEB_DATA_M1)
+#define VGT_PIPE_DATA_N1(pipe) _PIPE(pipe, _REG_PIPEA_DATA_N1, _REG_PIPEB_DATA_N1)
+#define VGT_PIPE_DATA_M2(pipe) _PIPE(pipe, _REG_PIPEA_DATA_M2, _REG_PIPEB_DATA_M2)
+#define VGT_PIPE_DATA_N2(pipe) _PIPE(pipe, _REG_PIPEA_DATA_N2, _REG_PIPEB_DATA_N2)
+#define VGT_PIPE_LINK_M1(pipe) _PIPE(pipe, _REG_PIPEA_LINK_M1, _REG_PIPEB_LINK_M1)
+#define VGT_PIPE_LINK_N1(pipe) _PIPE(pipe, _REG_PIPEA_LINK_N1, _REG_PIPEB_LINK_N1)
+#define VGT_PIPE_LINK_M2(pipe) _PIPE(pipe, _REG_PIPEA_LINK_M2, _REG_PIPEB_LINK_M2)
+#define VGT_PIPE_LINK_N2(pipe) _PIPE(pipe, _REG_PIPEA_LINK_N2, _REG_PIPEB_LINK_N2)
 
-/* VGA port control */
 /* FDI_RX, FDI_X is hard-wired to Transcoder_X */
 
 #define _REG_FDI_RXC_CTL			0xf200c
-
-#define _REGBIT_FDI_RX_ENABLE			(1 << 31)
-#define _REGBIT_FDI_RX_PLL_ENABLE		(1 << 13)
 #define _REGBIT_FDI_RX_PORT_WIDTH_MASK		(0x7 << 19)
 #define _REGBIT_FDI_RX_FDI_AUTO_TRAIN_ENABLE	(0x1 << 10)
-#define _REGBIT_FDI_LINK_TRAIN_PATTERN_1_CPT	(0 << 8)
-#define _REGBIT_FDI_LINK_TRAIN_PATTERN_2_CPT	(1 << 8)
-#define _REGBIT_FDI_LINK_TRAIN_NORMAL_CPT	(3 << 8)
-#define _REGBIT_FDI_LINK_TRAIN_PATTERN_MASK_CPT	(3 << 8)
-#define _REGBIT_FDI_RX_ENHANCE_FRAME_ENABLE	(1 << 6)
-#define _REGBIT_FDI_PCDCLK			(1 << 4)
 
 #define _REG_FDI_RXC_IIR			0xf2014
 #define _REG_FDI_RXC_IMR			0xf2018
 
-#define VGT_FDI_RX_IIR(pipe) _VGT_PIPE(pipe, _FDI_RXA_IIR, _FDI_RXB_IIR)
-#define VGT_FDI_RX_IMR(pipe) _VGT_PIPE(pipe, _FDI_RXA_IMR, _FDI_RXB_IMR)
+#define VGT_FDI_RX_IIR(pipe) _PIPE(pipe, _FDI_RXA_IIR, _FDI_RXB_IIR)
+#define VGT_FDI_RX_IMR(pipe) _PIPE(pipe, _FDI_RXA_IMR, _FDI_RXB_IMR)
 
 #define _REGBIT_FDI_RX_INTER_LANE_ALIGN		(1<<10)
 #define _REGBIT_FDI_RX_SYMBOL_LOCK		(1 << 9) /* train 2*/
@@ -651,78 +517,25 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 
 
 #define VGT_FDI_RX_CTL_BPC_MASK		(0x7 << 16)
-#define VGT_FDI_RX_CTL(pipe) _VGT_PIPE(pipe, _FDI_RXA_CTL, _FDI_RXB_CTL)
+#define VGT_FDI_RX_CTL(pipe) _PIPE(pipe, _FDI_RXA_CTL, _FDI_RXB_CTL)
 
-#define VGT_FDI_RX_TUSIZE1(pipe) _VGT_PIPE(pipe, _REG_FDI_RXA_TUSIZE1,_REG_FDI_RXB_TUSIZE1)
+#define VGT_FDI_RX_TUSIZE1(pipe) _PIPE(pipe, _REG_FDI_RXA_TUSIZE1,_REG_FDI_RXB_TUSIZE1)
 
 /* CPU: FDI_TX */
 #define _REG_FDI_TXC_CTL		0x62100
 
 #define _REGBIT_FDI_TX_ENABLE				(1 << 31)
-#define _REGBIT_FDI_LINK_TRAIN_PATTERN_1		(0 << 28)
-#define _REGBIT_FDI_LINK_TRAIN_PATTERN_2		(1 << 28)
-#define _REGBIT_FDI_LINK_TRAIN_NONE			(3 << 28)
 #define _REGBIT_FDI_TX_PLL_ENABLE			(1 << 14)
-#define _REGBIT_FDI_LINK_TRAIN_400MV_0DB_SNB_B		(0x0<<22)
-#define _REGBIT_FDI_LINK_TRAIN_400MV_6DB_SNB_B		(0x3a<<22)
-#define _REGBIT_FDI_LINK_TRAIN_600MV_3_5DB_SNB_B	(0x39<<22)
-#define _REGBIT_FDI_LINK_TRAIN_800MV_0DB_SNB_B		(0x38<<22)
-#define _REGBIT_FDI_LINK_TRAIN_VOL_EMP_MASK		(0x3f<<22)
 #define _REGBIT_FDI_TX_ENHANCE_FRAME_ENABLE		(1<<18)
 
-#define VGT_FDI_TX_CTL(pipe) _VGT_PIPE(pipe, _FDI_TXA_CTL, _FDI_TXB_CTL)
+#define VGT_FDI_TX_CTL(pipe) _PIPE(pipe, _FDI_TXA_CTL, _FDI_TXB_CTL)
 
 /* CRT */
 #define _REGBIT_ADPA_DAC_ENABLE			(1 << 31)
 #define PORT_TRANS_SEL_SHIFT			29
 #define VGT_PORT_TRANS_SEL_CPT(pipe)		((pipe) << PORT_TRANS_SEL_SHIFT)
-#define _REGBIT_ADPA_CRT_HOTPLUG_MONITOR_MASK	(3 << 24)
-#define _REGBIT_ADPA_CRT_HOTPLUG_ENABLE		(1 << 23)
-#define _REGBIT_ADPA_CRT_HOTPLUG_PERIOD_128	(1 << 22)
-#define _REGBIT_ADPA_CRT_HOTPLUG_WARMUP_10MS	(1 << 21)
-#define _REGBIT_ADPA_CRT_HOTPLUG_SAMPLE_4S	(1 << 20)
-#define _REGBIT_ADPA_CRT_HOTPLUG_VOLTAGE_50	(1 << 18)
-#define _REGBIT_ADPA_CRT_HOTPLUG_VOLREF_325MV	(0 << 17)
-#define _REGBIT_ADPA_CRT_HOTPLUG_FORCE_TRIGGER	(1 << 16)
 #define _REGBIT_ADPA_VSYNC_ACTIVE_HIGH		(1 << 4)
 #define _REGBIT_ADPA_HSYNC_ACTIVE_HIGH		(1 << 3)
-
-/* Display port */
-#define _REGBIT_DP_PORT_ENABLE		(1 << 31)
-#define  _REGBIT_DP_VOLTAGE_0_4		(0 << 25)
-#define  _REGBIT_DP_VOLTAGE_0_6		(1 << 25)
-#define  _REGBIT_DP_VOLTAGE_0_8		(2 << 25)
-#define  _REGBIT_DP_VOLTAGE_1_2		(3 << 25)
-#define  _REGBIT_DP_VOLTAGE_MASK	(7 << 25)
-#define  DP_VOLTAGE_SHIFT		25
-
-#define _REGBIT_DP_PRE_EMPHASIS_0		(0 << 22)
-#define _REGBIT_DP_PRE_EMPHASIS_3_5		(1 << 22)
-#define _REGBIT_DP_PRE_EMPHASIS_6		(2 << 22)
-#define _REGBIT_DP_PRE_EMPHASIS_9_5		(3 << 22)
-#define _REGBIT_DP_PRE_EMPHASIS_MASK		(7 << 22)
-
-#define _REGBIT_DP_LINK_TRAIN_PAT_1_CPT		(0 << 8)
-#define _REGBIT_DP_LINK_TRAIN_PAT_2_CPT		(1 << 8)
-#define _REGBIT_DP_LINK_TRAIN_PAT_IDLE_CPT	(2 << 8)
-#define _REGBIT_DP_LINK_TRAIN_OFF_CPT		(3 << 8)
-#define _REGBIT_DP_LINK_TRAIN_MASK_CPT		(7 << 8)
-#define _REGBIT_DP_AUDIO_OUTPUT_ENABLE		(1 << 6)
-#define _REGBIT_DP_PORT_DETECTED		(1 << 2)
-
-/* legacy or PCH_IBX ? */
-#define _REGBIT_DP_LINK_TRAIN_MASK		(3 << 28)
-#define _REGBIT_TRANS_DP_PORT_SEL_MASK	(3 << 29)
-#define _REGBIT_TRANS_DP_PORT_SEL_NONE	(3 << 29)
-#define _REGBIT_TRANS_DP_OUTPUT_ENABLE	(1 << 31)
-#define VGT_TRANS_DP_CTL(pipe)	(_REG_TRANS_DP_A_CTL + (pipe) * 0x01000)
-#define _REGBIT_TRANS_DP_PORT_SEL_B	(0 << 29)
-#define _REGBIT_TRANS_DP_PORT_SEL_C	(1 << 29)
-#define _REGBIT_TRANS_DP_PORT_SEL_D	(2 << 29)
-
-
-/* Digital display A (DP_A, embedded) */
-#define _REGBIT_DP_PORT_A_DETECTED	(1 << 2)
 
 /* HDMI/DVI/SDVO port */
 #define HDMI_TRANS_SEL_MASK		(3 << 29)
@@ -731,15 +544,8 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 
 /* PCH SDVOB multiplex with HDMIB */
 #define VGT_BACKLIGHT_DUTY_CYCLE_MASK		(0xffff)
-#define _REGBIT_PANEL_POWER_DOWN_DELAY_MASK	(0x1fff0000)
-#define _REGBIT_PANEL_POWER_DOWN_DELAY_SHIFT	16
-#define _REGBIT_PANEL_LIGHT_OFF_DELAY_MASK	(0x1fff)
-#define _REGBIT_PANEL_LIGHT_OFF_DELAY_SHIFT	0
 
-#define _REGBIT_PANEL_POWER_ON		(1 << 31)
-#define _REG_PCH_PP_CONTROL		0xc7204
 #define _REGBIT_POWER_TARGET_ON		(1 << 0)
-#define _REGBIT_PANEL_UNLOCK_REGS	(0xabcd << 16) /* Write Protect Key is 0xABCD */
 
 
 /* Watermark register (Ironlake) */
@@ -754,7 +560,7 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 #define CURSOR_MAXWM	0x1f	/* bit 4:0 */
 
 /*Intermediate Pixel Storage*/
-union PCH_PP_CONTROL_LAYOUT
+union _PCH_PP_CONTROL
 {
 	uint32_t data;
 	struct
@@ -768,7 +574,7 @@ union PCH_PP_CONTROL_LAYOUT
 	};
 };
 
-union PCH_PP_STATUS_LAYOUT
+union _PCH_PP_STAUTS
 {
 	uint32_t data;
 	struct
@@ -786,30 +592,12 @@ union PCH_PP_STATUS_LAYOUT
 /* CPU panel fitter */
 
 #define _REG_PF_CTL_2			0x69080
-
-#define _REGBIT_PF_ENABLE		(1 << 31)
-#define	_REGBIT_PF_PIPE_SEL_MASK	(3<<29)
-#define	_REGBIT_PF_PIPE_SEL(pipe)	((pipe)<<29)
-#define _REGBIT_PF_FILTER_MASK		(3 << 23)
-#define _REGBIT_PF_FILTER_PROGRAMMED	(0 << 23)
-#define _REGBIT_PF_FILTER_MED_3x3	(1 << 23)
-#define _REGBIT_PF_FILTER_EDGE_ENHANCE	(2 << 23)
-#define _REGBIT_PF_FILTER_EDGE_SOFTEN	(3 << 23)
-
 #define _REG_PF_WIN_SZ_2		0x69074
 #define _REG_PF_WIN_POS_2		0x69070
 
-
-#define VGT_PF_CTL(pipe)	_VGT_PIPE(pipe, _PFA_CTL_1, _PFB_CTL_1)
-#define VGT_PF_WIN_SZ(pipe)	_VGT_PIPE(pipe, _PFA_WIN_SZ, _PFB_WIN_SZ)
-#define    VGT_PF_WIN_POS(pipe) _VGT_PIPE(pipe, _PFA_WIN_POS, _PFB_WIN_POS)
-
 /* Per-transcoder DIP controls */
 
-#define _REGBIT_TRANS_ENABLE		(1 << 31)
-#define _REGBIT_TRANS_STATE_ENABLED	(1 << 30)
-#define _REGBIT_TRANS_INTERLACE_MASK	(7 << 21)
-#define VGT_TRANSCONF(plane)	_VGT_PIPE(plane, _PCH_TRANSACONF, _PCH_TRANSBCONF)
+#define VGT_TRANSCONF(plane)	_PIPE(plane, _PCH_TRANSACONF, _PCH_TRANSBCONF)
 
 union _TRANS_CONFIG
 {
@@ -826,37 +614,9 @@ union _TRANS_CONFIG
 	};
 };
 
-#define VGT_TRANS_CHICKEN2(pipe) _VGT_PIPE(pipe, _REG_TRANSA_CHICKEN2, _REG_TRANSB_CHICKEN2)
-#define _REGBIT_TRANS_AUTOTRAIN_GEN_STALL_DISABLE	(1<<31)
-
-/* transcoder */
-#define VGT_TRANS_HTOTAL(pipe)	_VGT_PIPE(pipe, _REG_TRANS_HTOTAL_A, _REG_TRANS_HTOTAL_B)
-#define VGT_TRANS_HBLANK(pipe)	_VGT_PIPE(pipe, _REG_TRANS_HBLANK_A, _REG_TRANS_HBLANK_B)
-#define VGT_TRANS_HSYNC(pipe)	 _VGT_PIPE(pipe, _REG_TRANS_HSYNC_A, _REG_TRANS_HSYNC_B)
-#define VGT_TRANS_VTOTAL(pipe)	_VGT_PIPE(pipe, _REG_TRANS_VTOTAL_A, _REG_TRANS_VTOTAL_B)
-#define VGT_TRANS_VBLANK(pipe)	_VGT_PIPE(pipe, _REG_TRANS_VBLANK_A, _REG_TRANS_VBLANK_B)
-#define VGT_TRANS_VSYNC(pipe)	 _VGT_PIPE(pipe, _REG_TRANS_VSYNC_A, _REG_TRANS_VSYNC_B)
-#define VGT_TRANS_VSYNCSHIFT(pipe)	_VGT_PIPE(pipe, _REG_TRANS_VSYNCSHIFT_A, \
-					_REG_TRANS_VSYNCSHIFT_B)
-
-#define    VGT_FDIA_PHASE_SYNC_SHIFT_EN	18
-#define VGT_FDIA_PHASE_SYNC_SHIFT_OVR	19
-#define    VGT_FDI_PHASE_SYNC_EN(pipe)	(1 << (VGT_FDIA_PHASE_SYNC_SHIFT_EN - ((pipe) * 2)))
-#define VGT_FDI_PHASE_SYNC_OVR(pipe)(1 << (VGT_FDIA_PHASE_SYNC_SHIFT_OVR - ((pipe) *2)))
-#define    _REGBIT_FDI_MPHY_IOSFSB_RESET_STATUS	(1<<13)
-#define    _REGBIT_MPHY_IOSFSB_RESET_CTL	(1<<12)
-#define VGT_TRANSDATA_M1(pipe)	_VGT_PIPE(pipe, _REG_TRANSA_DATA_M1, _REG_TRANSB_DATA_M1)
-#define VGT_TRANSDATA_N1(pipe)	_VGT_PIPE(pipe, _REG_TRANSA_DATA_N1, _REG_TRANSB_DATA_N1)
-#define VGT_TRANSDATA_M2(pipe)	_VGT_PIPE(pipe, _REG_TRANSA_DATA_M2, _REG_TRANSB_DATA_M2)
-#define VGT_TRANSDATA_N2(pipe)	_VGT_PIPE(pipe, _REG_TRANSA_DATA_N2, _REG_TRANSB_DATA_N2)
 #define _REG_TRANSC_VIDEO_DIP_CTL	0xE2200
 #define _REG_TRANSC_VIDEO_DIP_DATA	0xE2208
 #define _REG_TRANSC_VIDEO_DIP_GCP	0xE2210
-//#define _REG_TRANSC_DP_CTL		TRANS_DP_CTL_C
-
-/* Display & cursor control */
-
-/* Pipe A */
 
 #define _REG_PIPEBCONF		0x71008
 #define _REG_PIPEBSTAT		0x71024
@@ -880,36 +640,27 @@ union _TRANS_CONFIG
 #define _REGBIT_PIPE_8BPC		(0 << 5)
 
 /* bit fields of pipestat */
-#define _REGBIT_PIPE_VBLANK_INTERRUPT_STATUS	(1 << 1)
 
-#define VGT_PIPEDSL(pipe)	_VGT_PIPE(pipe, _PIPEADSL, _REG_PIPEBDSL)
-#define VGT_PIPECONF(pipe)	_VGT_PIPE(pipe, _PIPEACONF, _REG_PIPEBCONF)
-#define VGT_PIPESTAT(pipe)	_VGT_PIPE(pipe, _PIPEASTAT, _REG_PIPEBSTAT)
-#define VGT_PIPE_FRMCOUNT(pipe)	_VGT_PIPE(pipe, _PIPEA_FRMCOUNT_G4X, _REG_PIPEB_FRMCOUNT)
-#define VGT_PIPE_FLIPCOUNT(pipe) _VGT_PIPE(pipe, _PIPEA_FLIPCOUNT_G4X, _REG_PIPEB_FLIPCOUNT)
+#define VGT_PIPEDSL(pipe)	_PIPE(pipe, _PIPEADSL, _REG_PIPEBDSL)
+#define VGT_PIPECONF(pipe)	_PIPE(pipe, _PIPEACONF, _REG_PIPEBCONF)
+#define VGT_PIPESTAT(pipe)	_PIPE(pipe, _PIPEASTAT, _REG_PIPEBSTAT)
+#define VGT_PIPE_FRMCOUNT(pipe)	_PIPE(pipe, _PIPEA_FRMCOUNT_G4X, _REG_PIPEB_FRMCOUNT)
+#define VGT_PIPE_FLIPCOUNT(pipe) _PIPE(pipe, _PIPEA_FLIPCOUNT_G4X, _REG_PIPEB_FLIPCOUNT)
 
 #define VGT_PIPECONFPIPE(pipeconf) _VGT_GET_PIPE(pipeconf, _PIPEACONF, _REG_PIPEBCONF)
 #define VGT_FRMCOUNTPIPE(frmcount) _VGT_GET_PIPE(frmcount, _PIPEA_FRMCOUNT_G4X, _REG_PIPEB_FRMCOUNT)
 
-/* For Gen 2 */
-//#define	_REG_CURSIZE		CURSIZE
-/*
- * Palette regs
- */
-
-#define VGT_PALETTE(pipe) _VGT_PIPE(pipe, _PALETTE_A_OFFSET, _PALETTE_B_OFFSET)
+#define VGT_PALETTE(pipe) _PIPE(pipe, _PALETTE_A_OFFSET, _PALETTE_B_OFFSET)
 
 /* legacy palette */
 
 #define _REG_LGC_PALETTE_C		0x4b000
-#define VGT_LGC_PALETTE(pipe) _VGT_PIPE(pipe, _LGC_PALETTE_A, _LGC_PALETTE_B)
 
 /* Display Port */
 
 #define _REG_DP_TP_CTL_C		0x64240
 #define _REG_DP_TP_CTL_D		0x64340
 #define _REG_DP_TP_CTL_E		0x64440
-#define  _REGBIT_DP_TP_ENABLE		(1 << 31)
 #define  _REGBIT_DP_TP_FDI_AUTO_TRAIN_ENABLE	(1 << 15)
 #define  _DDI_BUFCTL_DETECT_MASK	0x1
 #define  _REGBIT_DDI_BUF_ENABLE		(1 << 31)
@@ -920,18 +671,13 @@ union _TRANS_CONFIG
 #define _REG_DP_TP_STATUS_C			0x64244
 #define _REG_DP_TP_STATUS_D			0x64344
 #define _REG_DP_TP_STATUS_E			0x64444
-#define  _REGBIT_DP_TP_STATUS_AUTOTRAIN_DONE	(1 << 12)
+#define VGT_DP_TP_CTL(port)		_PORT(port, DP_TP_CTL_A, \
+						DP_TP_CTL_B)
 
-#define VGT_DP_TP_CTL(port)		_VGT_PORT(port, DP_TP_CTL_A, \
+#define DP_TP_PORT(reg)		_VGT_GET_PORT(reg, DP_TP_CTL_A, \
 						DP_TP_CTL_B)
-#define VGT_DP_TP_CTL_PORT(reg)		_VGT_GET_PORT(reg, DP_TP_CTL_A, \
-						DP_TP_CTL_B)
-#define VGT_DP_TP_STATUS(port)		_VGT_PORT(port, DP_TP_STATUS_A, \
+#define DP_TP_STATUS(port)		_PORT(port, DP_TP_STATUS_A, \
 						DP_TP_STATUS_B)
-#define VGT_DP_TP_STATUS_PORT(reg)	_VGT_GET_PORT(reg, DP_TP_STATUS_A, \
-						DP_TP_STATUS_B)
-#define VGT_DDI_BUF_CTL(port)		_VGT_PORT(port, DDI_BUF_CTL_A, \
-						DDI_BUF_CTL_B)
 
 #define DRM_MODE_DPMS_ON		0
 
@@ -1040,12 +786,7 @@ union _TRANS_CONFIG
 
 /* digital port hotplug */
 /* GMBUS1 bits definitions */
-#define _GMBUS_SW_CLR_INT	(1 << 31)
-#define _GMBUS_SW_RDY		(1 << 30)
-#define _GMBUS_CYCLE_WAIT	(1 << 25)
-#define _GMBUS_CYCLE_INDEX	(1 << 26)
-#define _GMBUS_CYCLE_STOP	(1 << 27)
-#define _GMBUS_SLAVE_READ	(1 << 0)
+
 #define GMBUS1_TOTAL_BYTES_SHIFT 16
 #define GMBUS1_TOTAL_BYTES_MASK 0x1ff
 #define gmbus1_total_byte_count(v) (((v) >> GMBUS1_TOTAL_BYTES_SHIFT) & GMBUS1_TOTAL_BYTES_MASK)
@@ -1056,46 +797,22 @@ union _TRANS_CONFIG
 /* GMBUS0 bits definitions */
 #define _GMBUS_PIN_SEL_MASK	(0x7)
 
-/* GMBUS2 bits definitions */
-#define _GMBUS_IN_USE		(1 << 15)
-#define _GMBUS_HW_WAIT		(1 << 14)
-#define _GMBUS_HW_RDY		(1 << 11)
-#define _GMBUS_INT_STAT		(1 << 12)
-#define _GMBUS_NAK		(1 << 10)
-#define _GMBUS_ACTIVE		(1 << 9)
-
-#define _GMBUS_SLAVE_READ	(1 << 0)
-#define _GMBUS_SLAVE_WRITE	(0 << 0)
-#define _GMBUS_BYTE_COUNT_SHIFT	16
-#define _GMBUS_SLAVE_ADDR_SHIFT	1
-#define _GMBUS_TRANS_MAX_BYTES	((1 << 9) - 1)
-
 #define _REG_RC_PWRCTX_MAXCNT		0x2054
 #define _REG_VFSKPD			0x2470
 #define _REG_2D_CG_DIS			0x6200
 #define _REG_3D_CG_DIS			0x6204			
 #define _REG_3D_CG_DIS2			0x6208
 #define _REG_SUPER_QUEUE_CONFIG		0x902c
-/*
- * GPIO regs
- */
 
 /* interrupt related definitions */
 #define	_REGSHIFT_MASTER_INTERRUPT	31
-#define	_REGBIT_MASTER_INTERRUPT	(1 << 31)
-#define	_REGBIT_DP_A_HOTPLUG	(1 << 19)
-#define	_REGBIT_DP_A_HOTPLUG_IVB	(1 << 27)
-#define	_REGBIT_PIPE_A_VBLANK	(1 << 7)
 #define	_REGSHIFT_PCH	21
 #define	_REGBIT_PCH	(1 << 21)
 /* GEN7 */
 #define	_REGSHIFT_PCH_GEN7	28
 #define	_REGBIT_PCH_GEN7	(1 << 28)
 
-#define	_REGBIT_DP_A_HOTPLUG_STATUS	(3 << 0)
 #define	_REGBIT_DP_A_PULSE_DURATION	(3 << 2)
-#define	_REGBIT_DP_A_HOTPLUG_ENABLE	(1 << 4)
-//#define _REG_GTT_FAULT_STATUS	GEN7_ERR_INT
 
 #define	_REGBIT_CRT_HOTPLUG	(1 << 19)
 #define	_REGBIT_DP_B_HOTPLUG	(1 << 21)
@@ -1148,8 +865,6 @@ union _TRANS_CONFIG
 
 /* blacklight PWM control */
 
-#define        _REGBIT_PHASE_IN_IRQ_ENABLE	(1 << 24)
-#define        _REGBIT_PHASE_IN_IRQ_STATUS	(1 << 26)
 #define _REG_HISTOGRAM_THRSH	0x48268
 #define        _REGBIT_HISTOGRAM_IRQ_ENABLE	(1 << 31)
 #define        _REGBIT_HISTOGRAM_IRQ_STATUS	(1 << 30)
@@ -1194,11 +909,9 @@ union _TRANS_CONFIG
 #define VGT_OPREGION_SCIC_SF_REQEUSTEDCALLBACKS	1
 #define VGT_OPREGION_REG_PARM			0x204
 
-//#define MSAC_APERTURE_SIZE_MASK		0x3
 #define MSAC_APERTURE_SIZE_128M			(0 << 1)
 #define MSAC_APERTURE_SIZE_256M			(1 << 1)
 #define MSAC_APERTURE_SIZE_512M			(3 << 1)
-
 
 /*
  * Configuration register definition for BDF: 0:0:0.
@@ -1210,81 +923,33 @@ union _TRANS_CONFIG
 #define    _REGBIT_BDW_GMCH_GMS_MASK    0xff
 
 /* HSW */
-#define _REG_LCPLL_CTL			0x130040
-#define  _REGBIT_LCPLL_PLL_DISABLE		(1<<31)
-#define  _REGBIT_LCPLL_PLL_LOCK			(1<<30)
-#define  _REGBIT_LCPLL_CLK_FREQ_MASK		(3<<26)
-#define  _REGBIT_LCPLL_CD_SOURCE_FCLK		(1<<21)
-#define  _REGBIT_LCPLL_CD_SOURCE_FCLK_DONE	(1<<19)
-#define  _LCPLL_CLK_FREQ_450		(0<<26)
-#define  _REGBIT_HSW_CDCLK_LIMIT	(1 << 24)
-
-#define   _REGBIT_HSW_PWR_WELL_ENABLE			(1<<31)
-#define   _REGBIT_HSW_PWR_WELL_STATE				(1<<30)
-#define   _REGBIT_HSW_PWR_WELL_ENABLE_SINGLE_STEP	(1<<31)
-#define   _REGBIT_HSW_PWR_WELL_PWR_GATE_OVERRIDE	(1<<20)
-#define   _REGBIT_HSW_PWR_WELL_FORCE_ON			(1<<19)
 
 #define  _REGBIT_SPLL_CTL_ENABLE	(1 << 31)
-
-#define  _REGBIT_WRPLL_ENABLE	(1 << 31)
 
 #define _REG_PORT_CLK_SEL_DDIC	0x46108
 #define _REG_PORT_CLK_SEL_DDID	0x4610C
 #define _REG_PORT_CLK_SEL_DDIE	0x46110
 
 #define _REG_TRANS_CLK_SEL_C	0x46148
-#define _SBI_RESPONSE_MASK		0x3
-#define _SBI_RESPONSE_SHIFT		0x1
-#define _SBI_STAT_MASK			0x1
-#define _SBI_STAT_SHIFT			0x0
-#define _SBI_RESPONSE_FAIL		(0x1<<_SBI_RESPONSE_SHIFT)
-#define _SBI_RESPONSE_SUCCESS		(0x0<<_SBI_RESPONSE_SHIFT)
-#define _SBI_BUSY			(0x1<<_SBI_STAT_SHIFT)
-#define _SBI_READY			(0x0<<_SBI_STAT_SHIFT)
-#define _SBI_OPCODE_SHIFT		8
-#define _SBI_OPCODE_MASK		(0xff << _SBI_OPCODE_SHIFT)
-#define _SBI_CMD_IORD			2
-#define _SBI_CMD_IOWR			3
-#define _SBI_CMD_CRRD			6
-#define _SBI_CMD_CRWR			7
-#define _SBI_ADDR_OFFSET_SHIFT		16
-#define _SBI_ADDR_OFFSET_MASK		(0xffff << _SBI_ADDR_OFFSET_SHIFT)
+#define SBI_RESPONSE_MASK		0x3
+#define SBI_RESPONSE_SHIFT		0x1
+#define SBI_STAT_MASK			0x1
+#define SBI_STAT_SHIFT			0x0
+#define SBI_OPCODE_SHIFT		8
+#define SBI_OPCODE_MASK		(0xff << SBI_OPCODE_SHIFT)
+#define SBI_CMD_IORD			2
+#define SBI_CMD_IOWR			3
+#define SBI_CMD_CRRD			6
+#define SBI_CMD_CRWR			7
+#define SBI_ADDR_OFFSET_SHIFT		16
+#define SBI_ADDR_OFFSET_MASK		(0xffff << SBI_ADDR_OFFSET_SHIFT)
 
-#define _VGT_TRANS_DDI_FUNC_CTL(tran)   _VGT_TRANSCODER(tran, TRANS_DDI_FUNC_CTL_A, \
+#define _VGT_TRANS_DDI_FUNC_CTL(tran)   _TRANSCODER(tran, TRANS_DDI_FUNC_CTL_A, \
 						   TRANS_DDI_FUNC_CTL_B)
 
-
-#define  _REGBIT_TRANS_DDI_FUNC_ENABLE		(1<<31)
 /* Those bits are ignored by pipe EDP since it can only connect to DDI A */
-#define  _TRANS_DDI_PORT_SHIFT			28
-#define  _REGBIT_TRANS_DDI_PORT_MASK		(7<<_TRANS_DDI_PORT_SHIFT)
-#define  _REGBIT_TRANS_DDI_SELECT_PORT(x)	((x)<<_TRANS_DDI_PORT_SHIFT)
-#define  _REGBIT_TRANS_DDI_PORT_NONE		(0<<_TRANS_DDI_PORT_SHIFT)
 #define  _TRANS_DDI_MODE_SELECT_HIFT		24
-#define  _REGBIT_TRANS_DDI_MODE_SELECT_MASK	(7<<_TRANS_DDI_MODE_SELECT_HIFT)
-#define  _REGBIT_TRANS_DDI_MODE_SELECT_HDMI	(0<<_TRANS_DDI_MODE_SELECT_HIFT)
-#define  _REGBIT_TRANS_DDI_MODE_SELECT_DVI	(1<<_TRANS_DDI_MODE_SELECT_HIFT)
-#define  _REGBIT_TRANS_DDI_MODE_SELECT_DP_SST	(2<<_TRANS_DDI_MODE_SELECT_HIFT)
-#define  _REGBIT_TRANS_DDI_MODE_SELECT_DP_MST	(3<<_TRANS_DDI_MODE_SELECT_HIFT)
-#define  _REGBIT_TRANS_DDI_MODE_SELECT_FDI	(4<<_TRANS_DDI_MODE_SELECT_HIFT)
-#define  _REGBIT_TRANS_DDI_BPC_MASK		(7<<20)
-#define  _REGBIT_TRANS_DDI_BPC_8		(0<<20)
-#define  _REGBIT_TRANS_DDI_BPC_10		(1<<20)
-#define  _REGBIT_TRANS_DDI_BPC_6		(2<<20)
-#define  _REGBIT_TRANS_DDI_BPC_12		(3<<20)
-#define  _REGBIT_TRANS_DDI_PVSYNC		(1<<17)
-#define  _REGBIT_TRANS_DDI_PHSYNC		(1<<16)
 #define  _TRANS_DDI_EDP_INPUT_SHIFT		12
-#define  _REGBIT_TRANS_DDI_EDP_INPUT_MASK	(7<<_TRANS_DDI_EDP_INPUT_SHIFT)
-#define  _REGBIT_TRANS_DDI_EDP_INPUT_A_ON	(0<<_TRANS_DDI_EDP_INPUT_SHIFT)
-#define  _REGBIT_TRANS_DDI_EDP_INPUT_A_ONOFF	(4<<_TRANS_DDI_EDP_INPUT_SHIFT)
-#define  _REGBIT_TRANS_DDI_EDP_INPUT_B_ONOFF	(5<<_TRANS_DDI_EDP_INPUT_SHIFT)
-#define  _REGBIT_TRANS_DDI_EDP_INPUT_C_ONOFF	(6<<_TRANS_DDI_EDP_INPUT_SHIFT)
-#define  _REGBIT_TRANS_DDI_BFI_ENABLE		(1<<4)
-#define  _REGBIT_TRANS_DDI_PORT_WIDTH_X1	(0<<1)
-#define  _REGBIT_TRANS_DDI_PORT_WIDTH_X2	(1<<1)
-#define  _REGBIT_TRANS_DDI_PORT_WIDTH_X4	(3<<1)
 
 #define _REG_GEN7_SQ_CHICKEN_MBCUNIT_CONFIG		0x9030
 #define GEN7_L3SQCREG1				0xB010
@@ -1293,32 +958,12 @@ union _TRANS_CONFIG
 #define GEN8_L3SQCREG1				0xB100
 #define  BDW_WA_L3SQCREG1_DEFAULT		0x784000
 
-#define GEN7_L3CNTLREG2				0xB020
 #define GEN7_L3CNTLREG3				0xB024
 #define _REG_PIPE_WM_LINETIME_C			0x45278
 
 #define _REG_HSW_VIDEO_DIP_CTL_C		0x62200
 #define _REG_HSW_VIDEO_DIP_CTL_EDP		0x6F200
-#define  _REGBIT_SFUSE_STRAP_B_PRESENTED	(1 << 2)
-#define  _REGBIT_SFUSE_STRAP_C_PRESENTED	(1 << 1)
-#define  _REGBIT_SFUSE_STRAP_D_PRESENTED	(1 << 0)
-
-#define _REGBIT_FPGA_DBG_RM_NOCLAIM		(1 << 31)
-
 /* GEN8 interrupt registers definations */
-#define  _REGBIT_MASTER_IRQ_CONTROL	(1<<31)
-#define  _REGBIT_PCU_IRQ			(1<<30)
-#define  _REGBIT_DE_PCH_IRQ		(1<<23)
-#define  _REGBIT_DE_MISC_IRQ		(1<<22)
-#define  _REGBIT_DE_PORT_IRQ		(1<<20)
-#define  _REGBIT_DE_PIPE_C_IRQ		(1<<18)
-#define  _REGBIT_DE_PIPE_B_IRQ		(1<<17)
-#define  _REGBIT_DE_PIPE_A_IRQ		(1<<16)
-#define  _REGBIT_GT_VECS_IRQ		(1<<6)
-#define  _REGBIT_GT_VCS2_IRQ		(1<<3)
-#define  _REGBIT_GT_VCS1_IRQ		(1<<2)
-#define  _REGBIT_GT_BCS_IRQ		(1<<1)
-#define  _REGBIT_GT_RCS_IRQ		(1<<0)
 
 #define _REG_GT_ISR(which) (0x44300 + (0x10 * (which)))
 #define _REG_GT_IMR(which) (0x44304 + (0x10 * (which)))

@@ -120,7 +120,7 @@ static bool fence_mmio_write(struct vgt_device *vgt, unsigned int off,
 static inline void set_vRC(struct vgt_device *vgt, int c)
 {
 	__vreg(vgt, _REG_GT_CORE_STATUS) = c;
-	__vreg(vgt, _REG_GT_THREAD_STATUS) = c;
+	__vreg(vgt, GEN6_GT_THREAD_STATUS_REG) = c;
 }
 
 static void set_vRC_to_C6(struct vgt_device *vgt)
@@ -197,7 +197,7 @@ static bool mul_force_wake_write(struct vgt_device *vgt, unsigned int offset,
 
 	vgt_dbg(VGT_DBG_GENERIC, "VM%d write register FORCE_WAKE_MT with %x\n", vgt->vm_id, data);
 
-	if (!IS_BDWPLUS(vgt->pdev) && !(__vreg(vgt, ECOBUS) & ECOBUS_FORCEWAKE_MT_ENABLE)) {
+	if (!IS_BDWPLUS(vgt->pdev) && !(__vreg(vgt, ECOBUS) & FORCEWAKE_MT_ENABLE)) {
 		__vreg(vgt, FORCEWAKE_MT) = data;
 		return true;
 	}
@@ -217,7 +217,7 @@ static bool mul_force_wake_write(struct vgt_device *vgt, unsigned int offset,
 		__vreg(vgt, FORCEWAKE_ACK_HSW) = new_wake;
 	} else {
 		/* IVB */
-		__vreg(vgt, _REG_MULFORECEWAKE_ACK) = new_wake;
+		__vreg(vgt, FORCEWAKE_MT_ACK) = new_wake;
 	}
 
 	if (new_wake){
@@ -301,22 +301,22 @@ static bool gen6_gdrst_mmio_write(struct vgt_device *vgt, unsigned int offset,
 
 	memcpy(&data, p_data, bytes);
 
-	if (data & _REGBIT_GEN6_GRDOM_FULL) {
+	if (data & GEN6_GRDOM_FULL) {
 		vgt_info("VM %d request Full GPU Reset\n", vgt->vm_id);
 		ring_bitmap = 0xff;
 	}
 
-	if (data & _REGBIT_GEN6_GRDOM_RENDER) {
+	if (data & GEN6_GRDOM_RENDER) {
 		vgt_info("VM %d request GPU Render Reset\n", vgt->vm_id);
 		ring_bitmap |= (1 << RING_BUFFER_RCS);
 	}
 
-	if (data & _REGBIT_GEN6_GRDOM_MEDIA) {
+	if (data & GEN6_GRDOM_MEDIA) {
 		vgt_info("VM %d request GPU Media Reset\n", vgt->vm_id);
 		ring_bitmap |= (1 << RING_BUFFER_VCS);
 	}
 
-	if (data & _REGBIT_GEN6_GRDOM_BLT) {
+	if (data & GEN6_GRDOM_BLT) {
 		vgt_info("VM %d request GPU BLT Reset\n", vgt->vm_id);
 		ring_bitmap |= (1 << RING_BUFFER_BCS);
 	}
@@ -380,8 +380,8 @@ static bool pch_pp_control_mmio_write(struct vgt_device *vgt, unsigned int offse
 {
 	uint32_t data;
 	uint32_t reg;
-	union PCH_PP_CONTROL_LAYOUT pp_control;
-	union PCH_PP_STATUS_LAYOUT pp_status;
+	union _PCH_PP_CONTROL pp_control;
+	union _PCH_PP_STAUTS pp_status;
 
 	reg = offset & ~(bytes - 1);
 	if (reg_hw_access(vgt, reg)){
@@ -390,7 +390,7 @@ static bool pch_pp_control_mmio_write(struct vgt_device *vgt, unsigned int offse
 
 	data = *(uint32_t*)p_data;
 
-	__vreg(vgt, _REG_PCH_PP_CONTROL) = data;
+	__vreg(vgt, PCH_PP_CONTROL) = data;
 
 	pp_control.data = data;
 	pp_status.data = __vreg(vgt, PCH_PP_STATUS);
@@ -478,15 +478,15 @@ static bool lcpll_ctl_mmio_write(struct vgt_device *vgt, unsigned int offset,
 	if (!reg_hw_access(vgt, reg)) {
 		vreg_data = __vreg(vgt, offset);
 
-		if (vreg_data & _REGBIT_LCPLL_PLL_DISABLE)
-			vreg_data &= ~_REGBIT_LCPLL_PLL_LOCK;
+		if (vreg_data & LCPLL_PLL_DISABLE)
+			vreg_data &= ~LCPLL_PLL_LOCK;
 		else
-			vreg_data |= _REGBIT_LCPLL_PLL_LOCK;
+			vreg_data |= LCPLL_PLL_LOCK;
 
-		if (vreg_data & _REGBIT_LCPLL_CD_SOURCE_FCLK)
-			vreg_data |= _REGBIT_LCPLL_CD_SOURCE_FCLK_DONE;
+		if (vreg_data & LCPLL_CD_SOURCE_FCLK)
+			vreg_data |= LCPLL_CD_SOURCE_FCLK_DONE;
 		else
-			vreg_data &= ~_REGBIT_LCPLL_CD_SOURCE_FCLK_DONE;
+			vreg_data &= ~LCPLL_CD_SOURCE_FCLK_DONE;
 
 		__vreg(vgt, offset) = vreg_data;
 	}
@@ -712,7 +712,7 @@ static bool dpy_trans_ddi_ctl_write(struct vgt_device *vgt, unsigned int offset,
 		is_current_display_owner(vgt) &&
 		offset == TRANS_DDI_FUNC_CTL_EDP &&
 		PIPE_A  == get_edp_input(*((uint32_t *)p_data))) {
-		*((uint32_t *)p_data) |= _REGBIT_TRANS_DDI_EDP_INPUT_A_ONOFF;
+		*((uint32_t *)p_data) |= TRANS_DDI_EDP_INPUT_A_ONOFF;
 		vgt_set_power_well(vgt, true);
 	}
 
@@ -885,7 +885,7 @@ static bool ddi_buf_ctl_mmio_write(struct vgt_device *vgt, unsigned int offset,
 		(!(reg_val & _REGBIT_DDI_BUF_ENABLE))) {
 		if (!reg_hw_access(vgt, offset)) {
 			__vreg(vgt, _REG_DP_TP_STATUS_E) &=
-				~_REGBIT_DP_TP_STATUS_AUTOTRAIN_DONE;
+				~DP_TP_STATUS_AUTOTRAIN_DONE;
 		}
 	}
 
@@ -926,9 +926,9 @@ static bool fdi_auto_training_started(struct vgt_device *vgt)
 	vgt_reg_t tx_ctl = __vreg(vgt, _REG_DP_TP_CTL_E);
 
 	if ((ddi_buf_ctl & _REGBIT_DDI_BUF_ENABLE) &&
-		(rx_ctl & _REGBIT_FDI_RX_ENABLE) &&
+		(rx_ctl & FDI_RX_ENABLE) &&
 		(rx_ctl & _REGBIT_FDI_RX_FDI_AUTO_TRAIN_ENABLE) &&
-		(tx_ctl & _REGBIT_DP_TP_ENABLE) &&
+		(tx_ctl & DP_TP_CTL_ENABLE) &&
 		(tx_ctl & _REGBIT_DP_TP_FDI_AUTO_TRAIN_ENABLE)) {
 			rc = true;
 	}
@@ -950,18 +950,18 @@ static bool check_fdi_rx_train_status(struct vgt_device *vgt,
 	fdi_rx_ctl = VGT_FDI_RX_CTL(pipe);
 
 	if (train_pattern == FDI_LINK_TRAIN_PATTERN1) {
-		fdi_rx_train_bits =_REGBIT_FDI_LINK_TRAIN_PATTERN_1_CPT;
-		fdi_tx_train_bits = _REGBIT_FDI_LINK_TRAIN_PATTERN_1;
+		fdi_rx_train_bits =FDI_LINK_TRAIN_PATTERN_1_CPT;
+		fdi_tx_train_bits = FDI_LINK_TRAIN_PATTERN_1;
 		fdi_iir_check_bits = _REGBIT_FDI_RX_BIT_LOCK;
 	} else if (train_pattern == FDI_LINK_TRAIN_PATTERN2) {
-		fdi_rx_train_bits = _REGBIT_FDI_LINK_TRAIN_PATTERN_2_CPT;
-		fdi_tx_train_bits = _REGBIT_FDI_LINK_TRAIN_PATTERN_2;
+		fdi_rx_train_bits = FDI_LINK_TRAIN_PATTERN_2_CPT;
+		fdi_tx_train_bits = FDI_LINK_TRAIN_PATTERN_2;
 		fdi_iir_check_bits = _REGBIT_FDI_RX_SYMBOL_LOCK;
 	} else {
 		BUG();
 	}
 
-	fdi_rx_check_bits = _REGBIT_FDI_RX_ENABLE | fdi_rx_train_bits;
+	fdi_rx_check_bits = FDI_RX_ENABLE | fdi_rx_train_bits;
 	fdi_tx_check_bits = _REGBIT_FDI_TX_ENABLE | fdi_tx_train_bits;
 
 	/* If imr bit not been masked */
@@ -1018,7 +1018,7 @@ static bool update_fdi_rx_iir_status(struct vgt_device *vgt, unsigned int offset
 		if (offset == _FDI_RXA_CTL) {
 			if (fdi_auto_training_started(vgt))
 				__vreg(vgt, _REG_DP_TP_STATUS_E) |=
-					_REGBIT_DP_TP_STATUS_AUTOTRAIN_DONE;
+					DP_TP_STATUS_AUTOTRAIN_DONE;
 		}
 	}
 	return rc;
@@ -1039,12 +1039,12 @@ static bool dp_tp_ctl_mmio_write(struct vgt_device *vgt, unsigned int offset,
 	rc = default_mmio_write(vgt, offset, p_data, bytes);
 
 	if (!reg_hw_access(vgt, offset)) {
-		port = VGT_DP_TP_CTL_PORT(offset);
+		port = DP_TP_PORT(offset);
 		ctl_val = __vreg(vgt, offset);
 		val = (ctl_val & DP_TP_CTL_10_8_MASK) >> DP_TP_CTL_8_SHIFT;
 
 		if (val == 0x2) {
-			dp_tp_status_reg = VGT_DP_TP_STATUS(port);
+			dp_tp_status_reg = DP_TP_STATUS(port);
 			__vreg(vgt, dp_tp_status_reg) |= (1 << DP_TP_STATUS_25_SHIFT);
 			__sreg(vgt, dp_tp_status_reg) = __vreg(vgt, dp_tp_status_reg);
 		}
@@ -1096,25 +1096,25 @@ static bool pch_adpa_mmio_write(struct vgt_device *vgt, unsigned int offset,
 	if (reg_hw_access(vgt, offset))
 		return true;
 
-	if (new & _REGBIT_ADPA_CRT_HOTPLUG_FORCE_TRIGGER) {
+	if (new & ADPA_CRT_HOTPLUG_FORCE_TRIGGER) {
 
 		if ((new & _REGBIT_ADPA_DAC_ENABLE)) {
 			vgt_warn("HOTPLUG_FORCE_TRIGGER is set while VGA is enabled!\n");
 		}
 
 		/* emulate the status based on monitor connection information */
-		new &= ~_REGBIT_ADPA_CRT_HOTPLUG_FORCE_TRIGGER;
+		new &= ~ADPA_CRT_HOTPLUG_FORCE_TRIGGER;
 
 		if (dpy_has_monitor_on_port(vgt, PORT_E))
-			new |= _REGBIT_ADPA_CRT_HOTPLUG_MONITOR_MASK;
+			new |= ADPA_CRT_HOTPLUG_MONITOR_MASK;
 		else
-			new &= ~_REGBIT_ADPA_CRT_HOTPLUG_MONITOR_MASK;
+			new &= ~ADPA_CRT_HOTPLUG_MONITOR_MASK;
 	} else {
 		/* ignore the status bits in new value
 		 * since they are read only actually
 		 */
-		new = (new & ~_REGBIT_ADPA_CRT_HOTPLUG_MONITOR_MASK) |
-			(old & _REGBIT_ADPA_CRT_HOTPLUG_MONITOR_MASK);
+		new = (new & ~ADPA_CRT_HOTPLUG_MONITOR_MASK) |
+			(old & ADPA_CRT_HOTPLUG_MONITOR_MASK);
 	}
 
 	__vreg(vgt, offset) = __sreg(vgt, offset) = new;
@@ -1239,7 +1239,7 @@ static bool dpy_plane_ctl_write(struct vgt_device *vgt, unsigned int offset,
 
 	new_plane_ctl = *(vgt_reg_t *)p_data;
 	pipe = VGT_DSPCNTRPIPE(offset);
-	if ( (_PRI_PLANE_ENABLE & new_plane_ctl) &&  (_PRI_PLANE_ENABLE & __vreg(vgt, offset)) == 0) {
+	if ( (DISPLAY_PLANE_ENABLE & new_plane_ctl) &&  (DISPLAY_PLANE_ENABLE & __vreg(vgt, offset)) == 0) {
 		enable_plane = true;
 	}
 
@@ -1389,10 +1389,10 @@ static bool south_chicken2_write(struct vgt_device *vgt, unsigned int offset,
 		return false;
 
 	if (!reg_hw_access(vgt, offset)) {
-		if (__vreg(vgt, offset) & _REGBIT_MPHY_IOSFSB_RESET_CTL)
-			__vreg(vgt, offset) |= _REGBIT_FDI_MPHY_IOSFSB_RESET_STATUS;
+		if (__vreg(vgt, offset) & FDI_MPHY_IOSFSB_RESET_CTL)
+			__vreg(vgt, offset) |= FDI_MPHY_IOSFSB_RESET_STATUS;
 		else
-			__vreg(vgt, offset) &= ~_REGBIT_FDI_MPHY_IOSFSB_RESET_STATUS;
+			__vreg(vgt, offset) &= ~FDI_MPHY_IOSFSB_RESET_STATUS;
 
 		__sreg(vgt, offset) = __vreg(vgt, offset);
 	}
@@ -1471,7 +1471,7 @@ static void dp_aux_ch_trigger_interrupt_on_done(struct vgt_device *vgt, vgt_reg_
 		event = AUX_CHENNEL_D;
 	}
 
-	if (event != EVENT_MAX && (_REGBIT_DP_AUX_CH_CTL_INTERRUPT & value)) {
+	if (event != EVENT_MAX && (DP_AUX_CH_CTL_INTERRUPT & value)) {
 		vgt_trigger_virtual_event(vgt, event);
 	}
 }
@@ -1482,12 +1482,12 @@ static void dp_aux_ch_ctl_trans_done(struct vgt_device *vgt, vgt_reg_t value,
 	/* mark transaction done */
 	value |= _REGBIT_DP_AUX_CH_CTL_DONE;
 	value &= ~_REGBIT_DP_AUX_CH_CTL_SEND_BUSY;
-	value &= ~_REGBIT_DP_AUX_CH_CTL_RECV_ERR;
+	value &= ~DP_AUX_CH_CTL_RECEIVE_ERROR;
 
 	if (data_valid) {
-		value &= ~_REGBIT_DP_AUX_CH_CTL_TIME_OUT_ERR;
+		value &= ~DP_AUX_CH_CTL_TIME_OUT_ERROR;
 	} else {
-		value |= _REGBIT_DP_AUX_CH_CTL_TIME_OUT_ERR;
+		value |= DP_AUX_CH_CTL_TIME_OUT_ERROR;
 	}
 
 	/* message size */
@@ -1816,10 +1816,10 @@ static bool sbi_mmio_data_read(struct vgt_device *vgt, unsigned int offset,
 	rc = default_mmio_read(vgt, offset, p_data, bytes);
 
 	if (!reg_hw_access(vgt, offset)) {
-		if (((__vreg(vgt, SBI_CTL_STAT) & _SBI_OPCODE_MASK) >>
-			_SBI_OPCODE_SHIFT) == _SBI_CMD_CRRD) {
+		if (((__vreg(vgt, SBI_CTL_STAT) & SBI_OPCODE_MASK) >>
+			SBI_OPCODE_SHIFT) == SBI_CMD_CRRD) {
 			unsigned int sbi_offset = (__vreg(vgt, SBI_ADDR) &
-				_SBI_ADDR_OFFSET_MASK) >> _SBI_ADDR_OFFSET_SHIFT;
+				SBI_ADDR_OFFSET_MASK) >> SBI_ADDR_OFFSET_SHIFT;
 			vgt_reg_t val = get_sbi_reg_cached_value(vgt, sbi_offset);
 			*(vgt_reg_t *)p_data = val;
 		}
@@ -1838,18 +1838,18 @@ static bool sbi_mmio_ctl_write(struct vgt_device *vgt, unsigned int offset,
 	if (!reg_hw_access(vgt, offset)) {
 		vgt_reg_t data = __vreg(vgt, offset);
 
-		data &= ~(_SBI_STAT_MASK << _SBI_STAT_SHIFT);
-		data |= _SBI_READY;
+		data &= ~(SBI_STAT_MASK << SBI_STAT_SHIFT);
+		data |= SBI_READY;
 
-		data &= ~(_SBI_RESPONSE_MASK << _SBI_RESPONSE_SHIFT);
-		data |= _SBI_RESPONSE_SUCCESS;
+		data &= ~(SBI_RESPONSE_MASK << SBI_RESPONSE_SHIFT);
+		data |= SBI_RESPONSE_SUCCESS;
 
 		__vreg(vgt, offset) = data;
 
-		if (((__vreg(vgt, SBI_CTL_STAT) & _SBI_OPCODE_MASK) >>
-			_SBI_OPCODE_SHIFT) == _SBI_CMD_CRWR) {
+		if (((__vreg(vgt, SBI_CTL_STAT) & SBI_OPCODE_MASK) >>
+			SBI_OPCODE_SHIFT) == SBI_CMD_CRWR) {
 			unsigned int sbi_offset = (__vreg(vgt, SBI_ADDR) &
-				_SBI_ADDR_OFFSET_MASK) >> _SBI_ADDR_OFFSET_SHIFT;
+				SBI_ADDR_OFFSET_MASK) >> SBI_ADDR_OFFSET_SHIFT;
 			vgt_reg_t val = __vreg(vgt, SBI_DATA);
 			cache_sbi_reg_value(vgt, sbi_offset, val);
 		}
@@ -2102,16 +2102,16 @@ static bool power_well_ctl_write(struct vgt_device *vgt, unsigned int offset,
 
 	memcpy ((char *)vgt->state.vReg + offset, p_data, bytes);
 
-	if (value & _REGBIT_HSW_PWR_WELL_ENABLE) {
-		__vreg(vgt, offset) |= _REGBIT_HSW_PWR_WELL_STATE;
+	if (value & HSW_PWR_WELL_ENABLE_REQUEST) {
+		__vreg(vgt, offset) |= HSW_PWR_WELL_STATE_ENABLED;
 	} else {
-		__vreg(vgt, offset) &= ~_REGBIT_HSW_PWR_WELL_STATE;
+		__vreg(vgt, offset) &= ~HSW_PWR_WELL_STATE_ENABLED;
 	}
 
 	if (is_current_display_owner(vgt)) {
 		/* force to enable power well physically */
 		if (IS_HSW(vgt->pdev) && enable_panel_fitting && offset == HSW_PWR_WELL_DRIVER) {
-			value |= _REGBIT_HSW_PWR_WELL_ENABLE;
+			value |= HSW_PWR_WELL_ENABLE_REQUEST;
 		}
 		VGT_MMIO_WRITE(vgt->pdev, offset, value);
 	}
@@ -2247,13 +2247,13 @@ bool fpga_dbg_mmio_read(struct vgt_device *vgt, unsigned int reg,
 	if (!rc)
 		return false;
 
-	if (vgt->vm_id == 0 && (__vreg(vgt, reg) & _REGBIT_FPGA_DBG_RM_NOCLAIM)) {
-		VGT_MMIO_WRITE(vgt->pdev, reg, _REGBIT_FPGA_DBG_RM_NOCLAIM);
+	if (vgt->vm_id == 0 && (__vreg(vgt, reg) & FPGA_DBG_RM_NOCLAIM)) {
+		VGT_MMIO_WRITE(vgt->pdev, reg, FPGA_DBG_RM_NOCLAIM);
 
-		__vreg(vgt, reg) &= ~_REGBIT_FPGA_DBG_RM_NOCLAIM;
+		__vreg(vgt, reg) &= ~FPGA_DBG_RM_NOCLAIM;
 		__sreg(vgt, reg) = __vreg(vgt, reg);
 
-		*(vgt_reg_t *)p_data &= ~_REGBIT_FPGA_DBG_RM_NOCLAIM;
+		*(vgt_reg_t *)p_data &= ~FPGA_DBG_RM_NOCLAIM;
 	}
 
 	return true;
@@ -2285,8 +2285,8 @@ static bool sfuse_strap_mmio_read(struct vgt_device *vgt, unsigned int offset,
 	 * for indirect mode, we provide full PORT B,C,D capability to VM
 	 */
 	if (!propagate_monitor_to_guest && !is_current_display_owner(vgt)) {
-		*(vgt_reg_t*)p_data |=  (_REGBIT_SFUSE_STRAP_B_PRESENTED
-			| _REGBIT_SFUSE_STRAP_C_PRESENTED | _REGBIT_SFUSE_STRAP_D_PRESENTED);
+		*(vgt_reg_t*)p_data |=  (SFUSE_STRAP_DDIB_DETECTED
+			| SFUSE_STRAP_DDIC_DETECTED | SFUSE_STRAP_DDID_DETECTED);
 	}
 	return rc;
 }
@@ -2818,7 +2818,7 @@ reg_attr_t vgt_reg_info_general[] = {
 {_FDI_RXB_TUSIZE1, 4, F_DPY, 0, D_ALL, NULL, NULL},
 {_FDI_RXB_TUSIZE2, 4, F_DPY, 0, D_ALL, NULL, NULL},
 
-{_REG_PCH_PP_CONTROL, 4, F_DPY, 0, D_ALL, NULL, pch_pp_control_mmio_write},
+{PCH_PP_CONTROL, 4, F_DPY, 0, D_ALL, NULL, pch_pp_control_mmio_write},
 {PCH_PP_DIVISOR, 4, F_DPY, 0, D_ALL, NULL, NULL},
 {PCH_PP_STATUS, 4, F_DPY, 0, D_ALL, NULL, NULL},
 {PCH_LVDS, 4, F_DPY, 0, D_ALL, NULL, NULL},
@@ -2846,7 +2846,7 @@ reg_attr_t vgt_reg_info_general[] = {
 {0xE6E1C, 4, F_DPY, 0, D_ALL,
 	dpy_reg_mmio_read_3, NULL},
 {PCH_PORT_HOTPLUG, 4, F_VIRT, 0, D_ALL, NULL, shotplug_ctl_mmio_write},
-{_REG_LCPLL_CTL, 4, F_DPY, 0, D_ALL, NULL, lcpll_ctl_mmio_write},
+{LCPLL_CTL, 4, F_DPY, 0, D_ALL, NULL, lcpll_ctl_mmio_write},
 {FUSE_STRAP, 4, F_DPY, 0, D_ALL, NULL, NULL},
 {DIGITAL_PORT_HOTPLUG_CNTRL, 4, F_DPY, 0, D_ALL, NULL, NULL},
 
@@ -2997,7 +2997,7 @@ reg_attr_t vgt_reg_info_general[] = {
 {FORCEWAKE, 4, F_VIRT, 0, D_ALL, NULL, force_wake_write},
 {FORCEWAKE_ACK, 4, F_VIRT, 0, D_ALL, NULL, NULL},
 {_REG_GT_CORE_STATUS, 4, F_VIRT, 0, D_ALL, NULL, NULL},
-{_REG_GT_THREAD_STATUS, 4, F_VIRT, 0, D_ALL, NULL, NULL},
+{GEN6_GT_THREAD_STATUS_REG, 4, F_VIRT, 0, D_ALL, NULL, NULL},
 {GTFIFODBG, 4, F_RDR, 0, D_ALL, NULL, NULL},
 {GTFIFOCTL, 4, F_RDR, 0, D_ALL, NULL, NULL},
 {FORCEWAKE_MT, 4, F_VIRT, 0, D_ALL, NULL, mul_force_wake_write},
@@ -3042,7 +3042,7 @@ reg_attr_t vgt_reg_info_general[] = {
 
 {RSTDBYCTL, 4, F_DOM0, 0, D_ALL, NULL, NULL},
 
-{_REG_GEN6_GDRST, 4, F_DOM0, 0, D_ALL, gen6_gdrst_mmio_read, gen6_gdrst_mmio_write},
+{GEN6_GDRST, 4, F_DOM0, 0, D_ALL, gen6_gdrst_mmio_read, gen6_gdrst_mmio_write},
 {_REG_FENCE_0_LOW, 0x80, F_VIRT, 0, D_ALL, fence_mmio_read, fence_mmio_write},
 {VGT_PVINFO_PAGE, VGT_PVINFO_SIZE, F_VIRT, 0, D_ALL, pvinfo_read, pvinfo_write},
 {CPU_VGACNTRL, 4, F_DOM0, 0, D_ALL, vga_control_r, vga_control_w},
@@ -3594,15 +3594,15 @@ reg_list_t vgt_gen7_sticky_regs[] = {
 	{FORCEWAKE, 4},
 	{FORCEWAKE_ACK, 4},
 	{_REG_GT_CORE_STATUS, 4},
-	{_REG_GT_THREAD_STATUS, 4},
+	{GEN6_GT_THREAD_STATUS_REG, 4},
 	{GTFIFODBG, 4},
 	{GTFIFOCTL, 4},
 	{FORCEWAKE_MT, 4},
-	{_REG_LCPLL_CTL, 4},
+	{LCPLL_CTL, 4},
 	{FORCEWAKE_ACK_HSW, 4},
 
 	/* misc */
-	{_REG_GEN6_GDRST, 4},
+	{GEN6_GDRST, 4},
 	{_REG_FENCE_0_LOW, 0x80},
 	{VGT_PVINFO_PAGE, VGT_PVINFO_SIZE},
 	{CPU_VGACNTRL, 4},
@@ -3685,15 +3685,15 @@ reg_list_t vgt_gen8_sticky_regs[] = {
 	{FORCEWAKE, 4},
 	{FORCEWAKE_ACK, 4},
 	{_REG_GT_CORE_STATUS, 4},
-	{_REG_GT_THREAD_STATUS, 4},
+	{GEN6_GT_THREAD_STATUS_REG, 4},
 	{GTFIFODBG, 4},
 	{GTFIFOCTL, 4},
 	{FORCEWAKE_MT, 4},
-	{_REG_LCPLL_CTL, 4},
+	{LCPLL_CTL, 4},
 	{FORCEWAKE_ACK_HSW, 4},
 
 	/* misc */
-	{_REG_GEN6_GDRST, 4},
+	{GEN6_GDRST, 4},
 	{_REG_FENCE_0_LOW, 0x80},
 	{VGT_PVINFO_PAGE, VGT_PVINFO_SIZE},
 	{CPU_VGACNTRL, 4},

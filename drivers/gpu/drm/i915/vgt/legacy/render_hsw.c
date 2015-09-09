@@ -600,7 +600,7 @@ static bool gen7_init_null_context(struct pgt_device *pdev, int id)
 		goto err;
 	}
 
-	vgt_ring_emit(ring, PIPE_CONTROL(5));
+	vgt_ring_emit(ring, GFX_OP_PIPE_CONTROL(5));
 	vgt_ring_emit(ring, PIPE_CONTROL_CS_STALL |
 			    PIPE_CONTROL_MEDIA_STATE_CLEAR |
 			    PIPE_CONTROL_RENDER_TARGET_CACHE_FLUSH |
@@ -623,7 +623,7 @@ static bool gen7_init_null_context(struct pgt_device *pdev, int id)
 			    MI_LRI_BYTE3_DISABLE);
 	vgt_ring_emit(ring, CCID);
 	vgt_ring_emit(ring, 0);
-	vgt_ring_emit(ring, PIPE_CONTROL(5));
+	vgt_ring_emit(ring, GFX_OP_PIPE_CONTROL(5));
 	vgt_ring_emit(ring, PIPE_CONTROL_CS_STALL |
 			    PIPE_CONTROL_RENDER_TARGET_CACHE_FLUSH |
 			    PIPE_CONTROL_INDIRECT_STATE_DISABLE);
@@ -673,7 +673,7 @@ static bool gen7_save_hw_context(int id, struct vgt_device *vgt)
 		return true;
 
 	/* pipeline flush */
-	vgt_ring_emit(ring, PIPE_CONTROL(5));
+	vgt_ring_emit(ring, GFX_OP_PIPE_CONTROL(5));
 	vgt_ring_emit(ring, PIPE_CONTROL_CS_STALL |
 			    PIPE_CONTROL_TLB_INVALIDATE |
 			    PIPE_CONTROL_FLUSH_ENABLE);
@@ -681,7 +681,7 @@ static bool gen7_save_hw_context(int id, struct vgt_device *vgt)
 	vgt_ring_emit(ring, 0);
 	vgt_ring_emit(ring, 0);
 
-	vgt_ring_emit(ring, PIPE_CONTROL(5));
+	vgt_ring_emit(ring, GFX_OP_PIPE_CONTROL(5));
 	vgt_ring_emit(ring, PIPE_CONTROL_RENDER_TARGET_CACHE_FLUSH |
 			    PIPE_CONTROL_FLUSH_ENABLE |
 			    PIPE_CONTROL_VF_CACHE_INVALIDATE |
@@ -707,12 +707,12 @@ static bool gen7_save_hw_context(int id, struct vgt_device *vgt)
 	vgt_ring_emit(ring, ccid);
 
 	/* pipeline flush */
-	vgt_ring_emit(ring, PIPE_CONTROL(5));
+	vgt_ring_emit(ring, GFX_OP_PIPE_CONTROL(5));
 	vgt_ring_emit(ring, PIPE_CONTROL_CS_STALL |
 			    PIPE_CONTROL_TLB_INVALIDATE |
 			    PIPE_CONTROL_FLUSH_ENABLE |
-			    PIPE_CONTROL_POST_SYNC_IMM |
-			    PIPE_CONTROL_POST_SYNC_GLOBAL_GTT);
+			    PIPE_CONTROL_QW_WRITE |
+			    PIPE_CONTROL_GLOBAL_GTT_IVB);
 	vgt_ring_emit(ring, vgt_data_ctx_magic(pdev));
 	vgt_ring_emit(ring, ++pdev->magic);
 	vgt_ring_emit(ring, 0);
@@ -765,15 +765,15 @@ static bool gen7_save_hw_context(int id, struct vgt_device *vgt)
 #endif
 
 	/* pipeline flush */
-	vgt_ring_emit(ring, PIPE_CONTROL(5));
+	vgt_ring_emit(ring, GFX_OP_PIPE_CONTROL(5));
 	vgt_ring_emit(ring, PIPE_CONTROL_CS_STALL |
 			    PIPE_CONTROL_TLB_INVALIDATE |
 			    PIPE_CONTROL_FLUSH_ENABLE |
 			    PIPE_CONTROL_MEDIA_STATE_CLEAR |
 			    PIPE_CONTROL_DC_FLUSH_ENABLE |
 			    PIPE_CONTROL_RENDER_TARGET_CACHE_FLUSH |
-			    PIPE_CONTROL_POST_SYNC_IMM |
-			    PIPE_CONTROL_POST_SYNC_GLOBAL_GTT);
+			    PIPE_CONTROL_QW_WRITE |
+			    PIPE_CONTROL_GLOBAL_GTT_IVB);
 	vgt_ring_emit(ring, vgt_data_ctx_magic(pdev));
 	vgt_ring_emit(ring, ++pdev->magic);
 	vgt_ring_emit(ring, 0);
@@ -867,13 +867,13 @@ static bool vgt_reset_engine(struct pgt_device *pdev, int id)
 	ctl = VGT_READ_CTL(pdev, id);
 
 	/* trigger engine specific reset */
-	VGT_MMIO_WRITE(pdev, _REG_GEN6_GDRST, _REGBIT_GEN6_GRDOM_RENDER);
+	VGT_MMIO_WRITE(pdev, GEN6_GDRST, GEN6_GRDOM_RENDER);
 
 #define GDRST_COUNT 0x1000
 	/* wait for reset complete */
 	for (i = 0; i < GDRST_COUNT; i++) {
-		if (!(VGT_MMIO_READ(pdev, _REG_GEN6_GDRST) &
-			_REGBIT_GEN6_GRDOM_RENDER))
+		if (!(VGT_MMIO_READ(pdev, GEN6_GDRST) &
+			GEN6_GRDOM_RENDER))
 			break;
 	}
 
@@ -924,7 +924,7 @@ static bool gen7_restore_hw_context(int id, struct vgt_device *vgt)
 	//update_context(vgt, rb->context_save_area);
 
 	/* pipeline flush */
-	vgt_ring_emit(ring, PIPE_CONTROL(5));
+	vgt_ring_emit(ring, GFX_OP_PIPE_CONTROL(5));
 	vgt_ring_emit(ring, PIPE_CONTROL_CS_STALL |
 			    PIPE_CONTROL_TLB_INVALIDATE |
 			    PIPE_CONTROL_FLUSH_ENABLE);
@@ -945,12 +945,12 @@ static bool gen7_restore_hw_context(int id, struct vgt_device *vgt)
 	vgt_ring_emit(ring, 0);
 
 	/* pipeline flush */
-	vgt_ring_emit(ring, PIPE_CONTROL(5));
+	vgt_ring_emit(ring, GFX_OP_PIPE_CONTROL(5));
 	vgt_ring_emit(ring, PIPE_CONTROL_CS_STALL |
 			    PIPE_CONTROL_TLB_INVALIDATE |
 			    PIPE_CONTROL_FLUSH_ENABLE |
-			    PIPE_CONTROL_POST_SYNC_IMM |
-			    PIPE_CONTROL_POST_SYNC_GLOBAL_GTT);
+			    PIPE_CONTROL_QW_WRITE |
+			    PIPE_CONTROL_GLOBAL_GTT_IVB);
 	vgt_ring_emit(ring, vgt_data_ctx_magic(pdev));
 	vgt_ring_emit(ring, ++pdev->magic);
 	vgt_ring_emit(ring, 0);
@@ -997,13 +997,13 @@ static bool gen7_restore_hw_context(int id, struct vgt_device *vgt)
 #endif
 
 	/* pipeline flush */
-	vgt_ring_emit(ring, PIPE_CONTROL(5));
+	vgt_ring_emit(ring, GFX_OP_PIPE_CONTROL(5));
 	vgt_ring_emit(ring, PIPE_CONTROL_CS_STALL |
 			    PIPE_CONTROL_TLB_INVALIDATE |
 			    PIPE_CONTROL_FLUSH_ENABLE |
 			    PIPE_CONTROL_MEDIA_STATE_CLEAR |
-			    PIPE_CONTROL_POST_SYNC_IMM |
-			    PIPE_CONTROL_POST_SYNC_GLOBAL_GTT);
+			    PIPE_CONTROL_QW_WRITE |
+			    PIPE_CONTROL_GLOBAL_GTT_IVB);
 	vgt_ring_emit(ring, vgt_data_ctx_magic(pdev));
 	vgt_ring_emit(ring, ++pdev->magic);
 	vgt_ring_emit(ring, 0);
@@ -1022,17 +1022,17 @@ static bool gen7_restore_hw_context(int id, struct vgt_device *vgt)
 
 #if 0
 	/* then restore current context to whatever VM expects */
-	vgt_ring_emit(ring, MI_LOAD_REGISTER_IMM);
+	vgt_ring_emit(ring, MI_LRI_CMD);
 	vgt_ring_emit(ring, CCID);
 	vgt_ring_emit(ring, __vreg(vgt, CCID));
 
 	/* pipeline flush */
-	vgt_ring_emit(ring, PIPE_CONTROL(5));
+	vgt_ring_emit(ring, GFX_OP_PIPE_CONTROL(5));
 	vgt_ring_emit(ring, PIPE_CONTROL_CS_STALL |
 			    PIPE_CONTROL_TLB_INVALIDATE |
 			    PIPE_CONTROL_FLUSH_ENABLE |
-			    PIPE_CONTROL_POST_SYNC_IMM |
-			    PIPE_CONTROL_POST_SYNC_GLOBAL_GTT);
+			    PIPE_CONTROL_QW_WRITE |
+			    PIPE_CONTROL_GLOBAL_GTT_IVB);
 	vgt_ring_emit(ring, vgt_data_ctx_magic(pdev));
 	vgt_ring_emit(ring, ++pdev->magic);
 	vgt_ring_emit(ring, 0);

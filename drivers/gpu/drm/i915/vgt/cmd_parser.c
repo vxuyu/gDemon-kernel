@@ -875,7 +875,7 @@ static int vgt_cmd_handler_pipe_control(struct parser_exec_state *s)
 
 
 	for (i = 1; i < cmd_len;) {
-		if (cmd_val(s, i) & PIPE_CONTROL_POST_SYNC)
+		if (cmd_val(s, i) & PIPE_CONTROL_MMIO_WRITE)
 			rc |= cmd_reg_handler(s,
 				cmd_val(s, i+1) & BIT_RANGE_MASK(22, 2), i, "pipe_ctrl");
 		else if (cmd_val(s, i) & (2 << 14))
@@ -1682,16 +1682,16 @@ static struct cmd_info cmd_info[] = {
 
 	{"ME_SEMAPHORE_WAIT", OP_MI_SEMAPHORE_WAIT, F_LEN_VAR, R_ALL, D_BDW, ADDR_FIX_1(2), 8, NULL},
 
-	{"MI_STORE_DATA_IMM", OP_MI_STORE_DATA_IMM, F_LEN_VAR, R_ALL, D_HSW,
+	{"MI_STORE_DWORD_IMM", OP_MI_STORE_DWORD_IMM, F_LEN_VAR, R_ALL, D_HSW,
 		ADDR_FIX_1(2), 10, NULL},
 
-	{"MI_STORE_DATA_IMM", OP_MI_STORE_DATA_IMM, F_LEN_VAR, R_ALL, D_BDW,
+	{"MI_STORE_DWORD_IMM", OP_MI_STORE_DWORD_IMM, F_LEN_VAR, R_ALL, D_BDW,
 		ADDR_FIX_1(1), 10, NULL},
 
 	{"MI_STORE_DATA_INDEX", OP_MI_STORE_DATA_INDEX, F_LEN_VAR, R_ALL, D_ALL,
 		0, 8, NULL},
 
-	{"MI_LOAD_REGISTER_IMM", OP_MI_LOAD_REGISTER_IMM, F_LEN_VAR, R_ALL, D_ALL, 0, 8, vgt_cmd_handler_lri},
+	{"MI_LOAD_REGISTER_IMM", OP_MI_LRI_CMD, F_LEN_VAR, R_ALL, D_ALL, 0, 8, vgt_cmd_handler_lri},
 
 	{"MI_UPDATE_GTT", OP_MI_UPDATE_GTT, F_LEN_VAR, R_RCS, D_PRE_BDW,
 		0, 8, vgt_cmd_handler_mi_update_gtt},

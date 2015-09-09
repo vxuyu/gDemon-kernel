@@ -74,9 +74,9 @@ struct decode_info{
 #define OP_MI_SEMAPHORE_SIGNAL		    0x1B  /* BDW+ */
 #define OP_MI_SEMAPHORE_WAIT		    0x1C  /* BDW+ */
 
-#define OP_MI_STORE_DATA_IMM                0x20
+#define OP_MI_STORE_DWORD_IMM		    0x20
 #define OP_MI_STORE_DATA_INDEX              0x21
-#define OP_MI_LOAD_REGISTER_IMM             0x22
+#define OP_MI_LRI_CMD                       0x22
 #define OP_MI_UPDATE_GTT                    0x23
 #define OP_MI_STORE_REGISTER_MEM            0x24
 #define OP_MI_FLUSH_DW                      0x26

@@ -502,13 +502,13 @@ static bool is_pport_present(struct pgt_device *pgt, struct gt_port *port)
 		found = VGT_MMIO_READ(pgt, DDI_BUF_CTL_A) & _DDI_BUFCTL_DETECT_MASK;
 		break;
 	case PORT_B:
-		found = VGT_MMIO_READ(pgt, SFUSE_STRAP) & _REGBIT_SFUSE_STRAP_B_PRESENTED;
+		found = VGT_MMIO_READ(pgt,SFUSE_STRAP) & SFUSE_STRAP_DDIB_DETECTED;
 		break;
 	case PORT_C:
-		found = VGT_MMIO_READ(pgt, SFUSE_STRAP) & _REGBIT_SFUSE_STRAP_C_PRESENTED;
+		found = VGT_MMIO_READ(pgt,SFUSE_STRAP) & SFUSE_STRAP_DDIC_DETECTED;
 		break;
 	case PORT_D:
-		found = VGT_MMIO_READ(pgt, SFUSE_STRAP) & _REGBIT_SFUSE_STRAP_D_PRESENTED;
+		found = VGT_MMIO_READ(pgt,SFUSE_STRAP) & SFUSE_STRAP_DDID_DETECTED;
 		break;
 	case PORT_E:
 		found = true;

@@ -427,10 +427,10 @@ static bool gen8_reset_engine(int ring_id,
 		return false;
 	}
 
-	VGT_MMIO_WRITE(pdev, _REG_GEN6_GDRST, _REGBIT_GEN6_GRDOM_RENDER);
+	VGT_MMIO_WRITE(pdev, GEN6_GDRST, GEN6_GRDOM_RENDER);
 
 	for (count = 1000; count > 0; count --)
-		if (!(VGT_MMIO_READ(pdev, _REG_GEN6_GDRST) & _REGBIT_GEN6_GRDOM_RENDER))
+		if (!(VGT_MMIO_READ(pdev, GEN6_GDRST) & GEN6_GRDOM_RENDER))
 			break;
 
 	if (!count) {

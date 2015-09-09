@@ -801,11 +801,11 @@ static inline enum vgt_pipe vgt_get_pipe_from_port(struct vgt_device *vgt,
 
 		ddi_func_ctl  = __vreg(vgt, _VGT_TRANS_DDI_FUNC_CTL(pipe));
 
-		if (!(ddi_func_ctl & _REGBIT_TRANS_DDI_FUNC_ENABLE))
+		if (!(ddi_func_ctl & TRANS_DDI_FUNC_ENABLE))
 			continue;
 
-		ddi_port_info = (ddi_func_ctl & _REGBIT_TRANS_DDI_PORT_MASK) >>
-					_TRANS_DDI_PORT_SHIFT;
+		ddi_port_info = (ddi_func_ctl & TRANS_DDI_PORT_MASK) >>
+					TRANS_DDI_PORT_SHIFT;
 		if (ddi_port_info == port) {
 			// pipe has the port setting same as input
 			break;

@@ -683,7 +683,7 @@ void vgt_setup_reg_info(struct pgt_device *pdev)
 				vgt_get_reg_num(D_BDW), true);
 
 	/* GDRST can be accessed by byte */
-	mht = vgt_find_mmio_entry(_REG_GEN6_GDRST);
+	mht = vgt_find_mmio_entry(GEN6_GDRST);
 	if (mht)
 		mht->align_bytes = 1;
 
@@ -798,7 +798,7 @@ void state_vreg_init(struct vgt_device *vgt)
 	/* set the bit 0:2 (Thread C-State) to C0
 	 * TODO: consider other bit 3:31
 	 */
-	__vreg(vgt, _REG_GT_THREAD_STATUS) = 0;
+	__vreg(vgt, GEN6_GT_THREAD_STATUS_REG) = 0;
 
 	/* set the bit 0:2(Core C-State ) to C0 */
 	__vreg(vgt, _REG_GT_CORE_STATUS) = 0;
@@ -807,10 +807,10 @@ void state_vreg_init(struct vgt_device *vgt)
 
 	if (IS_HSW(vgt->pdev)) {
 		/*
-		 * Clear _REGBIT_FPGA_DBG_RM_NOCLAIM for not causing DOM0
+		 * Clear FPGA_DBG_RM_NOCLAIM for not causing DOM0
 		 * or Ubuntu HVM complains about unclaimed MMIO registers.
 		 */
-		__vreg(vgt, FPGA_DBG) &= ~_REGBIT_FPGA_DBG_RM_NOCLAIM;
+		__vreg(vgt, FPGA_DBG) &= ~FPGA_DBG_RM_NOCLAIM;
 	}
 }
 
