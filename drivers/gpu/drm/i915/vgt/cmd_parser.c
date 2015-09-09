@@ -1178,6 +1178,9 @@ static int vgt_handle_mi_display_flip(struct parser_exec_state *s, bool resubmit
 			cmd_ptr(s, 0),
 			((value & ~PLANE_SELECT_MASK) |
 			 (real_plane_code << PLANE_SELECT_SHIFT)));
+
+		vgt_inject_flip_done(s->vgt, pipe);
+
 		return 0;
 	}
 

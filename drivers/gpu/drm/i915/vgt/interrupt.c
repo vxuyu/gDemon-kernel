@@ -2041,6 +2041,9 @@ static void vgt_init_events(
 	SET_POLICY_DOM0(hstate, PIPE_B_VBLANK);
 	SET_POLICY_DOM0(hstate, PIPE_C_VBLANK);
 
+	SET_POLICY_DOM0(hstate, PRIMARY_A_FLIP_DONE);
+	SET_POLICY_DOM0(hstate, PRIMARY_B_FLIP_DONE);
+	SET_POLICY_DOM0(hstate, PRIMARY_C_FLIP_DONE);
 }
 static enum hrtimer_restart vgt_dpy_timer_fn(struct hrtimer *data)
 {
@@ -2208,7 +2211,7 @@ void vgt_fini_irq(struct pci_dev *pdev)
 void vgt_inject_flip_done(struct vgt_device *vgt, enum vgt_pipe pipe)
 {
 	enum vgt_event_type event = EVENT_MAX;
-	if (current_foreground_vm(vgt->pdev) != vgt) {
+	if (current_display_owner(vgt->pdev) != vgt) {
 		if (pipe == PIPE_A) {
 			event = PRIMARY_A_FLIP_DONE;
 		} else if (pipe == PIPE_B) {
