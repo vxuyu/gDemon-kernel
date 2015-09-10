@@ -4135,6 +4135,17 @@ int emulator_write_phys(struct kvm_vcpu *vcpu, gpa_t gpa,
 {
 	int ret;
 
+#ifdef CONFIG_KVMGT
+	gfn_t gfn = gpa_to_gfn(gpa);
+
+	if (kvmgt_gfn_is_write_protected(vcpu->kvm, gfn)) {
+		if (!kvmgt_emulate_write(vcpu->kvm, gpa, val, bytes))
+			return 0;
+
+		return 1;
+	}
+#endif
+
 	ret = kvm_vcpu_write_guest(vcpu, gpa, val, bytes);
 	if (ret < 0)
 		return 0;
