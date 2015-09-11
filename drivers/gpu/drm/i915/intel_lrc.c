@@ -376,8 +376,6 @@ static void execlists_elsp_write(struct drm_i915_gem_request *rq0,
 		intel_uncore_forcewake_get__locked(dev_priv, FORCEWAKE_ALL);
 	}
 	/* You must always write both descriptors in the order below. */
-	spin_lock(&dev_priv->uncore.lock);
-	intel_uncore_forcewake_get__locked(dev_priv, FORCEWAKE_ALL);
 	I915_WRITE_FW(RING_ELSP(ring), upper_32_bits(desc[1]));
 	I915_WRITE_FW(RING_ELSP(ring), lower_32_bits(desc[1]));
 

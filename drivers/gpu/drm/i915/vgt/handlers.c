@@ -2543,8 +2543,8 @@ reg_attr_t vgt_reg_info_general[] = {
 {_PIPEADSL, 4, F_DPY, 0, D_ALL, pipe_dsl_mmio_read, NULL},
 {_PIPEACONF, 4, F_DPY, 0, D_ALL, NULL, pipe_conf_mmio_write},
 {_PIPEASTAT, 4, F_DPY, 0, D_ALL, NULL, NULL},
-{_PIPEA_FRMCOUNT_GM45, 4, F_DPY, 0, D_ALL, pipe_frmcount_mmio_read, NULL},
-{_PIPEA_FLIPCOUNT_GM45, 4, F_VIRT, 0, D_ALL, NULL, NULL},
+{_PIPEA_FRMCOUNT_G4X, 4, F_DPY, 0, D_ALL, pipe_frmcount_mmio_read, NULL},
+{_PIPEA_FLIPCOUNT_G4X, 4, F_VIRT, 0, D_ALL, NULL, NULL},
 
 {PIPE_B_OFFSET, 4, F_DPY, 0, D_ALL, pipe_dsl_mmio_read, NULL},
 {_REG_PIPEBCONF, 4, F_DPY, 0, D_ALL, NULL, pipe_conf_mmio_write},
@@ -3318,8 +3318,8 @@ reg_attr_t vgt_reg_info_bdw[] = {
 
 {0x1C054, 4, F_DOM0, 0, D_BDW_PLUS, NULL, NULL},
 /* BDW */
-{GEN8_PRIVATE_PAT, 4, F_PT, 0, D_BDW_PLUS, NULL, NULL},
-{GEN8_PRIVATE_PAT + 4, 4, F_PT, 0, D_BDW_PLUS, NULL, NULL},
+{GEN8_PRIVATE_PAT_LO, 4, F_PT, 0, D_BDW_PLUS, NULL, NULL},
+{GEN8_PRIVATE_PAT_HI, 4, F_PT, 0, D_BDW_PLUS, NULL, NULL},
 
 {GAMTARBMODE, 4, F_DOM0, 0, D_BDW_PLUS, NULL, NULL},
 

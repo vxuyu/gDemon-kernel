@@ -27,7 +27,6 @@
 
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM vgt
-//ysun #define TRACE_SYSTEM_STRING __stringify(TRACE_SYSTEM)
 
 TRACE_EVENT(vgt_mmio_rw,
 		TP_PROTO(bool write, u32 vm_id, u32 offset, void *pd,

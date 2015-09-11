@@ -2153,20 +2153,6 @@ void *vgt_init_irq(struct pci_dev *pdev, struct drm_device *dev)
 		return NULL;
 	}
 
-	/* ysun
-	irq = bind_virq_to_irq(VIRQ_VGT_GFX, 0, false);
-	if (irq < 0) {
-		printk("vGT: fail to bind virq\n");
-		return NULL;
-	}
-	*/
-
-	ret = request_irq(pdev->irq, vgt_interrupt, IRQF_SHARED, "vgt", pgt);
-	if (ret < 0) {
-		printk("vGT: error on request_irq (%d)\n", ret);
-		//unbind_from_irq(irq);
-		return NULL;
-	}
 	irq = -1;
 	vgt_dbg(VGT_DBG_IRQ, "not requesting irq here!\n");
 	hstate->pirq = pdev->irq;
