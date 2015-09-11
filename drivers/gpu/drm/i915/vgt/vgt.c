@@ -716,8 +716,10 @@ static bool vgt_initialize_platform(struct pgt_device *pdev)
 			pdev->ring_xxx_bit[RING_BUFFER_VCS2] = 0;
 		}
 
-		if (IS_SKL(pdev))
+		if (IS_SKL(pdev)) {
+			enable_panel_fitting = false;
 			vgt_get_memory_latency(pdev);
+		}
 	} else {
 		vgt_err("Unsupported platform.\n");
 		return false;
