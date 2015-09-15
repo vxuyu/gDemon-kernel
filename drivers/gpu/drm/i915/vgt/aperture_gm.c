@@ -189,7 +189,7 @@ ssize_t get_avl_vm_aperture_gm_and_fence(struct pgt_device *pdev, char *buf,
 
 	for (i = 0; i < MAX_NR_RES; i++) {
 		buf_len += snprintf(buf + buf_len, buf_sz - buf_len,
-					"%*pd\n", bitmap_sz[i], bitmap[i]);
+					"%*pb\n", bitmap_sz[i], bitmap[i]);
 	}
 
 	return buf_len;
