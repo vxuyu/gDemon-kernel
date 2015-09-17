@@ -102,7 +102,7 @@ extern bool spt_out_of_sync;
 extern bool cmd_parser_ip_buf;
 extern bool timer_based_qos;
 extern int tbs_period_ms;
-extern bool vgt_in_xen;
+extern bool opregion_present;
 
 #define vgt_dbg(component, fmt, s...)	\
 	do { if (vgt_debug & component) printk(KERN_DEBUG "vGT debug:(%s:%d) " fmt, __FUNCTION__, __LINE__, ##s); } while (0)
@@ -169,7 +169,6 @@ typedef struct {
 
 	/* OpRegion state */
 	void		*opregion_va;
-	uint64_t    opregion_offset;
 	uint64_t	opregion_gfn[VGT_OPREGION_PAGES];
 	struct page *opregion_pages[VGT_OPREGION_PAGES];
 } vgt_state_t;
