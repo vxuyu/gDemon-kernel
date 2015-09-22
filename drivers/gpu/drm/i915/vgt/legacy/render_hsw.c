@@ -1265,7 +1265,13 @@ bool ring_mmio_write_in_rb_mode(struct vgt_device *vgt, unsigned int off,
 		sring->head = vring->head;
 		break;
 	case RB_OFFSET_START:
-		sring->start = mmio_g2h_gmadr(vgt, off, vring->start);
+		if (mmio_g2h_gmadr(vgt, off,
+					vring->start, &(sring->start)) < 0) {
+			vgt_err("vGT(%d): Failed to convert guest ring_buffer "
+				"start(0x%x) with value(%x)\n",
+				vgt->vgt_id, off, vring->start);
+			return false;
+		}
 		break;
 	case RB_OFFSET_CTL:
 		sring->ctl = vring->ctl;

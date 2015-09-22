@@ -1650,7 +1650,8 @@ void vgt_reg_watchdog_handler(struct vgt_device *state,
 extern char *vgt_irq_name[EVENT_MAX];
 ssize_t get_avl_vm_aperture_gm_and_fence(struct pgt_device *pdev, char *buf,
 		ssize_t buf_sz);
-vgt_reg_t mmio_g2h_gmadr(struct vgt_device *vgt, unsigned long reg, vgt_reg_t g_value);
+int mmio_g2h_gmadr(struct vgt_device *vgt, unsigned long reg,
+		vgt_reg_t g_value, vgt_reg_t *h_gmadr);
 vgt_reg_t mmio_h2g_gmadr(struct vgt_device *vgt, unsigned long reg, vgt_reg_t h_value);
 unsigned long rsvd_aperture_alloc(struct pgt_device *pdev, unsigned long size);
 void rsvd_aperture_free(struct pgt_device *pdev, unsigned long start, unsigned long size);

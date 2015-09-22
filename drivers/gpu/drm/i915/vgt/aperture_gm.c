@@ -31,16 +31,19 @@
  *
  * handle in 4 bytes granule
  */
-vgt_reg_t mmio_g2h_gmadr(struct vgt_device *vgt, unsigned long reg, vgt_reg_t g_value)
+int mmio_g2h_gmadr(struct vgt_device *vgt, unsigned long reg,
+		vgt_reg_t g_value, vgt_reg_t *h_value)
 {
 	struct pgt_device *pdev = vgt->pdev;
-	uint64_t h_value;
+	uint64_t h_val;
 	vgt_reg_t mask;
 	uint32_t size;
-	int ret;
+	int ret = 0;
 
-	if (!reg_addr_fix(pdev, reg))
-		return g_value;
+	if (!reg_addr_fix(pdev, reg)) {
+		*h_value = g_value;
+		return 0;
+	}
 
 	ASSERT((reg < _REG_FENCE_0_LOW) || (reg >= _REG_FENCE_0_LOW + VGT_FENCE_REGION_SIZE));
 
@@ -59,18 +62,20 @@ vgt_reg_t mmio_g2h_gmadr(struct vgt_device *vgt, unsigned long reg, vgt_reg_t g_
 			  (g_value & ~mask);
 	}
 
-	h_value = g_value & mask;
+	h_val = g_value & mask;
 	size = reg_aux_addr_size(pdev, reg);
-	ret = g2h_gm_range(vgt, &h_value, size);
+	ret = g2h_gm_range(vgt, &h_val, size);
+	if (ret < 0) {
+		vgt_err("vGT(%d): Failed to convert guest graphics memory address: g_value(0x%x), size(0x%x)\n",
+				vgt->vgt_id, g_value, size);
 
-	/*
-	 *  Note: ASSERT_VM should be placed outside, e.g. after lock is released in
-	 *  vgt_emulate_write(). Will fix this later.
-	 */
-	ASSERT_VM(!ret, vgt);
-	vgt_dbg(VGT_DBG_MEM, "....(g)%x->(h)%llx\n", g_value, (h_value & mask) | (g_value & ~mask));
+		return ret;
+	}
 
-	return (h_value & mask) | (g_value & ~mask);
+	vgt_dbg(VGT_DBG_MEM, "....(g)%x->(h)%llx\n", g_value, (h_val & mask) | (g_value & ~mask));
+
+	*h_value =  (h_val & mask) | (g_value & ~mask);
+	return 0;
 }
 
 /*

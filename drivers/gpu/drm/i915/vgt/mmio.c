@@ -166,29 +166,53 @@ static unsigned long vgt_get_reg_64(struct vgt_device *vgt, unsigned int reg)
 		return __vreg64(vgt, reg);
 }
 
-static void vgt_update_reg(struct vgt_device *vgt, unsigned int reg)
+static int vgt_update_reg(struct vgt_device *vgt, unsigned int reg)
 {
 	struct pgt_device *pdev = vgt->pdev;
+	int ret = 0;
 	/*
 	 * update sreg if pass through;
 	 * update preg if boot_time or vgt is reg's cur owner
 	 */
-	__sreg(vgt, reg) = mmio_g2h_gmadr(vgt, reg, __vreg(vgt, reg));
+	ret = mmio_g2h_gmadr(vgt, reg, __vreg(vgt, reg), vgt_sreg(vgt, reg));
+	if (ret < 0) {
+		vgt_err("vGT(%d): Failed to update reg(0x%x), vreg(0x%x)\n",
+				vgt->vgt_id, reg, __vreg(vgt, reg));
+		return ret;
+	}
+
 	if (reg_hw_access(vgt, reg))
 		VGT_MMIO_WRITE(pdev, reg, __sreg(vgt, reg));
+
+	return 0;
 }
 
-static void vgt_update_reg_64(struct vgt_device *vgt, unsigned int reg)
+static int vgt_update_reg_64(struct vgt_device *vgt, unsigned int reg)
 {
 	struct pgt_device *pdev = vgt->pdev;
+	int ret = 0;
 	/*
 	 * update sreg if pass through;
 	 * update preg if boot_time or vgt is reg's cur owner
 	 */
-	__sreg(vgt, reg) = mmio_g2h_gmadr(vgt, reg, __vreg(vgt, reg));
-	__sreg(vgt, reg + 4) = mmio_g2h_gmadr(vgt, reg + 4, __vreg(vgt, reg + 4));
+	ret = mmio_g2h_gmadr(vgt, reg, __vreg(vgt, reg), vgt_sreg(vgt, reg));
+	if (ret < 0) {
+		vgt_err("vGT(%d): Failed to update low 32-bit of reg(0x%x), vreg(0x%x)\n",
+				vgt->vgt_id, reg, __vreg(vgt, reg));
+		return ret;
+	}
+
+	ret = mmio_g2h_gmadr(vgt, reg + 4,
+			__vreg(vgt, reg + 4), vgt_sreg(vgt, reg + 4));
+	if (ret < 0) {
+		vgt_err("vGT(%d): Failed to update high 32-bit of reg(0x%x), vreg(0x%x)\n",
+				vgt->vgt_id, reg+4, __vreg(vgt, reg+4));
+		return ret;
+	}
+
 	if (reg_hw_access(vgt, reg))
 			VGT_MMIO_WRITE_BYTES(pdev, reg, __sreg64(vgt, reg), 8);
+	return 0;
 }
 
 bool default_mmio_read(struct vgt_device *vgt, unsigned int offset,
@@ -212,16 +236,17 @@ bool default_mmio_read(struct vgt_device *vgt, unsigned int offset,
 bool default_mmio_write(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes)
 {
+	int ret;
 	memcpy((char *)vgt->state.vReg + offset,
 			p_data, bytes);
 
 	offset &= ~(bytes - 1);
 	if (bytes <= 4)
-		vgt_update_reg(vgt, offset);
+		ret = vgt_update_reg(vgt, offset);
 	else
-		vgt_update_reg_64(vgt, offset);
+		ret = vgt_update_reg_64(vgt, offset);
 
-	return true;
+	return (ret < 0) ? false : true;
 }
 
 bool default_passthrough_mmio_read(struct vgt_device *vgt, unsigned int offset,
