@@ -304,7 +304,7 @@ static int kvmgt_set_trap_area(struct vgt_device *vgt, uint64_t start,
 	}
 
 	info->trap_mmio.base_addr = start;
-	info->trap_mmio.len = end - start;
+	info->trap_mmio.len = end - start + 1;
 
 	kvm_iodevice_init(&info->trap_mmio.iodev, &trap_mmio_ops);
 	mutex_lock(&kvm->slots_lock);
