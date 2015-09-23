@@ -210,8 +210,15 @@ int allocate_vm_aperture_gm_and_fence(struct vgt_device *vgt, vgt_params_t vp)
 	int i=0;
 
 	ASSERT(vgt->aperture_base == 0); /* not allocated yet*/
-	ASSERT(vp.aperture_sz > 0 && vp.aperture_sz <= vp.gm_sz);
-	ASSERT(vp.fence_sz > 0);
+
+	if (vp.aperture_sz <= 0 || vp.aperture_sz > vp.gm_sz) {
+		vgt_err("Aperture size error(%d).", vp.aperture_sz);
+		return -EINVAL;
+	}
+	if (vp.fence_sz <= 0) {
+		vgt_err("Fence size error(%d).", vp.fence_sz);
+		return -EINVAL;
+	}
 
 	visable_gm_start = bitmap_find_next_zero_area(gm_bitmap, guard,
 				aperture_search_start, vp.aperture_sz, 0);
@@ -261,8 +268,6 @@ void free_vm_aperture_gm_and_fence(struct vgt_device *vgt)
 		aperture_2_gm(vgt->pdev, vgt->aperture_base)/SIZE_1MB;
 	unsigned long hidden_gm_start = vgt->hidden_gm_offset/SIZE_1MB;
 	int i=0;
-
-	ASSERT(vgt->aperture_sz > 0 && vgt->aperture_sz <= vgt->gm_sz);
 
 	/* mark the related areas as available */
 	bitmap_clear(gm_bitmap, visable_gm_start, vgt->aperture_sz/SIZE_1MB);
