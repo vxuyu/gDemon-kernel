@@ -219,7 +219,12 @@ static void vgt_hvm_opregion_handle_request(struct vgt_device *vgt, uint32_t sws
 bool vgt_emulate_cfg_read(struct vgt_device *vgt, unsigned int offset, void *p_data, int bytes)
 {
 
-	ASSERT ((offset + bytes) <= VGT_CFG_SPACE_SZ);
+	if ((offset + bytes) > VGT_CFG_SPACE_SZ) {
+		vgt_err("VM(%d): CFG_SPACE read error, offset(%x) + bytes(%d)\n",
+				vgt->vgt_id, offset, bytes);
+		return false;
+	}
+
 	memcpy(p_data, &vgt->state.cfg_space[offset], bytes);
 
 	/* TODO: hooks */
@@ -247,7 +252,12 @@ bool vgt_emulate_cfg_write(struct vgt_device *vgt, unsigned int off,
 	bool rc = true;
 	uint32_t low_mem_max_gpfn;
 
-	ASSERT ((off + bytes) <= VGT_CFG_SPACE_SZ);
+	if ((off + bytes) > VGT_CFG_SPACE_SZ) {
+		vgt_err("VM(%d): CFG_SPACE write error, offset(%x) + bytes(%d)\n",
+				vgt->vgt_id, off, bytes);
+		return false;
+	}
+
 	cfg_reg = (uint32_t*)(cfg_space + (off & ~3));
 	switch (off & ~3) {
 		case VGT_REG_CFG_VENDOR_ID:
@@ -284,7 +294,11 @@ bool vgt_emulate_cfg_write(struct vgt_device *vgt, unsigned int off,
 		case VGT_REG_CFG_SPACE_BAR0:	/* GTTMMIO */
 		case VGT_REG_CFG_SPACE_BAR1:	/* GMADR */
 		case VGT_REG_CFG_SPACE_BAR2:	/* IO */
-			ASSERT((bytes == 4) && (off & 3) == 0);
+			if ((bytes != 4) || (off & 3) != 0) {
+				vgt_err("VM(%d): CFG_SPACE_BAR offset (%x) and bytes (%d) align error\n",
+					vgt->vgt_id, off, bytes);
+				return false;
+			}
 			new = *(uint32_t *)p_data;
 			printk("Programming bar 0x%x with 0x%x\n", off, new);
 			size = vgt->state.bar_size[(off - VGT_REG_CFG_SPACE_BAR0)/8];
@@ -344,7 +358,11 @@ bool vgt_emulate_cfg_write(struct vgt_device *vgt, unsigned int off,
 		case VGT_REG_CFG_SPACE_BAR1+4:
 		case VGT_REG_CFG_SPACE_BAR0+4:
 		case VGT_REG_CFG_SPACE_BAR2+4:
-			ASSERT((bytes == 4) && (off & 3) == 0);
+			if ((bytes != 4) || (off & 3) != 0) {
+				vgt_err("VM(%d): CFG_SPACE_BARx+4 offset (%x) and bytes (%d) align error\n",
+					vgt->vgt_id, off, bytes);
+				return false;
+			}
 			new = *(uint32_t *)p_data;
 			printk("Programming bar 0x%x with 0x%x\n", off, new);
 			size = vgt->state.bar_size[(off - (VGT_REG_CFG_SPACE_BAR0 + 4))/8];
