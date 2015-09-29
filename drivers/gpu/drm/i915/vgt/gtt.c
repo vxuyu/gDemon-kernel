@@ -1183,7 +1183,7 @@ static bool ppgtt_handle_guest_write_page_table_bytes(void *gp,
 	index = (pa & (PAGE_SIZE - 1)) >> info->gtt_entry_size_shift;
 
 	ppgtt_get_guest_entry(spt, &we, index);
-	memcpy(&we.val64 + (pa & (info->gtt_entry_size - 1)), p_data, bytes);
+	memcpy((char *)&we.val64 + (pa & (info->gtt_entry_size - 1)), p_data, bytes);
 
 	if (partial_access && !hi) {
 		trace_gpt_change(vgt->vm_id, "partial access - LOW",
@@ -1632,7 +1632,7 @@ bool gtt_mmio_read(struct vgt_device *vgt,
 		return false;
 
 	ggtt_get_guest_entry(ggtt_mm, &e, index);
-	memcpy(p_data, &e.val64 + (off & (info->gtt_entry_size - 1)), bytes);
+	memcpy(p_data, (char *)&e.val64 + (off & (info->gtt_entry_size - 1)), bytes);
 
 	return true;
 }
@@ -1741,7 +1741,7 @@ bool gtt_mmio_write(struct vgt_device *vgt, unsigned int off,
 
 	ggtt_get_guest_entry(ggtt_mm, &e, g_gtt_index);
 
-	memcpy(&e.val64 + (off & (info->gtt_entry_size - 1)), p_data, bytes);
+	memcpy((char *)&e.val64 + (off & (info->gtt_entry_size - 1)), p_data, bytes);
 
 	if (partial_access && !hi)
 		goto out;
