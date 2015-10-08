@@ -50,6 +50,9 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 /*
  * Registers used only by the command parser
  */
+#define _REG_OACONTROL_GEN8      0x2B00
+#define _REG_OACTXCONTROL        0x2360
+
 /* PRB0, RCS */
 #define _REG_RCS_TAIL	0x02030
 #define _REG_RCS_HEAD	0x02034

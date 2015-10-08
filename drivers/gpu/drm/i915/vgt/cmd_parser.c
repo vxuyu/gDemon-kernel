@@ -774,39 +774,26 @@ static int cmd_reg_handler(struct parser_exec_state *s,
 	struct pgt_device *pdev = vgt->pdev;
 	int rc = -1;
 
-	/*Enabled for HSW at this moment to test,  disabled for BDW*/
-	if (!IS_HSW(pdev)) {
-		rc = 0;
-		goto reg_handle;
-	}
-
-	if (!reg_is_mmio(pdev, offset + 4)){
+	if (!reg_is_mmio(pdev, offset + 3)) {
 		rc = -1;
 		goto reg_handle;
 	}
 
-	if ( reg_is_render(pdev, offset) ||
+	if ((reg_is_render(pdev, offset) && !reg_addr_fix(pdev, offset)) ||
 	     reg_passthrough(pdev, offset) ||
 	     (!vgt->vm_id && reg_is_config(pdev, offset)) ) {
 		rc = 0;
-	}
-	else if (offset == _REG_DE_RRMR || offset == FORCEWAKE_MT) {
-		rc = 0;
-	}/*TODO: for registers like rmrr or other tricky registers, continue using current
-		temporary exception before developing full solution for them.*/
-	else if ((offset == 0x138064) || (offset == 0x42008)) {
+	} else if (offset == _REG_DE_RRMR || offset == FORCEWAKE_MT) {
 		rc = 0;
 	}
 
 reg_handle:
 	if (!rc)
 		reg_set_cmd_access(pdev, offset);
-	else {
+	else
 		vgt_err("%s access to non-render register (%x)\n", cmd, offset);
-		//ASSERT_VM(0,vgt);
-	}
 
-	return 0;
+	return rc;
 }
 
 static int vgt_cmd_handler_lri(struct parser_exec_state *s)
