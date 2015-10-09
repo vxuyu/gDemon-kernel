@@ -225,7 +225,7 @@ static bool mul_force_wake_ack_read(struct vgt_device *vgt, unsigned int offset,
 	return true;
 }
 
-static bool mul_force_wake_write(struct vgt_device *vgt, unsigned int offset,
+bool mul_force_wake_write(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes)
 {
 	uint32_t data, mask, wake, old_wake, new_wake;
