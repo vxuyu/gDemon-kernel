@@ -694,8 +694,13 @@ bool set_panel_fitting(struct vgt_device *vgt, enum pipe pipe)
 	}
 	src_width = (__vreg(vgt, VGT_PIPESRC(pipe)) & 0xffff0000) >> 16;
 	src_height = __vreg(vgt, VGT_PIPESRC(pipe)) & 0xffff;
-	ASSERT_VM(src_width != 0, vgt);
-	ASSERT_VM(src_height != 0, vgt);
+	if (src_width == 0 || src_height == 0) {
+		vgt_err("vGT(%d) set_panel_fitting:"
+			       "Error source size width(%d) or height(%d)\n",
+				vgt->vgt_id, src_width, src_height);
+		return false;
+	}
+
 	src_width += 1;
 	src_height += 1;
 
@@ -712,9 +717,13 @@ bool set_panel_fitting(struct vgt_device *vgt, enum pipe pipe)
 
 	target_width = VGT_MMIO_READ(vgt->pdev, h_total_reg) & 0xffff;
 	target_height = VGT_MMIO_READ(vgt->pdev, v_total_reg) & 0xffff;
+	if (target_width == 0 || target_width == 0) {
+		vgt_err("vGT(%d) set_panel_fitting:"
+				"Error target size width(%d) or height(%d)\n",
+				vgt->vgt_id, target_width, target_height);
+		return false;
+	}
 
-	ASSERT_VM(target_width != 0, vgt);
-	ASSERT_VM(target_height != 0, vgt);
 	target_width += 1;
 	target_height += 1;
 
