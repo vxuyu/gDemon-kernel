@@ -137,7 +137,7 @@ bool vgt_i2c_handle_gmbus_read(struct vgt_device *vgt, unsigned int offset,
 bool vgt_i2c_handle_gmbus_write(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes);
 
-void vgt_i2c_handle_aux_ch_write(struct vgt_device *vgt,
+bool vgt_i2c_handle_aux_ch_write(struct vgt_device *vgt,
 				enum port port_idx,
 				unsigned int offset,
 				void *p_data);
