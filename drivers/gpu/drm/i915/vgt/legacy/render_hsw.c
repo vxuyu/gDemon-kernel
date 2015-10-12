@@ -1349,8 +1349,9 @@ bool ring_uhptr_write_in_rb_mode(struct vgt_device *vgt, unsigned int off,
 		ring_id = RING_BUFFER_VECS;
 		break;
 	default:
-		ASSERT(0);
-		break;
+		vgt_err("vGT(%d) ring_uhptr_write_in_rb_mode: Invalid offset(%x)\n",
+			vgt->vgt_id, off);
+		return false;
 	}
 
 	rs = &vgt->rb[ring_id];
