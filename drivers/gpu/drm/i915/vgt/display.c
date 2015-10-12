@@ -523,8 +523,13 @@ bool rebuild_pipe_mapping(struct vgt_device *vgt, unsigned int reg, uint32_t new
 	}
 
 	/*enable pipe case*/
-	ASSERT((reg == TRANS_DDI_FUNC_CTL_EDP) ||
-			(new_data & TRANS_DDI_PORT_MASK));
+	if ((reg != TRANS_DDI_FUNC_CTL_EDP) &&
+			!(new_data & TRANS_DDI_PORT_MASK)) {
+
+		vgt_err("vGT(%d) rebuild_pipe_mapping: invalid register(%x) or data(%x)\n",
+				vgt->vgt_id, reg, new_data);
+		return false;
+	}
 
 	if (reg == TRANS_DDI_FUNC_CTL_EDP) {
 		// In such case, it is virtual PORT_A mapping to physical PORT_A
@@ -567,9 +572,15 @@ bool rebuild_pipe_mapping(struct vgt_device *vgt, unsigned int reg, uint32_t new
 		}
 	}
 
-	ASSERT(virtual_pipe != I915_MAX_PIPES);
+	if (virtual_pipe == I915_MAX_PIPES) {
+		vgt_err("vGT(%d) rebuild_pipe_mapping: invalid display pipe(%d)\n",
+				vgt->vgt_id, virtual_pipe);
+		return false;
+	}
+
 	vgt_set_pipe_mapping(vgt, virtual_pipe, physical_pipe);
-	vgt_dbg(VGT_DBG_DPY, "vGT: add pipe mapping  %x - > %x \n", virtual_pipe, physical_pipe);
+	vgt_dbg(VGT_DBG_DPY, "vGT: add pipe mapping %x -> %x\n",
+			virtual_pipe, physical_pipe);
 	vgt_update_irq_reg(vgt);
 
 	if (current_foreground_vm(vgt->pdev) == vgt) {
