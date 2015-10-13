@@ -762,8 +762,8 @@ int kvmgt_pin_slot(struct kvm *kvm, struct kvm_memory_slot *slot)
 				(slot->flags & KVM_MEM_READONLY))
 		return -EFAULT;
 	if (slot->pfn_list) {
-		vgt_warn("VM%d: slot %d: pfn_list is not NULL!\n", kvm->domid, slot->id);
-		return -EEXIST;
+		vgt_info("VM%d: slot %d: reuse pinned pages!\n", kvm->domid, slot->id);
+		return 0;
 	}
 
 	/* Try the 1st page, ignore this slot on errors. It's possible */
