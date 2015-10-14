@@ -326,17 +326,11 @@ static int __kvmgt_set_trap_area(struct vgt_device *vgt, uint64_t start,
 static int __kvmgt_unset_trap_area(struct vgt_device *vgt)
 {
 	int r;
-	struct kvm *kvm;
 	struct kvmgt_hvm_info *info = vgt->hvm_info;
+	struct kvm *kvm = info->kvm;
 
 	if (!info->trap_mmio.set)
 		return 0;
-
-	kvm = kvmgt_find_by_domid(vgt->vm_id);
-	if (kvm == NULL) {
-		vgt_err("cannot find kvm for VM%d\n", vgt->vm_id);
-		return 0;
-	}
 
 	mutex_lock(&kvm->slots_lock);
 	r = kvm_io_bus_unregister_dev(kvm, KVM_MMIO_BUS,

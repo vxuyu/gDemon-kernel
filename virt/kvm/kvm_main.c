@@ -655,6 +655,11 @@ static void kvm_destroy_vm(struct kvm *kvm)
 	list_del(&kvm->vm_list);
 	spin_unlock(&kvm_lock);
 	kvm_free_irq_routing(kvm);
+
+#ifdef CONFIG_KVMGT
+	kvmgt_exit(kvm);
+#endif
+
 	for (i = 0; i < KVM_NR_BUSES; i++)
 		kvm_io_bus_destroy(kvm->buses[i]);
 	kvm_coalesced_mmio_free(kvm);
@@ -662,9 +667,6 @@ static void kvm_destroy_vm(struct kvm *kvm)
 	mmu_notifier_unregister(&kvm->mmu_notifier, kvm->mm);
 #else
 	kvm_arch_flush_shadow_all(kvm);
-#endif
-#ifdef CONFIG_KVMGT
-	kvmgt_exit(kvm);
 #endif
 	kvm_arch_destroy_vm(kvm);
 	kvm_destroy_devices(kvm);
