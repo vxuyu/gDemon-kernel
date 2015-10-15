@@ -90,7 +90,8 @@ void kvmgt_exit(struct kvm *kvm)
 	if (!kvm->vgt_enabled || !kvm->vgt)
 		return;
 
-	vgt_info("release vgt resrouce for KVM!\n");
+	vgt_info("release vgt resrouce for KVM\n");
+
 	vp.vm_id = -kvm->domid;
 	vgt_ops->del_state_sysfs(vp);
 
@@ -597,8 +598,8 @@ static bool kvmgt_opregion_init(struct vgt_device *vgt)
 
 	memcpy_fromio(vgt->state.opregion_va, vgt->pdev->opregion_va, VGT_OPREGION_SIZE);
 	memcpy(&vgt->state.cfg_space[VGT_REG_CFG_OPREGION], &kvm->opregion_gpa, sizeof(kvm->opregion_gpa));
-	vgt_info("opregion init succeed!\n");
 
+	vgt_info("opregion initialized\n");
 	return true;
 }
 
@@ -756,7 +757,7 @@ int kvmgt_pin_slot(struct kvm *kvm, struct kvm_memory_slot *slot)
 				(slot->flags & KVM_MEM_READONLY))
 		return -EFAULT;
 	if (slot->pfn_list) {
-		vgt_info("VM%d: slot %d: reuse pinned pages!\n", kvm->domid, slot->id);
+		vgt_info("VM%d: slot %d: reuse pinned pages\n", kvm->domid, slot->id);
 		return 0;
 	}
 
@@ -782,7 +783,7 @@ int kvmgt_pin_slot(struct kvm *kvm, struct kvm_memory_slot *slot)
 		slot->pfn_list[i] = pfn;
 	}
 
-	vgt_info("VM%d: pinned slot id(%hd) base_gfn(0x%llx) npages(%lu)\n",
+	vgt_info("VM%d: pinned slot id(%02hd) base_gfn(0x%llx) npages(%lu)\n",
 			kvm->domid, slot->id, slot->base_gfn, slot->npages);
 	return 0;
 }
@@ -807,7 +808,7 @@ int kvmgt_unpin_slot(struct kvm *kvm, struct kvm_memory_slot *slot)
 	kvfree(slot->pfn_list);
 	slot->pfn_list = NULL;
 
-	vgt_info("VM%d: unpinned slot id(%hd) base_gfn(0x%llx) npages(%lu)\n",
+	vgt_info("VM%d: unpinned slot id(%02hd) base_gfn(0x%llx) npages(%lu)\n",
 			kvm->domid, slot->id, slot->base_gfn, slot->npages);
 	return 0;
 }
