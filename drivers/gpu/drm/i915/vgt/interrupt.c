@@ -2098,7 +2098,6 @@ void *vgt_init_irq(struct pci_dev *pdev, struct drm_device *dev)
 	struct pgt_device *node, *pgt = NULL;
 	int irq;
 	struct vgt_irq_host_state *hstate;
-	int ret = 0;
 
 	if (!hypervisor_check_host() || !vgt_enabled)
 		return NULL;
@@ -2129,14 +2128,11 @@ void *vgt_init_irq(struct pci_dev *pdev, struct drm_device *dev)
 	}
 
 	irq = -1;
-	vgt_dbg(VGT_DBG_IRQ, "not requesting irq here!\n");
 	hstate->pirq = pdev->irq;
 	hstate->i915_irq = irq;
 
 	hstate->installed = true;
 
-	printk("vGT: allocate virq (%d) for i915, while keep original irq (%d) for vgt\n",
-		hstate->i915_irq, hstate->pirq);
 	printk("vGT: track_nest: %s\n", vgt_track_nest ? "enabled" : "disabled");
 
 	return pgt;
