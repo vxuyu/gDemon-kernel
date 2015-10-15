@@ -26,8 +26,8 @@
 #include <linux/delay.h>
 #include <linux/acpi.h>
 
-#include "fb_decoder.h"
 #include "vgt.h"
+#include "fb_decoder.h"
 
 /* working for both HSW/BDW and SKL+ */
 #define OFFSET_TO_DP_AUX_PORT(offset) (((offset) & 0xF00) >> 8)
@@ -802,13 +802,6 @@ static bool dpy_trans_ddi_ctl_write(struct vgt_device *vgt, unsigned int offset,
 
 	return true;
 }
-
-extern int vgt_decode_primary_plane_format(struct vgt_device *vgt,
-	int pipe, struct vgt_primary_plane_format *plane);
-extern int vgt_decode_cursor_plane_format(struct vgt_device *vgt,
-	int pipe, struct vgt_cursor_plane_format *plane);
-extern int vgt_decode_sprite_plane_format(struct vgt_device *vgt,
-	int pipe, struct vgt_sprite_plane_format *plane);
 
 int vgt_surf_base_range_check(struct vgt_device *vgt,
 	enum pipe pipe, enum vgt_plane_type plane, vgt_reg_t *surf_base)

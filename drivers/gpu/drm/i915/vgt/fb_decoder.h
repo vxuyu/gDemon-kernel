@@ -135,5 +135,10 @@ int vgt_register_fb_notifier(struct notifier_block *nb);
  * Unregister the callback for notification
  */
 int vgt_unregister_fb_notifier(struct notifier_block *nb);
-
+int vgt_decode_primary_plane_format(struct vgt_device *vgt,
+			   int pipe, struct vgt_primary_plane_format *plane);
+int vgt_decode_cursor_plane_format(struct vgt_device *vgt,
+			   int pipe, struct vgt_cursor_plane_format *plane);
+int vgt_decode_sprite_plane_format(struct vgt_device *vgt,
+			   int pipe, struct vgt_sprite_plane_format *plane);
 #endif

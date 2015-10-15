@@ -23,9 +23,9 @@
 #include <linux/module.h>
 #include <linux/pci.h>
 #include <linux/debugfs.h>
-#include "fb_decoder.h"
 
 #include "vgt.h"
+#include "fb_decoder.h"
 
 /*
  * Dump buffer

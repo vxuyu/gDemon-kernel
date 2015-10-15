@@ -419,6 +419,7 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 #define   MI_WAIT_FOR_SPRITE_A_FLIP_PENDING      (1<<2)
 
 #define	PIPE_CONTROL_DC_FLUSH_ENABLE			(1<<5)
+#define PIPE_CONTROL_LRI_POST_SYNC			(1<<23)
 #define DUMMY_3D		(0x6d800005)
 #define PRIM_TRILIST		(0x4)
 /*
