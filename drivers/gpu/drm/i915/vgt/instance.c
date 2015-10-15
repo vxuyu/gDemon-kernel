@@ -123,6 +123,9 @@ int create_vgt_instance(struct pgt_device *pdev, struct vgt_device **ptr_vgt, vg
 		printk("Insufficient memory for vgt_device in %s\n", __FUNCTION__);
 		return rc;
 	}
+	if (reset_dur_threshold > 0 && reset_count_threshold > 0)
+		vgt->reset_count_start_time =
+			vzalloc(reset_count_threshold * sizeof(unsigned long));
 
 	atomic_set(&vgt->crashing, 0);
 
@@ -340,6 +343,7 @@ err2:
 	vfree(vgt->state.sReg);
 	if (vgt->vgt_id >= 0)
 		free_vgt_id(vgt->vgt_id);
+	vfree(vgt->reset_count_start_time);
 	vfree(vgt);
 	return rc;
 }
@@ -455,6 +459,7 @@ void vgt_release_instance(struct vgt_device *vgt)
 	free_vm_rsvd_aperture(vgt);
 	vfree(vgt->state.vReg);
 	vfree(vgt->state.sReg);
+	vfree(vgt->reset_count_start_time);
 	vfree(vgt);
 	printk("vGT: vgt_release_instance done\n");
 }

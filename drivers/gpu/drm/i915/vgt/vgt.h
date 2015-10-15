@@ -92,6 +92,9 @@ extern bool bypass_dom0_addr_check;
 extern bool render_engine_reset;
 extern bool enable_panel_fitting;
 extern bool enable_reset;
+extern int reset_count_threshold;
+extern int reset_dur_threshold;
+extern int reset_max_threshold;
 extern bool vgt_lock_irq;
 extern int shadow_execlist_context;
 extern bool wp_submitted_ctx;
@@ -304,6 +307,10 @@ struct vgt_device {
 	unsigned long reset_flags;
 	unsigned long enabled_rings_before_reset;
 	unsigned long last_reset_time;
+
+	unsigned long *reset_count_start_time; /*record each reset time*/
+	int reset_count;
+	int reset_count_head; /*sliding window methods*/
 };
 
 typedef u32 reg_info_t;
@@ -1693,6 +1700,7 @@ extern void i915_handle_error(struct drm_device *dev, bool wedged,
 extern int i915_wait_error_work_complete(struct drm_device *dev);
 
 int vgt_reset_device(struct pgt_device *pgt);
+bool vgt_reset_stat(struct vgt_device *vgt);
 int vgt_del_state_sysfs(vgt_params_t vp);
 void reset_cached_interrupt_registers(struct pgt_device *pdev);
 
@@ -1868,5 +1876,27 @@ static inline void reset_el_structure(struct pgt_device *pdev,
 	} while (0)
 
 #include "mpt.h"
+
+static inline bool vgt_kill_vm(struct vgt_device *vgt)
+{
+	if (vgt->vm_id == 0) {
+		vgt_err("Try to kill the Dom0!\n");
+		return false;
+	}
+
+	if (atomic_cmpxchg(&vgt->crashing, 0, 1)) {
+		vgt_err("VM-%d is under crashing!\n", vgt->vm_id);
+		return false;
+	}
+
+	vgt_warn("Killing VM-%d\n", vgt->vm_id);
+	if (!hypervisor_pause_domain(vgt) &&
+			!hypervisor_shutdown_domain(vgt)) {
+		return true;
+	} else {
+		vgt_err("Failed to kill VM-%d!\n", vgt->vm_id);
+		return false;
+	}
+}
 
 #endif	/* _VGT_DRV_H_ */

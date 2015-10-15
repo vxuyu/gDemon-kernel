@@ -166,6 +166,22 @@ module_param_named(enable_panel_fitting, enable_panel_fitting, bool, 0600);
 bool enable_reset = true;
 module_param_named(enable_reset, enable_reset, bool, 0600);
 
+/*
+ * Below parameters allow two kinds of reset policy setting:
+ * 1, Maximum allowed reset number in a specified duration.
+ *  Set "reset_dur_threshold" as the duration and "reset_count_threshold" as the number.
+ * 2, Total allowed reset number in VM's life cycle.
+ *  Set "reset_dur_threshold" as 0 and "reset_max_threshold" the maximum number.
+ * By default only 5 times reset allowed in 60 seconds, disable the counter by setting
+ * reset_count_threshold and reset_max_threshold to ZERO.
+ */
+int reset_count_threshold = 5;
+module_param_named(reset_count_threshold, reset_count_threshold, int, 0600);
+int reset_dur_threshold = 60;
+module_param_named(reset_dur_threshold, reset_dur_threshold, int, 0600);
+int reset_max_threshold = 20;
+module_param_named(reset_max_threshold, reset_max_threshold, int, 0600);
+
 bool vgt_lock_irq = false;
 module_param_named(vgt_lock_irq, vgt_lock_irq, bool, 0400);
 
@@ -1189,6 +1205,46 @@ bool vgt_handle_dom0_device_reset(void)
 	return true;
 }
 
+bool vgt_reset_stat(struct vgt_device *vgt)
+{
+	bool rc = true;
+
+	if (vgt->vm_id == 0)
+		return true;
+
+	vgt->reset_count++;
+
+	if (reset_dur_threshold == 0) {
+		if (reset_max_threshold > 0 &&
+				vgt->reset_count > reset_max_threshold) {
+			rc = false;
+			vgt_err("VM-%d reset device %d times after it created.\n",
+				vgt->vm_id, vgt->reset_count);
+		}
+	} else if (reset_dur_threshold > 0 && reset_count_threshold > 0) {
+
+		vgt->reset_count_start_time[vgt->reset_count_head] = get_seconds();
+
+		if (vgt->reset_count >= reset_count_threshold) {
+			int reset_stat_duration = get_seconds() -
+				vgt->reset_count_start_time[(vgt->reset_count_head + 1) %
+					reset_count_threshold];
+			if (reset_stat_duration < reset_dur_threshold) {
+				rc = false;
+				vgt_err("VM-%d reset device %d times in %d seconds.\n",
+					vgt->vm_id, reset_count_threshold, reset_stat_duration);
+			}
+		}
+		vgt->reset_count_head++;
+		vgt->reset_count_head %= reset_count_threshold;
+	}
+
+	if (!rc)
+		vgt_kill_vm(vgt);
+
+	return rc;
+}
+
 int vgt_reset_device(struct pgt_device *pdev)
 {
 	struct vgt_irq_host_state *hstate = pdev->irq_hstate;
@@ -1203,6 +1259,9 @@ int vgt_reset_device(struct pgt_device *pdev)
 		vgt_err("Try to reset device too fast.\n");
 		return -EAGAIN;
 	}
+
+	if (!vgt_reset_stat(current_render_owner(pdev)))
+		return -EPERM;
 
 	if (test_and_set_bit(RESET_INPROGRESS,
 				&pdev->device_reset_flags)) {

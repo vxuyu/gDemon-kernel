@@ -2641,7 +2641,9 @@ int vgt_scan_vring(struct vgt_device *vgt, int ring_id)
 
 	t1 = get_cycles();
 	stat->vring_scan_cycles += t1 - t0;
-	ASSERT_VM(!ret, vgt);
+	if (ret)
+		vgt_kill_vm(vgt);
+
 	return ret;
 }
 
