@@ -352,6 +352,7 @@ struct vgt_device_info {
 	u32 gtt_entry_size;
 	u32 gtt_entry_size_shift;
 	u32 gmadr_bytes_in_cmd;
+	u32 max_surface_size;
 };
 
 /* per-device structure */

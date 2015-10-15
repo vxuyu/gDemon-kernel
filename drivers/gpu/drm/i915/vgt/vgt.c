@@ -586,6 +586,7 @@ static bool vgt_initialize_device_info(struct pgt_device *pdev)
 		info->gtt_entry_size = 4;
 		info->gtt_entry_size_shift = 2;
 		info->gmadr_bytes_in_cmd = 4;
+		info->max_surface_size = 36 * SIZE_1MB;
 	} else if (IS_BDW(pdev) || IS_SKL(pdev)) {
 		int gen = IS_BDW(pdev) ? 8 : 9;
 
@@ -605,6 +606,7 @@ static bool vgt_initialize_device_info(struct pgt_device *pdev)
 		info->gtt_entry_size = 8;
 		info->gtt_entry_size_shift = 3;
 		info->gmadr_bytes_in_cmd = 8;
+		info->max_surface_size = 36 * SIZE_1MB;
 	}
 
 	printk("GEN device info:\n");

@@ -46,6 +46,9 @@
 
 DEFINE_HASHTABLE(vgt_cmd_table, VGT_CMD_HASH_BITS);
 
+static inline int cmd_address_audit(struct parser_exec_state *s, unsigned long g_addr,
+	int op_size, bool index_mode);
+
 static void vgt_add_cmd_entry(struct vgt_cmd_entry *e)
 {
 	hash_add(vgt_cmd_table, &e->hlist, e->info->opcode);
@@ -1324,24 +1327,44 @@ static inline bool address_audit(struct parser_exec_state *s, int index)
 	return true;
 }
 
-static inline bool vgt_cmd_addr_audit_with_bitmap(struct parser_exec_state *s,
-			unsigned long addr_bitmap)
+static inline int cmd_address_audit(struct parser_exec_state *s, unsigned long g_addr,
+	int op_size, bool index_mode)
 {
-	unsigned int bit;
-	unsigned int delta = 0;
-	int cmd_len = cmd_length(s);
+	struct vgt_device *vgt = s->vgt;
+	int max_surface_size = vgt->pdev->device_info.max_surface_size;
+	int i;
+	int rc = 0;
 
-	if (!addr_bitmap)
-		return true;
+	ASSERT(op_size <= max_surface_size);
 
-	for_each_set_bit(bit, &addr_bitmap, sizeof(addr_bitmap)*8) {
-		if (bit + delta >= cmd_len)
-			return false;
-		address_audit(s, bit + delta);
-		delta = delta + gmadr_dw_number(s) - 1;
+	if (s->vgt->vgt_id == 0)
+		return rc;
+
+	if (index_mode)	{
+		if (g_addr >= PAGE_SIZE/sizeof(uint64_t))
+			rc = -1;
+	} else if ((!g_gm_is_valid(vgt, g_addr))
+		|| (!g_gm_is_valid(vgt, g_addr + op_size - 1))) {
+		rc = -1;
 	}
 
-	return true;
+	if (rc < 0) {
+		vgt_err("cmd_parser: Malicious %s detected, addr=0x%lx, len=%d!\n",
+			s->info->name, g_addr, op_size);
+
+		printk("cmd dump: ");
+		for (i = 0; i < cmd_length(s); i++) {
+			if (!(i % 4))
+				printk("\n%08x ", cmd_val(s, i));
+			else
+				printk("%08x ", cmd_val(s, i));
+		}
+		printk("\ncurrent VM addr range: visible 0x%llx - 0x%llx, hidden 0x%llx - 0x%llx\n",
+			vgt_guest_visible_gm_base(vgt), vgt_guest_visible_gm_end(vgt),
+			vgt_guest_hidden_gm_base(vgt), vgt_guest_hidden_gm_end(vgt));
+	}
+
+	return rc;
 }
 
 static int vgt_cmd_handler_mi_update_gtt(struct parser_exec_state *s)
@@ -2285,8 +2308,6 @@ static int vgt_cmd_parser_exec(struct parser_exec_state *s)
 	}
 
 	s->info = info;
-
-	vgt_cmd_addr_audit_with_bitmap(s, info->addr_bitmap);
 
 	t1 = get_cycles();
 

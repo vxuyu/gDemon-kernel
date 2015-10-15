@@ -1652,6 +1652,11 @@ bool vgt_batch_ELSP_write(struct vgt_device *vgt, int ring_id)
 			continue;
 		}
 
+		if (!ctx_descs[i]->privilege_access) {
+			vgt_err("VM-%d: Unexpected GGTT base rendering!\n", vgt->vm_id);
+			return false;
+		}
+
 		vgt_dbg(VGT_DBG_EXECLIST, "SUBMISSION: ctx%d guest lrca is: 0x%x\n",
 						i, ctx_descs[i]->lrca);
 		el_ctx = execlist_context_find(vgt, ctx_descs[i]->lrca);
