@@ -179,6 +179,12 @@ struct shadow_ctx_page {
 	struct vgt_device *vgt;
 };
 
+struct shadow_ring_buffer {
+	unsigned long guest_rb_base;
+	unsigned long shadow_rb_base;
+	uint32_t ring_size;
+};
+
 struct execlist_context {
 	struct ctx_desc_format guest_context;
 	uint32_t shadow_lrca;
@@ -201,6 +207,8 @@ struct execlist_context {
 	struct shadow_ctx_page ctx_pages[MAX_EXECLIST_CTX_PAGES];
 	/* used for lazy context shadowing optimization */
 	gtt_entry_t shadow_entry_backup[MAX_EXECLIST_CTX_PAGES];
+
+	struct shadow_ring_buffer shadow_rb;
 
 	struct hlist_node node;
 };

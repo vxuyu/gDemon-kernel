@@ -345,6 +345,26 @@ TRACE_EVENT(ctx_write_trap,
 				__entry->pa, __entry->bytes)
 );
 
+TRACE_EVENT(shadow_rb_copy,
+		TP_PROTO(int vm_id, int ring_id, uint32_t guest_lrca, uint32_t shadow_lrca, uint32_t size, unsigned long vbase, unsigned long sbase, uint32_t rb_head, uint32_t tail),
+
+		TP_ARGS(vm_id, ring_id, guest_lrca, shadow_lrca, size, vbase, sbase, rb_head, tail),
+
+		TP_STRUCT__entry(
+			__array(char, buf, MAX_BUF_LEN)
+		),
+
+		TP_fast_assign(
+			snprintf(__entry->buf, MAX_BUF_LEN,
+				"VM-%d (ring <%d> ctx-0x%x(sctx-0x%x)): copy shadow ring. "
+				"size:0x%x, base: 0x%lx(sbase:0x%lx), head: 0x%x, tail: 0x%x\n",
+				vm_id, ring_id, guest_lrca, shadow_lrca,
+				size, vbase, sbase, rb_head, tail);
+		),
+
+		TP_printk("%s", __entry->buf)
+);
+
 #endif /* _VGT_TRACE_H_ */
 
 /* This part must be out of protection */

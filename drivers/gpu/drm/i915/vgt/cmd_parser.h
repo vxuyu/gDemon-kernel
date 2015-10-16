@@ -485,6 +485,8 @@ struct parser_exec_state {
 
 	uint32_t *ip_buf_va;
 	void *ip_buf;
+
+	struct execlist_context *el_ctx;
 };
 
 #define CMD_TAIL_NUM	1024

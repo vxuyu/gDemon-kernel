@@ -97,6 +97,7 @@ extern int reset_dur_threshold;
 extern int reset_max_threshold;
 extern bool vgt_lock_irq;
 extern int shadow_execlist_context;
+extern int shadow_ring_buffer;
 extern bool wp_submitted_ctx;
 extern bool propagate_monitor_to_guest;
 extern bool irq_based_ctx_switch;
@@ -188,6 +189,7 @@ typedef struct {
 #define vgt_sreg(vgt, off)	((vgt_reg_t *)((char *)vgt->state.sReg + off))
 
 struct vgt_mm;
+struct execlist_context;
 
 #define vgt_el_queue_head(vgt, ring_id) \
 	((vgt)->rb[ring_id].el_slots_head)

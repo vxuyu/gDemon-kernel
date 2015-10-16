@@ -2544,6 +2544,7 @@ static int __vgt_scan_vring(struct vgt_device *vgt, int ring_id, vgt_reg_t head,
 	s.ring_tail = gma_tail;
 
 	s.request_id = rs->request_id;
+	s.el_ctx = rs->el_ctx;
 
 	if (bypass_scan_mask & (1 << ring_id)) {
 		add_tail_entry(&s, tail, 100, 0, 0);
@@ -2618,6 +2619,61 @@ out:
 	return rc;
 }
 
+static int vgt_copy_rb_to_shadow(struct vgt_device *vgt,
+				  struct execlist_context *el_ctx,
+				  uint32_t head,
+				  uint32_t tail)
+{
+	uint32_t rb_size;
+	uint32_t left_len;
+	uint32_t rb_offset;
+	unsigned long vbase, sbase;
+
+	rb_size = el_ctx->shadow_rb.ring_size;
+	vbase = el_ctx->shadow_rb.guest_rb_base;
+	sbase = el_ctx->shadow_rb.shadow_rb_base;
+
+	trace_shadow_rb_copy(vgt->vm_id, el_ctx->ring_id,
+			     el_ctx->guest_context.lrca,
+			     el_ctx->shadow_lrca,
+			     rb_size, vbase, sbase, head, tail);
+
+	if (head <= tail)
+		left_len = tail - head;
+	else
+		left_len = rb_size - head + tail;
+
+	rb_offset = head;
+
+	while (left_len > 0) {
+		void *ip_va, *ip_sva;
+		uint32_t ip_buf_len;
+		uint32_t copy_len;
+		ip_va = vgt_gma_to_va(vgt->gtt.ggtt_mm, vbase + rb_offset);
+		if (ip_va == NULL) {
+			vgt_err("VM-%d(ring-%d): gma %lx is invalid!\n",
+				vgt->vm_id, el_ctx->ring_id, vbase + rb_offset);
+			dump_stack();
+			return EFAULT;
+		}
+
+		ip_buf_len = PAGE_SIZE - ((vbase + rb_offset) & (PAGE_SIZE - 1));
+		if (left_len <= ip_buf_len)
+			copy_len = left_len;
+		else
+			copy_len = ip_buf_len;
+
+		ip_sva = (uint32_t *)v_aperture(vgt->pdev, sbase + rb_offset);
+		hypervisor_read_va(vgt, ip_va, ip_sva,
+				   copy_len, 1);
+
+		left_len -= copy_len;
+		rb_offset = (rb_offset + copy_len) & (rb_size - 1);
+	}
+
+	return 0;
+}
+
 /*
  * Scan the guest ring.
  *   Return 0: success
@@ -2627,7 +2683,7 @@ int vgt_scan_vring(struct vgt_device *vgt, int ring_id)
 {
 	vgt_state_ring_t *rs = &vgt->rb[ring_id];
 	vgt_ringbuffer_t *vring = &rs->vring;
-	int ret;
+	int ret = 0;
 	cycles_t t0, t1;
 	struct vgt_statistics *stat = &vgt->stat;
 
@@ -2642,11 +2698,21 @@ int vgt_scan_vring(struct vgt_device *vgt, int ring_id)
 
 	stat->vring_scan_cnt++;
 	rs->request_id++;
-	ret = __vgt_scan_vring(vgt, ring_id, rs->last_scan_head,
-		vring->tail & RB_TAIL_OFF_MASK,
-		vring->start, _RING_CTL_BUF_SIZE(vring->ctl));
 
-	rs->last_scan_head = vring->tail;
+	/* copy the guest rb into shadow rb */
+	if (shadow_ring_buffer) {
+		ret = vgt_copy_rb_to_shadow(vgt, rs->el_ctx,
+				    vring->head,
+				    vring->tail & RB_TAIL_OFF_MASK);
+	}
+
+	if (ret == 0) {
+		ret = __vgt_scan_vring(vgt, ring_id, rs->last_scan_head,
+			vring->tail & RB_TAIL_OFF_MASK,
+			vring->start, _RING_CTL_BUF_SIZE(vring->ctl));
+
+		rs->last_scan_head = vring->tail;
+	}
 
 	t1 = get_cycles();
 	stat->vring_scan_cycles += t1 - t0;

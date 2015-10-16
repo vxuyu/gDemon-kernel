@@ -176,6 +176,9 @@ static inline enum vgt_ring_id vgt_get_ringid_from_lrca(struct vgt_device *vgt,
 	return ring_id;
 }
 
+static void vgt_create_shadow_rb(struct vgt_device *vgt, struct execlist_context *el_ctx);
+static void vgt_destroy_shadow_rb(struct vgt_device *vgt, struct execlist_context *el_ctx);
+
 /* a queue implementation
  *
  * It is used to hold the submitted execlists through writing ELSP.
@@ -924,6 +927,7 @@ static struct execlist_context *vgt_create_execlist_context(struct vgt_device *v
 		vgt_el_create_shadow_context(vgt, ring_id, el_ctx);
 
 	vgt_el_create_shadow_ppgtt(vgt, ring_id, el_ctx);
+	vgt_create_shadow_rb(vgt, el_ctx);
 
 	trace_ctx_lifecycle(vgt->vm_id, ring_id,
 			el_ctx->guest_context.lrca, "create");
@@ -959,6 +963,9 @@ static void vgt_destroy_execlist_context(struct vgt_device *vgt,
 		}
 		vgt_clean_guest_page(vgt, &el_ctx->ctx_pages[i].guest_page);
 	}
+
+	/* free the shadow cmd buffers */
+	vgt_destroy_shadow_rb(vgt, el_ctx);
 
 	// free the shadow context;
 	if (vgt_require_shadow_context(vgt)) {
@@ -1401,7 +1408,74 @@ static inline bool vgt_hw_ELSP_write(struct vgt_device *vgt,
 	!(((tail) >= (last_tail)) &&				\
 	  ((tail) <= (head)))))
 
-static void vgt_update_ring_info(struct vgt_device *vgt,
+/* Shadow ring buffer implementation */
+static void vgt_create_shadow_rb(struct vgt_device *vgt,
+				 struct execlist_context *el_ctx)
+{
+	unsigned long shadow_hpa;
+	unsigned long shadow_gma;
+	uint32_t rb_size;
+	unsigned long rb_gma;
+	struct reg_state_ctx_header *reg_state;
+
+	if (!shadow_ring_buffer)
+		return;
+
+	ASSERT(el_ctx->shadow_rb.shadow_rb_base == 0);
+
+	reg_state = vgt_get_reg_state_from_lrca(vgt,
+				el_ctx->guest_context.lrca);
+
+	rb_size = _RING_CTL_BUF_SIZE(reg_state->rb_ctrl.val);
+	if ((rb_size >= 2 * SIZE_1MB) || (rb_size == 0)) {
+		vgt_err("VM-%d: RB size <0x%x> is invalid. "
+			"Shadow RB will not be created!\n",
+			vgt->vm_id, rb_size);
+		return;
+	}
+
+	rb_gma = reg_state->rb_start.val;
+	shadow_hpa = rsvd_aperture_alloc(vgt->pdev, rb_size);
+	if (shadow_hpa == 0) {
+		vgt_err("VM-%d: Failed to allocate gm for shadow privilege bb!\n",
+			vgt->vm_id);
+		return;
+	}
+
+	shadow_gma = aperture_2_gm(vgt->pdev, shadow_hpa);
+	el_ctx->shadow_rb.guest_rb_base = rb_gma;
+
+	el_ctx->shadow_rb.shadow_rb_base = shadow_gma;
+	el_ctx->shadow_rb.ring_size = rb_size;
+
+	return;
+}
+
+static void vgt_destroy_shadow_rb(struct vgt_device *vgt,
+				  struct execlist_context *el_ctx)
+{
+	unsigned long hpa;
+	if (!shadow_ring_buffer)
+		return;
+
+	if (el_ctx->shadow_rb.ring_size == 0)
+		return;
+
+	ASSERT(el_ctx->shadow_rb.shadow_rb_base);
+	hpa = phys_aperture_base(vgt->pdev) +
+			el_ctx->shadow_rb.shadow_rb_base;
+	rsvd_aperture_free(vgt->pdev, hpa,
+			   el_ctx->shadow_rb.ring_size);
+
+	el_ctx->shadow_rb.guest_rb_base = 0;
+	el_ctx->shadow_rb.shadow_rb_base = 0;
+	el_ctx->shadow_rb.ring_size = 0;
+
+	return;
+}
+
+/* perform command buffer scan and shadowing */
+static void vgt_manipulate_cmd_buf(struct vgt_device *vgt,
 			struct execlist_context *el_ctx)
 {
 	struct reg_state_ctx_header *guest_state;
@@ -1438,7 +1512,7 @@ static void vgt_update_ring_info(struct vgt_device *vgt,
 	vgt->rb[ring_id].has_ppgtt_mode_enabled = 1;
 	vgt->rb[ring_id].has_ppgtt_base_set = 1;
 	vgt->rb[ring_id].request_id = el_ctx->request_id;
-
+	vgt->rb[ring_id].el_ctx = el_ctx;
 #if 0
 	/* keep this trace for debug purpose */
 	trace_printk("VRING: HEAD %04x TAIL %04x START %08x last_scan %08x PREEMPTION %d DPY %d\n",
@@ -1452,6 +1526,22 @@ static void vgt_update_ring_info(struct vgt_device *vgt,
 		el_ctx->scan_head_valid = true;
 	} else {
 		vgt->rb[ring_id].last_scan_head = el_ctx->last_scan_head;
+	}
+
+	if ((vring->start != el_ctx->shadow_rb.shadow_rb_base) &&
+	    (el_ctx->shadow_rb.guest_rb_base != vring->start)) {
+		vgt_dbg(VGT_DBG_EXECLIST,
+			"VM-%d: rb base is changed in workload submission "
+			 "from 0x%lx to 0x%x\n",
+			 vgt->vm_id,
+			 el_ctx->shadow_rb.guest_rb_base,
+			 vring->start);
+		el_ctx->shadow_rb.guest_rb_base = vring->start;
+	}
+
+	if (el_ctx->shadow_rb.ring_size != _RING_CTL_BUF_SIZE(vring->ctl)) {
+		vgt_destroy_shadow_rb(vgt, el_ctx);
+		vgt_create_shadow_rb(vgt, el_ctx);
 	}
 
 	vgt_scan_vring(vgt, ring_id);
@@ -1566,7 +1656,7 @@ void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 
 		ASSERT_VM(ring_id == ctx->ring_id, vgt);
 		vgt_update_shadow_ctx_from_guest(vgt, ctx);
-		vgt_update_ring_info(vgt, ctx);
+		vgt_manipulate_cmd_buf(vgt, ctx);
 
 		trace_ctx_lifecycle(vgt->vm_id, ring_id,
 			ctx->guest_context.lrca, "schedule_to_run");

@@ -134,6 +134,8 @@ typedef struct {
 	struct vgt_exec_list execlist_slots[EL_QUEUE_SLOT_NUM];
 	struct vgt_elsp_store elsp_store;
 	int csb_write_ptr;
+
+	struct execlist_context *el_ctx;
 } vgt_state_ring_t;
 
 struct vgt_render_context_ops {
