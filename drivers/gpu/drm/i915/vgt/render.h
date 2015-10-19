@@ -40,7 +40,8 @@ typedef struct {
  * Ring ID definition.
  */
 enum vgt_ring_id {
-	RING_BUFFER_RCS = 0,
+	RING_ID_INVALID = -1,
+	RING_BUFFER_RCS,
 	RING_BUFFER_VCS,
 	RING_BUFFER_BCS,
 	RING_BUFFER_VECS,
