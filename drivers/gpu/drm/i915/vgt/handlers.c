@@ -499,7 +499,7 @@ static bool lcpll_ctl_mmio_write(struct vgt_device *vgt, unsigned int offset,
 static bool pipe_frmcount_mmio_read(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes)
 {
-	enum vgt_pipe pipe;
+	enum pipe pipe;
 
 	/* TODO
 	 *
@@ -747,7 +747,7 @@ extern int vgt_decode_sprite_plane_format(struct vgt_device *vgt,
 	int pipe, struct vgt_sprite_plane_format *plane);
 
 vgt_reg_t vgt_surf_base_range_check (struct vgt_device *vgt,
-	enum vgt_pipe pipe, enum vgt_plane_type plane)
+	enum pipe pipe, enum vgt_plane_type plane)
 {
 	uint32_t  reg = _REG_INVALID;
 	vgt_reg_t surf_base = 0;
@@ -805,7 +805,7 @@ static bool pipe_conf_mmio_write(struct vgt_device *vgt, unsigned int offset,
 {
 	bool rc, orig_pipe_enabled, curr_pipe_enabled;
 	unsigned int reg;
-	enum vgt_pipe pipe;
+	enum pipe pipe;
 	enum vgt_plane_type plane;
 	uint32_t wr_data;
 
@@ -938,7 +938,7 @@ static bool fdi_auto_training_started(struct vgt_device *vgt)
 
 /* FIXME: this function is highly platform-dependent (SNB + CPT) */
 static bool check_fdi_rx_train_status(struct vgt_device *vgt,
-		enum vgt_pipe pipe, unsigned int train_pattern)
+		enum pipe pipe, unsigned int train_pattern)
 {
 	unsigned int fdi_rx_imr, fdi_tx_ctl, fdi_rx_ctl;
 	unsigned int fdi_rx_check_bits, fdi_tx_check_bits;
@@ -978,7 +978,7 @@ static bool check_fdi_rx_train_status(struct vgt_device *vgt,
 static bool update_fdi_rx_iir_status(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes)
 {
-	enum vgt_pipe pipe;
+	enum pipe pipe;
 	unsigned int reg, fdi_rx_iir;
 	bool rc;
 
@@ -1031,7 +1031,7 @@ static bool update_fdi_rx_iir_status(struct vgt_device *vgt, unsigned int offset
 static bool dp_tp_ctl_mmio_write(struct vgt_device *vgt, unsigned int offset,
 		void *p_data, unsigned int bytes)
 {
-	enum vgt_port port;
+	enum port port;
 	unsigned int dp_tp_status_reg, val;
 	vgt_reg_t ctl_val;
 	bool rc;
@@ -1124,8 +1124,8 @@ static bool pch_adpa_mmio_write(struct vgt_device *vgt, unsigned int offset,
 
 bool vgt_map_plane_reg(struct vgt_device *vgt, unsigned int reg, unsigned int *p_real_reg)
 {
-	enum vgt_pipe virtual_pipe;
-	enum vgt_pipe real_pipe ;
+	enum pipe virtual_pipe;
+	enum pipe real_pipe ;
 
 	switch (reg)
 	{
@@ -1229,9 +1229,9 @@ static bool dpy_plane_mmio_write(struct vgt_device *vgt, unsigned int offset,
 static bool dpy_plane_ctl_write(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes)
 {
-	enum vgt_pipe pipe = PIPE_A;
-	enum vgt_pipe p_pipe = I915_MAX_PIPES;
-	enum vgt_pipe v_pipe = I915_MAX_PIPES;
+	enum pipe pipe = PIPE_A;
+	enum pipe p_pipe = I915_MAX_PIPES;
+	enum pipe v_pipe = I915_MAX_PIPES;
 	vgt_reg_t new_plane_ctl;
 	bool enable_plane = false;
 	struct vgt_device *foreground_vgt;
@@ -1271,7 +1271,7 @@ static bool pri_surf_mmio_write(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes)
 {
 	struct fb_notify_msg msg;
-	enum vgt_pipe pipe = VGT_DSPSURFPIPE(offset);
+	enum pipe pipe = VGT_DSPSURFPIPE(offset);
 	unsigned int real_offset;
 	vgt_reg_t ret_val;
 
@@ -1299,7 +1299,7 @@ static bool pri_surf_mmio_write(struct vgt_device *vgt, unsigned int offset,
 static bool sprite_plane_ctl_write(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes)
 {
-	enum vgt_pipe pipe = VGT_SPRCNTRPIPE(offset);
+	enum pipe pipe = VGT_SPRCNTRPIPE(offset);
 
 	dpy_plane_mmio_write(vgt, offset, p_data, bytes);
 	vgt_surf_base_range_check(vgt, pipe, SPRITE_PLANE);
@@ -1311,7 +1311,7 @@ static bool spr_surf_mmio_write(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes)
 {
 	struct fb_notify_msg msg;
-	enum vgt_pipe pipe = VGT_SPRSURFPIPE(offset);
+	enum pipe pipe = VGT_SPRSURFPIPE(offset);
 	unsigned int real_offset;
 	vgt_reg_t ret_val;
 
@@ -1335,7 +1335,7 @@ static bool spr_surf_mmio_write(struct vgt_device *vgt, unsigned int offset,
 static bool cur_plane_ctl_write(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes)
 {
-	enum vgt_pipe pipe = VGT_CURCNTRPIPE(offset);
+	enum pipe pipe = VGT_CURCNTRPIPE(offset);
 
 	dpy_plane_mmio_write(vgt,offset, p_data, bytes);
 	vgt_surf_base_range_check(vgt, pipe, CURSOR_PLANE);
@@ -1346,7 +1346,7 @@ static bool cur_plane_ctl_write(struct vgt_device *vgt, unsigned int offset,
 static bool cur_surf_mmio_write(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes)
 {
-	enum vgt_pipe pipe = VGT_CURSURFPIPE(offset);
+	enum pipe pipe = VGT_CURSURFPIPE(offset);
 	unsigned int real_offset;
 	vgt_reg_t ret_val;
 
@@ -1405,7 +1405,7 @@ static bool surflive_mmio_read(struct vgt_device *vgt, unsigned int offset,
 {
 	vgt_reg_t surflive_val;
 	unsigned int surf_reg = 0;
-	enum vgt_pipe pipe;
+	enum pipe pipe;
 
 	if (plane == PRIMARY_PLANE) {
 		pipe = VGT_DSPSURFLIVEPIPE(offset);
@@ -1541,7 +1541,7 @@ static bool dp_aux_ch_ctl_mmio_write(struct vgt_device *vgt, unsigned int offset
 	vgt_reg_t value = *(vgt_reg_t *)p_data;
 	int msg, addr, ctrl, op, len;
 	struct vgt_dpcd_data *dpcd = NULL;
-	enum vgt_port port_idx = vgt_get_dp_port_idx(offset);
+	enum port port_idx = vgt_get_dp_port_idx(offset);
 	struct gt_port *port = NULL;
 
 	ASSERT(bytes == 4);

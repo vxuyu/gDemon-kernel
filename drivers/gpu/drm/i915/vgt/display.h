@@ -123,37 +123,6 @@ enum vgt_uevent_type;
 		    (vgt->ports[port].type == VGT_DP_C) ||			\
 		    (vgt->ports[port].type == VGT_DP_D)))
 
-enum transcoder {
-	TRANSCODER_A = 0,
-	TRANSCODER_B,
-	TRANSCODER_C,
-	TRANSCODER_EDP = 0xF,
-};
-
-enum dpcd_index {
-	DPCD_DPA = 0,
-	DPCD_DPB,
-	DPCD_DPC,
-	DPCD_DPD,
-	DPCD_MAX
-};
-
-enum vgt_pipe {
-	PIPE_A = 0,
-	PIPE_B,
-	PIPE_C,
-	I915_MAX_PIPES
-};
-
-enum vgt_port {
-	PORT_A = 0,
-	PORT_B,
-	PORT_C,
-	PORT_D,
-	PORT_E,
-	I915_MAX_PORTS
-};
-
 enum vgt_plane_type {
 	PRIMARY_PLANE = 0,
 	CURSOR_PLANE,
@@ -255,7 +224,7 @@ struct sbi_registers {
 struct port_cache {
 	bool valid;
 	struct vgt_edid_data_t	*edid;	/* per display EDID information */
-	enum vgt_port		port_override;
+	enum port		port_override;
 	enum vgt_port_type	type;
 };
 
@@ -265,9 +234,9 @@ struct gt_port {
 	struct vgt_edid_data_t	*edid;	/* per display EDID information */
 	struct vgt_dpcd_data	*dpcd;	/* per display DPCD information */
 	enum vgt_port_type	type;
-	enum vgt_port		port_override;
+	enum port		port_override;
 	struct port_cache	cache; /* the temporary updated information */
-	enum vgt_port physcal_port;
+	enum port physcal_port;
 };
 
 struct vgt_port_output_struct {
@@ -333,13 +302,13 @@ bool rebuild_pipe_mapping(struct vgt_device *vgt, unsigned int reg, uint32_t new
 
 bool update_pipe_mapping(struct vgt_device *vgt, unsigned int physical_reg, uint32_t physical_wr_data);
 
-bool set_panel_fitting(struct vgt_device *vgt, enum vgt_pipe pipe);
+bool set_panel_fitting(struct vgt_device *vgt, enum pipe pipe);
 
 bool vgt_manage_emul_dpy_events(struct pgt_device *pdev);
 
-void vgt_update_frmcount(struct vgt_device *vgt, enum vgt_pipe pipe);
+void vgt_update_frmcount(struct vgt_device *vgt, enum pipe pipe);
 
-void vgt_calculate_frmcount_delta(struct vgt_device *vgt, enum vgt_pipe pipe);
+void vgt_calculate_frmcount_delta(struct vgt_device *vgt, enum pipe pipe);
 
 void vgt_set_power_well(struct vgt_device *vgt, bool enable);
 

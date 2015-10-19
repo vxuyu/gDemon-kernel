@@ -189,7 +189,7 @@ child_dev_insert_fake_port(struct child_devices* dev, int max_num, int efp_port)
 bool vgt_prepare_vbios_general_definition(struct vgt_device *vgt)
 {
 	bool ret = true;
-	struct vbt_header *header;
+	struct vgt_vbt_header *header;
 	struct bios_data_header *data_header;
 	struct vbios_general_definitions *gendef;
 	struct child_devices* child_dev;
@@ -205,7 +205,7 @@ bool vgt_prepare_vbios_general_definition(struct vgt_device *vgt)
 		return false;
 	}
 
-	header = (struct vbt_header*) (vgt->state.opregion_va + VBIOS_OFFSET);
+	header = (struct vgt_vbt_header*) (vgt->state.opregion_va + VBIOS_OFFSET);
 
 	data_header = (struct bios_data_header*)
 		(((u8*)header) + header->bios_data_offset);

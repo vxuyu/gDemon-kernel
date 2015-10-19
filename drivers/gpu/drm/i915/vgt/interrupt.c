@@ -1147,8 +1147,8 @@ static void vgt_handle_ctx_switch_virt(struct vgt_irq_host_state *hstate,
 static enum vgt_event_type translate_physical_event(struct vgt_device *vgt,
 	enum vgt_event_type event)
 {
-	enum vgt_pipe virtual_pipe = I915_MAX_PIPES;
-	enum vgt_pipe physical_pipe = I915_MAX_PIPES;
+	enum pipe virtual_pipe = I915_MAX_PIPES;
+	enum pipe physical_pipe = I915_MAX_PIPES;
 	enum vgt_event_type virtual_event = event;
 	int i;
 
@@ -1801,11 +1801,11 @@ void vgt_forward_events(struct pgt_device *pdev)
 	pdev->stat.virq_cycles += get_cycles() - pdev->stat.last_virq;
 }
 
-inline bool vgt_need_emulated_irq(struct vgt_device *vgt, enum vgt_pipe pipe)
+inline bool vgt_need_emulated_irq(struct vgt_device *vgt, enum pipe pipe)
 {
 	bool rc = false;
 	if (vgt_has_pipe_enabled(vgt, pipe)) {
-		enum vgt_pipe phys_pipe = vgt->pipe_mapping[pipe];
+		enum pipe phys_pipe = vgt->pipe_mapping[pipe];
 		if ((phys_pipe == I915_MAX_PIPES) ||
 			!pdev_has_pipe_enabled(vgt->pdev, phys_pipe))
 			rc = true;
@@ -1814,7 +1814,7 @@ inline bool vgt_need_emulated_irq(struct vgt_device *vgt, enum vgt_pipe pipe)
 }
 
 static inline void vgt_emulate_vblank(struct vgt_device *vgt,
-			enum vgt_pipe pipe)
+			enum pipe pipe)
 {
 	enum vgt_event_type vblank;
 	switch (pipe) {
@@ -2176,7 +2176,7 @@ void vgt_fini_irq(struct pci_dev *pdev)
 	hstate->installed = false;
 }
 
-void vgt_inject_flip_done(struct vgt_device *vgt, enum vgt_pipe pipe)
+void vgt_inject_flip_done(struct vgt_device *vgt, enum pipe pipe)
 {
 	enum vgt_event_type event = EVENT_MAX;
 	if (current_display_owner(vgt->pdev) != vgt) {

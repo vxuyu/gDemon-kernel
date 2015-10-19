@@ -40,7 +40,7 @@ static void vgt_restore_sreg(struct vgt_device *vgt,unsigned int reg)
 
 }
 
-static int vgt_restore_state(struct vgt_device *vgt, enum vgt_pipe pipe)
+static int vgt_restore_state(struct vgt_device *vgt, enum pipe pipe)
 {
 #if 0
 	unsigned int pipe_ctrl = VGT_MMIO_READ(vgt->pdev, VGT_PIPECONF(pipe));
@@ -65,7 +65,7 @@ static int vgt_restore_state(struct vgt_device *vgt, enum vgt_pipe pipe)
 	return 0;
 }
 
-static int wait_for_vblank_atomic(struct pgt_device *pdev, enum vgt_pipe pipe)
+static int wait_for_vblank_atomic(struct pgt_device *pdev, enum pipe pipe)
 {
 	int ret;
 	unsigned int frmcnt_mmio = VGT_PIPE_FRMCOUNT(pipe);
@@ -82,7 +82,7 @@ static int wait_for_vblank_atomic(struct pgt_device *pdev, enum vgt_pipe pipe)
 static int wait_for_vblanks_atomic(struct pgt_device *pdev)
 {
 	int ret = 0;
-	enum vgt_pipe pipe;
+	enum pipe pipe;
 
 	for (pipe = PIPE_A; (pipe < I915_MAX_PIPES) && !ret; ++ pipe) {
 		vgt_reg_t pipeconf = VGT_MMIO_READ(pdev, VGT_PIPECONF(pipe));
@@ -119,7 +119,7 @@ int prepare_for_display_switch(struct pgt_device *pdev)
 void do_vgt_fast_display_switch(struct pgt_device *pdev)
 {
 	struct vgt_device *to_vgt = pdev->next_foreground_vm;
-	enum vgt_pipe pipe;
+	enum pipe pipe;
 
 	vgt_dbg(VGT_DBG_DPY, "vGT: doing display switch: from %p to %p\n",
 			current_foreground_vm(pdev), to_vgt);
@@ -373,9 +373,9 @@ void vgt_update_monitor_status(struct vgt_device *vgt)
 	}
 }
 
-enum vgt_pipe get_edp_input(uint32_t wr_data)
+enum pipe get_edp_input(uint32_t wr_data)
 {
-	enum vgt_pipe pipe = I915_MAX_PIPES;
+	enum pipe pipe = I915_MAX_PIPES;
 
 	if ((TRANS_DDI_FUNC_ENABLE & wr_data) == 0) {
 		return I915_MAX_PIPES;
@@ -398,9 +398,9 @@ enum vgt_pipe get_edp_input(uint32_t wr_data)
 	return pipe;
 }
 
-enum vgt_pipe get_pipe(unsigned int reg, uint32_t wr_data)
+enum pipe get_pipe(unsigned int reg, uint32_t wr_data)
 {
-	enum vgt_pipe pipe = I915_MAX_PIPES;
+	enum pipe pipe = I915_MAX_PIPES;
 
 	if (reg == TRANS_DDI_FUNC_CTL_A)
 		pipe = PIPE_A;
@@ -437,8 +437,8 @@ bool rebuild_pipe_mapping(struct vgt_device *vgt, unsigned int reg, uint32_t new
 	vgt_reg_t hw_value;
 	int i = 0;
 
-	enum vgt_pipe virtual_pipe = I915_MAX_PIPES;
-	enum vgt_pipe physical_pipe = I915_MAX_PIPES;
+	enum pipe virtual_pipe = I915_MAX_PIPES;
+	enum pipe physical_pipe = I915_MAX_PIPES;
 
 	if (vgt->vm_id == 0) {
 		return true;
@@ -471,7 +471,7 @@ bool rebuild_pipe_mapping(struct vgt_device *vgt, unsigned int reg, uint32_t new
 		if (TRANS_DDI_FUNC_ENABLE & hw_value)
 			physical_pipe = get_edp_input(hw_value);
 	} else {
-		enum vgt_port vport, vport_override;
+		enum port vport, vport_override;
 		vport = (new_data & TRANS_DDI_PORT_MASK) >> TRANS_DDI_PORT_SHIFT;
 		vport_override = vgt->ports[vport].port_override;
 		if (vport_override == I915_MAX_PORTS) {
@@ -485,7 +485,7 @@ bool rebuild_pipe_mapping(struct vgt_device *vgt, unsigned int reg, uint32_t new
 								
 		} else {
 			for (i = 0; i <= TRANSCODER_C; i++) {
-				enum vgt_port pport;
+				enum port pport;
 				hw_value = VGT_MMIO_READ(vgt->pdev, _VGT_TRANS_DDI_FUNC_CTL(i));
 				pport = (hw_value & TRANS_DDI_PORT_MASK) >>
 						TRANS_DDI_PORT_SHIFT;
@@ -522,9 +522,9 @@ bool update_pipe_mapping(struct vgt_device *vgt, unsigned int physical_reg, uint
 {
 	int i = 0;
 	uint32_t virtual_wr_data;
-	enum vgt_pipe virtual_pipe = I915_MAX_PIPES;
-	enum vgt_pipe physical_pipe = I915_MAX_PIPES;
-	enum vgt_port pport;
+	enum pipe virtual_pipe = I915_MAX_PIPES;
+	enum pipe physical_pipe = I915_MAX_PIPES;
+	enum port pport;
 
 	physical_pipe = get_pipe(physical_reg, physical_wr_data);
 
@@ -551,7 +551,7 @@ bool update_pipe_mapping(struct vgt_device *vgt, unsigned int physical_reg, uint
 	}
 
 	for (i = 0; i <= TRANSCODER_C; i++) {
-		enum vgt_port vport, vport_override;
+		enum port vport, vport_override;
 		virtual_wr_data = __vreg(vgt, _VGT_TRANS_DDI_FUNC_CTL(i));
 		vport = (virtual_wr_data & TRANS_DDI_PORT_MASK) >>
 				TRANS_DDI_PORT_SHIFT;
@@ -590,12 +590,12 @@ TODO: 1, program watermark in vgt. 2, make sure dom0 set the max timing for
 each monitor in i915 driver
 */
 
-bool set_panel_fitting(struct vgt_device *vgt, enum vgt_pipe pipe)
+bool set_panel_fitting(struct vgt_device *vgt, enum pipe pipe)
 {
 	unsigned int src_width, src_height;
 	unsigned int target_width, target_height;
 	unsigned int pf_ctl;
-	enum vgt_pipe real_pipe;
+	enum pipe real_pipe;
 	unsigned int h_total_reg;
 	unsigned int v_total_reg;
 	uint32_t edp_trans_code;
@@ -696,7 +696,7 @@ bool set_panel_fitting(struct vgt_device *vgt, enum vgt_pipe pipe)
 bool vgt_manage_emul_dpy_events(struct pgt_device *pdev)
 {
 	int i;
-	enum vgt_pipe pipe;
+	enum pipe pipe;
 	struct vgt_irq_host_state *hstate = pdev->irq_hstate;
 	bool emul_enable = false;
 
@@ -904,8 +904,8 @@ void vgt_detect_display(struct vgt_device *vgt, int index)
  */
 void vgt_dpy_init_modes(vgt_reg_t *mmio_array)
 {
-	enum vgt_port port;
-	enum vgt_pipe pipe;
+	enum port port;
+	enum pipe pipe;
 	unsigned int offset;
 
 	mmio_array[REG_INDEX(DDI_BUF_CTL_A)] &=

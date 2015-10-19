@@ -23,8 +23,8 @@
  * SOFTWARE.
  */
 
-#include "trace.h"
 #include "vgt.h"
+#include "trace.h"
 
 //#define EL_SLOW_DEBUG
 

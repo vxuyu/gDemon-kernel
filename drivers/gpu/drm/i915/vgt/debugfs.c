@@ -475,8 +475,8 @@ static inline vgt_reg_t vgt_get_mmio_value(struct pgt_device *pdev,
 static void vgt_dump_dpy_mmio(struct seq_file *m, struct pgt_device *pdev,
 		struct vgt_device *vgt)
 {
-	enum vgt_pipe pipe;
-	enum vgt_port port;
+	enum pipe pipe;
+	enum port port;
 	const char *str;
 	unsigned int reg;
 	vgt_reg_t val;
@@ -677,7 +677,7 @@ static int vgt_show_phys_dpyinfo(struct seq_file *m, void *data)
 static int vgt_show_virt_dpyinfo(struct seq_file *m, void *data)
 {
 	struct vgt_device *vgt =  (struct vgt_device *)m->private;
-	enum vgt_pipe pipe;
+	enum pipe pipe;
 
 	seq_printf(m, "----------DPY info (VM-%d)----------\n", vgt->vm_id);
 	vgt_dump_dpy_mmio(m, NULL, vgt);
@@ -685,7 +685,7 @@ static int vgt_show_virt_dpyinfo(struct seq_file *m, void *data)
 
 	seq_printf(m, "---- physical/virtual mapping:\n");
 	for (pipe = PIPE_A; pipe < I915_MAX_PIPES; ++ pipe) {
-		enum vgt_pipe physical_pipe = vgt->pipe_mapping[pipe];
+		enum pipe physical_pipe = vgt->pipe_mapping[pipe];
 		if (physical_pipe == I915_MAX_PIPES) {
 			seq_printf(m, "\t virtual pipe %d no mapping available yet\n", pipe);
 		} else {

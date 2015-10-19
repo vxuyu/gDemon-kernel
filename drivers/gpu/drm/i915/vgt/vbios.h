@@ -34,7 +34,7 @@
 #define VBIOS_GENERAL_FEATURES  1
 #define VBIOS_GENERAL_DEFINITIONS  2
 
-struct vbt_header {
+struct vgt_vbt_header {
 	u8 product_string[20]; /* string of "$VBT HASWELL"*/
 	u16 version;
 	u16 header_size;

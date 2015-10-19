@@ -42,6 +42,7 @@ struct pgt_device;
 struct vgt_device;
 
 #include "../i915_vgpu.h"
+#include "../i915_drv.h"
 #include "host.h"
 #include "reg.h"
 #include "devtable.h"
@@ -234,7 +235,7 @@ struct vgt_tailq {
 #define vgt_tailq_idx(idx) ((idx) & VGT_TAILQ_IDX_MASK)
 
 struct vgt_device {
-	enum vgt_pipe pipe_mapping[I915_MAX_PIPES];
+	enum pipe pipe_mapping[I915_MAX_PIPES];
 	int vgt_id;		/* 0 is always for dom0 */
 	int vm_id;		/* domain ID per hypervisor */
 	struct pgt_device *pdev;	/* the pgt device where the GT device registered. */
@@ -770,9 +771,9 @@ static inline bool vgt_match_device_attr(struct pgt_device *pdev, reg_attr_t *at
 	return attr->device & vgt_gen_dev_type(pdev);
 }
 
-static inline enum vgt_port vgt_get_port(struct vgt_device *vgt, struct gt_port *port_ptr)
+static inline enum port vgt_get_port(struct vgt_device *vgt, struct gt_port *port_ptr)
 {
-	enum vgt_port port_type;
+	enum port port_type;
 
 	if (!vgt || !port_ptr)
 		return I915_MAX_PORTS;
@@ -784,10 +785,10 @@ static inline enum vgt_port vgt_get_port(struct vgt_device *vgt, struct gt_port 
 	return port_type;
 }
 
-static inline enum vgt_pipe vgt_get_pipe_from_port(struct vgt_device *vgt,
-						enum vgt_port port)
+static inline enum pipe vgt_get_pipe_from_port(struct vgt_device *vgt,
+						enum port port)
 {
-	enum vgt_pipe pipe;
+	enum pipe pipe;
 
 	if (port == I915_MAX_PORTS)
 		return I915_MAX_PIPES;
@@ -1597,14 +1598,14 @@ void vgt_reset_virtual_states(struct vgt_device *vgt, unsigned long ring_bitmap)
 void vgt_reset_ppgtt(struct vgt_device *vgt, unsigned long ring_bitmap);
 void vgt_reset_execlist(struct vgt_device *vgt, unsigned long ring_bitmap);
 
-enum vgt_pipe get_edp_input(uint32_t wr_data);
+enum pipe get_edp_input(uint32_t wr_data);
 void vgt_forward_events(struct pgt_device *pdev);
 void vgt_emulate_dpy_events(struct pgt_device *pdev);
 void *vgt_install_irq(struct pci_dev *pdev, struct drm_device *dev);
 int vgt_irq_init(struct pgt_device *pgt);
 void vgt_irq_exit(struct pgt_device *pgt);
 
-void vgt_inject_flip_done(struct vgt_device *vgt, enum vgt_pipe pipe);
+void vgt_inject_flip_done(struct vgt_device *vgt, enum pipe pipe);
 
 bool vgt_rrmr_mmio_write(struct vgt_device *vgt, unsigned int offset,
         void *p_data, unsigned int bytes);
@@ -1757,20 +1758,6 @@ int vgt_init_mmio_device(struct pgt_device *pdev);
 void vgt_cleanup_mmio_dev(struct pgt_device *pdev);
 int vgt_create_mmio_dev(struct vgt_device *vgt);
 void vgt_destroy_mmio_dev(struct vgt_device *vgt);
-
-/* invoked likely in irq disabled condition */
-#define wait_for_atomic(COND, MS) ({					\
-	unsigned long cnt = MS*100;					\
-	int ret__ = 0;							\
-	while (!(COND)) {						\
-		if (!(--cnt)) {						\
-			ret__ = -ETIMEDOUT;				\
-			break;						\
-		}							\
-		udelay(10);						\
-	}								\
-	ret__;								\
-})
 
 extern reg_attr_t vgt_reg_info_general[];
 extern reg_attr_t vgt_reg_info_hsw[];

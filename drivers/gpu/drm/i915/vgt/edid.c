@@ -133,9 +133,9 @@ static unsigned char edid_get_byte(struct vgt_device *vgt)
  * GMBUS interface for I2C access
  *
  *************************************************************************/
-static inline enum vgt_port vgt_get_port_from_gmbus0(vgt_reg_t gmbus0)
+static inline enum port vgt_get_port_from_gmbus0(vgt_reg_t gmbus0)
 {
-	enum vgt_port port = I915_MAX_PORTS;
+	enum port port = I915_MAX_PORTS;
 	int port_select = gmbus0 & _GMBUS_PIN_SEL_MASK;
 
 	if (port_select == 2)
@@ -155,7 +155,7 @@ static bool vgt_gmbus0_mmio_write(struct vgt_device *vgt,
 			unsigned int offset, void *p_data, unsigned int bytes)
 {
 	vgt_reg_t wvalue = *(vgt_reg_t *)p_data;
-	enum vgt_port port = I915_MAX_PORTS;
+	enum port port = I915_MAX_PORTS;
 	int pin_select = wvalue & _GMBUS_PIN_SEL_MASK;
 
 	vgt_init_i2c_edid(vgt);
@@ -481,7 +481,7 @@ static inline AUX_CH_REGISTERS vgt_get_aux_ch_reg(unsigned int offset)
 		_DP_AUX_CH_CTL_MESSAGE_SIZE_SHIFT)
 
 void vgt_i2c_handle_aux_ch_write(struct vgt_device *vgt,
-				enum vgt_port port_idx,
+				enum port port_idx,
 				unsigned int offset,
 				void *p_data)
 {

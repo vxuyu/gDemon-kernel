@@ -27,6 +27,8 @@
 
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM vgt
+#undef TRACE_INCLUDE_FILE
+#define TRACE_INCLUDE_FILE trace
 
 TRACE_EVENT(vgt_mmio_rw,
 		TP_PROTO(bool write, u32 vm_id, u32 offset, void *pd,
@@ -348,6 +350,4 @@ TRACE_EVENT(ctx_write_trap,
 /* This part must be out of protection */
 #undef TRACE_INCLUDE_PATH
 #define TRACE_INCLUDE_PATH .
-#undef TRACE_INCLUDE_FILE
-#define TRACE_INCLUDE_FILE trace
 #include <trace/define_trace.h>

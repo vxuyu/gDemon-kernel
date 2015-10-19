@@ -58,10 +58,6 @@
 #define DRM_I915_VGT_SUPPORT	1
 #endif
 
-#ifdef DRM_I915_VGT_SUPPORT
-#include "fb_decoder.h"
-#endif
-
 /* General customization:
  */
 

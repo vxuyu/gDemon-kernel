@@ -970,7 +970,7 @@ static int vgt_cmd_handler_mi_batch_buffer_end(struct parser_exec_state *s)
 #define PLANE_INFO_SHIFT	8
 #define PLANE_INFO_MASK		(0x7 << PLANE_INFO_SHIFT)
 
-static bool display_flip_decode_plane_info(uint32_t  plane_code, enum vgt_pipe *pipe, enum vgt_plane_type *plane )
+static bool display_flip_decode_plane_info(uint32_t  plane_code, enum pipe *pipe, enum vgt_plane_type *plane )
 {
 	switch (plane_code) {
 		case DISPLAY_FLIP_PLANE_A:
@@ -1005,7 +1005,7 @@ static bool display_flip_decode_plane_info(uint32_t  plane_code, enum vgt_pipe *
 
 }
 
-static bool display_flip_encode_plane_info(enum vgt_pipe pipe, enum vgt_plane_type plane, uint32_t * plane_code)
+static bool display_flip_encode_plane_info(enum pipe pipe, enum vgt_plane_type plane, uint32_t * plane_code)
 {
 
 	if (pipe == PIPE_A && plane == PRIMARY_PLANE)
@@ -1050,7 +1050,7 @@ static bool vgt_flip_parameter_check(struct parser_exec_state *s,
 				uint32_t surf_val)
 {
 	struct pgt_device *pdev = s->vgt->pdev;
-	enum vgt_pipe pipe = I915_MAX_PIPES;
+	enum pipe pipe = I915_MAX_PIPES;
 	enum vgt_plane_type plane = MAX_PLANE;
 	uint32_t surf_reg, ctrl_reg;
 	uint32_t stride_reg, stride_mask, phys_stride;
@@ -1104,8 +1104,8 @@ static int vgt_handle_mi_display_flip(struct parser_exec_state *s, bool resubmit
 	uint32_t stride_reg, stride_val, stride_mask;
 	uint32_t tile_para;
 	uint32_t opcode, plane_code, real_plane_code;
-	enum vgt_pipe pipe;
-	enum vgt_pipe real_pipe;
+	enum pipe pipe;
+	enum pipe real_pipe;
 	enum vgt_plane_type plane;
 	int i, length, rc = 0;
 	struct fb_notify_msg msg;
@@ -1225,8 +1225,8 @@ static bool is_wait_for_flip_pending(uint32_t cmd)
 static int vgt_handle_mi_wait_for_event(struct parser_exec_state *s)
 {
 	int rc = 0;
-	enum vgt_pipe virtual_pipe = I915_MAX_PIPES;
-	enum vgt_pipe real_pipe = I915_MAX_PIPES;
+	enum pipe virtual_pipe = I915_MAX_PIPES;
+	enum pipe real_pipe = I915_MAX_PIPES;
 	uint32_t cmd = cmd_val(s, 0);
 	uint32_t new_cmd = cmd;
 	enum vgt_plane_type plane_type = MAX_PLANE;

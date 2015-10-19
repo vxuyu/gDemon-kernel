@@ -624,7 +624,7 @@ static ssize_t vgt_vport_connection_store(struct kobject *kobj, struct kobj_attr
 		vgt_flush_port_info(vgt, port);
 
 	if (hotplug_request) {
-		enum vgt_port port_type = vgt_get_port(vgt, port);
+		enum port port_type = vgt_get_port(vgt, port);
 		switch (port_type) {
 		case PORT_A:
 			event = EVENT_MAX; break;
@@ -700,7 +700,7 @@ static ssize_t vgt_vport_port_override_store(struct kobject *kobj, struct kobj_a
                         const char *buf, size_t count)
 {
 	struct gt_port *port = kobj_to_port(kobj);
-	enum vgt_port override;
+	enum port override;
 
 	if (strncmp("PORT_A", buf, 6) == 0) {
 		override = PORT_A;
@@ -731,7 +731,7 @@ static ssize_t vgt_vport_pipe_show(struct kobject *kobj, struct kobj_attribute *
 {
 	struct gt_port *port_ptr = kobj_to_port(kobj);
 	struct vgt_device *vgt = kobj_to_vgt(kobj->parent);
-	enum vgt_port port;
+	enum port port;
 	ssize_t buf_len;
 	int cpu;
 
@@ -742,7 +742,7 @@ static ssize_t vgt_vport_pipe_show(struct kobject *kobj, struct kobj_attribute *
 	if (port == PORT_A)
 		buf_len = sprintf(buf, "PIPE_EDP\n");
 	else {
-		enum vgt_pipe pipe = vgt_get_pipe_from_port(vgt, port);
+		enum pipe pipe = vgt_get_pipe_from_port(vgt, port);
 		buf_len = sprintf(buf, "%s\n", VGT_PIPE_NAME(pipe));
 	}
 

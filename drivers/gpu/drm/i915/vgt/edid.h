@@ -138,7 +138,7 @@ bool vgt_i2c_handle_gmbus_write(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes);
 
 void vgt_i2c_handle_aux_ch_write(struct vgt_device *vgt,
-				enum vgt_port port_idx,
+				enum port port_idx,
 				unsigned int offset,
 				void *p_data);
 
@@ -155,9 +155,9 @@ typedef enum {
 	AUX_CH_DATA5
 }AUX_CH_REGISTERS;
 
-static inline enum vgt_port vgt_get_dp_port_idx(unsigned int offset)
+static inline enum port vgt_get_dp_port_idx(unsigned int offset)
 {
-	enum vgt_port port_idx;
+	enum port port_idx;
 
 	if (offset >= DPA_AUX_CH_CTL
 		&& offset <= DPA_AUX_CH_CTL +
