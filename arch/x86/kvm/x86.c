@@ -2118,6 +2118,10 @@ int kvm_set_msr_common(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 			return xen_hvm_config(vcpu, data);
 		if (kvm_pmu_is_valid_msr(vcpu, msr))
 			return kvm_pmu_set_msr(vcpu, msr_info);
+#ifdef CONFIG_KVMGT
+		if (kvmgt_is_disabled_msr(msr))
+			break;
+#endif
 		if (!ignore_msrs) {
 			vcpu_unimpl(vcpu, "unhandled wrmsr: 0x%x data %llx\n",
 				    msr, data);
@@ -2328,6 +2332,12 @@ int kvm_get_msr_common(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 	default:
 		if (kvm_pmu_is_valid_msr(vcpu, msr_info->index))
 			return kvm_pmu_get_msr(vcpu, msr_info->index, &msr_info->data);
+#ifdef CONFIG_KVMGT
+		if (kvmgt_is_disabled_msr(msr_info->index)) {
+			msr_info->data = 0;
+			return 0;
+		}
+#endif
 		if (!ignore_msrs) {
 			vcpu_unimpl(vcpu, "unhandled rdmsr: 0x%x\n", msr_info->index);
 			return 1;

@@ -48,4 +48,17 @@ bool kvmgt_emulate_write(struct kvm *kvm, gpa_t gpa, const void *val, int len);
 
 pfn_t kvmgt_gfn_to_pfn_by_rmap(struct kvm *kvm, gfn_t gfn);
 
+static inline bool kvmgt_is_disabled_msr(u32 msr)
+{
+	switch (msr) {
+	case 0x95: /* enable/disable cache cos */
+	case 0xd00 ... 0xd03: /* eLLC cos ways mask */
+		return true;
+	default:
+		break;
+	}
+
+	return false;
+}
+
 #endif /* _KVMGT_H_ */
