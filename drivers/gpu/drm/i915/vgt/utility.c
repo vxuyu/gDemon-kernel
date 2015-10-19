@@ -212,15 +212,18 @@ static void show_batchbuffer(struct pgt_device *pdev, int ring_id, u64 addr,
 	u64 start;
 	struct vgt_device *vgt = current_render_owner(pdev);
 	uint32_t val;
+	struct vgt_mm *mm;
 
 	if (!vgt) {
 		vgt_err("no render owner at hanging point\n");
 		return;
 	}
 
-	if (addr < bytes) {
+	addr &= ~0x1;
+
+	if ((addr & 0xFFF) < bytes) {
 		bytes *= 2;
-		start = 0;
+		start = addr & ~0xFFF;
 	} else if (!ppgtt && (addr + bytes) >= info->max_gtt_gm_sz) {
 		bytes *= 2;
 		start = info->max_gtt_gm_sz - bytes;
@@ -229,11 +232,31 @@ static void show_batchbuffer(struct pgt_device *pdev, int ring_id, u64 addr,
 		bytes *= 2;
 	}
 
+	if (!ppgtt) {
+		mm = vgt->gtt.ggtt_mm;
+	} else if (is_execlist_mode(pdev, ring_id)) {
+		struct execlist_context *el_ctx;
+		u32 lrca = VGT_MMIO_READ(pdev, _REG_CUR_DESC(ring_id));
+
+		lrca >>= GTT_PAGE_SHIFT;
+		el_ctx = execlist_context_find(vgt, lrca);
+		if (!el_ctx) {
+			printk("cannot find ctx with lrca 0x%x\n",
+				lrca);
+			return;
+		}
+		mm = el_ctx->ppgtt_mm;
+	} else {
+		mm = vgt->rb[ring_id].active_ppgtt_mm;
+	}
+
+	if (!mm) {
+		printk("cannot find mm for dump batch\n");
+		return;
+	}
+
 	printk("Batch buffer contents: \n");
 	for (i = 0; i < bytes; i += 4) {
-		struct vgt_mm *mm = ppgtt ? vgt->rb[ring_id].active_ppgtt_mm :
-			vgt->gtt.ggtt_mm;
-
 		ip_va = vgt_gma_to_va(mm, start + i);
 
 		if (!(i % 32))
@@ -251,6 +274,56 @@ static void show_batchbuffer(struct pgt_device *pdev, int ring_id, u64 addr,
 	printk("\n");
 }
 
+
+void mmio_show_batchbuffer(struct pgt_device *pdev, int ring_id, int
+		bytes)
+{
+	u32 bb_state, sbb_state;
+	u64 bb_start, bb_head;
+	u64 sbb_head;
+	int ppgtt;
+
+	bb_state = VGT_MMIO_READ(pdev, _REG_BB_STATE(ring_id));
+
+	bb_head = VGT_MMIO_READ(pdev, _REG_BB_HEAD_U(ring_id));
+	bb_head &= 0xFFFF;
+	bb_head <<= 32;
+	bb_head |= VGT_MMIO_READ(pdev, _REG_BB_HEAD(ring_id));
+
+	bb_start = VGT_MMIO_READ(pdev, _REG_BB_START_U(ring_id));
+	bb_start &= 0xFFFF;
+	bb_start <<= 32;
+	bb_start |= VGT_MMIO_READ(pdev, _REG_BB_START(ring_id));
+
+	sbb_state = VGT_MMIO_READ(pdev, _REG_SBB_STATE(ring_id));
+
+	sbb_head = VGT_MMIO_READ(pdev, _REG_SBB_HEAD_U(ring_id));
+	sbb_head &= 0xFFFF;
+	sbb_head <<= 32;
+	sbb_head |= VGT_MMIO_READ(pdev, _REG_SBB_HEAD(ring_id));
+
+	printk("mmio batch info: state: 0x%x, head:0x%llx, start:0x%llx\n",
+			bb_state, bb_head, bb_start);
+
+	printk("mmio batch info SBB: state: 0x%x, head:0x%llx\n", sbb_state,
+			sbb_head);
+
+	if (bb_head & 0x1) {
+		printk("dumping batch buffer contents\n");
+		ppgtt = bb_state & (1 << 5);
+		bb_head &= ~0x1;
+		show_batchbuffer(pdev, ring_id, bb_head, bytes,
+				ppgtt);
+
+		if (sbb_head & 0x1) {
+			printk("dumping second level batch buffer:\n");
+			sbb_head &= ~0x1;
+			show_batchbuffer(pdev, ring_id, sbb_head, bytes,
+					ppgtt);
+
+		}
+	}
+}
 /*
  * Given a ring buffer, print out the current data [-bytes, bytes]
  */
@@ -333,7 +406,9 @@ void common_show_ring_buffer(struct pgt_device *pdev, int ring_id, int bytes,
 	if ((*cur & 0xfff00000) == 0x18800000 && vgt) {
 		int ppgtt = (*cur & _CMDBIT_BB_START_IN_PPGTT);
 
-		if (ppgtt && !test_bit(ring_id, &vgt->gtt.active_ppgtt_mm_bitmap)) {
+		if (ppgtt &&
+			!test_bit(ring_id, &vgt->gtt.active_ppgtt_mm_bitmap)
+			&& !is_execlist_mode(pdev, ring_id)) {
 			printk("Batch buffer in PPGTT with PPGTT disabled?\n");
 			return;
 		}
@@ -347,6 +422,9 @@ void common_show_ring_buffer(struct pgt_device *pdev, int ring_id, int bytes,
 			bytes,
 			ppgtt);
 	}
+
+	mmio_show_batchbuffer(pdev, ring_id, bytes);
+
 }
 
 void legacy_show_ring_buffer(struct pgt_device *pdev, int ring_id, int bytes)
@@ -366,14 +444,6 @@ void legacy_show_ring_buffer(struct pgt_device *pdev, int ring_id, int bytes)
 			VGT_MMIO_READ(pdev, VGT_ACTHD(ring_id)));
 }
 
-unsigned long ring_id_2_current_desc_reg [] = {
-	[RING_BUFFER_RCS] = 0x4400,
-	[RING_BUFFER_VCS] = 0x4440,
-	[RING_BUFFER_VCS2] = 0x4480,
-	[RING_BUFFER_VECS] = 0x44c0,
-	[RING_BUFFER_BCS] = 0x4500,
-};
-
 void execlist_show_ring_buffer(struct pgt_device *pdev, int ring_id, int bytes)
 {
 	struct vgt_device *vgt = current_render_owner(pdev);
@@ -390,7 +460,7 @@ void execlist_show_ring_buffer(struct pgt_device *pdev, int ring_id, int bytes)
 
 	printk("....Current execlist status: %lx.\n", val);
 
-	val = VGT_MMIO_READ(pdev, ring_id_2_current_desc_reg[ring_id]);
+	val = VGT_MMIO_READ(pdev, _REG_CUR_DESC(ring_id));
 
 	printk("....Current element descriptor(low): %lx.\n", val);
 

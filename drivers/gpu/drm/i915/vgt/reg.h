@@ -993,4 +993,26 @@ union _TRANS_CONFIG
 #define _REG_BCS_PDP_UDW(n)	_REG_RING_PDP_UDW(0x22000, n)
 #define _REG_BCS_PDP_LDW(n)	_REG_RING_PDP_LDW(0x22000, n)
 
+#define _REG_CUR_DESC(n)	(0x4400 + (n)*0x40)
+
+#define _REG_RCS_BB_STATE	0x2110
+#define _REG_RCS_BB_HEAD	0x2140
+#define _REG_RCS_BB_HEAD_U	0x2168
+#define _REG_RCS_BB_START	0x2150
+#define _REG_RCS_BB_START_U	0x2170
+
+#define _REG_BB_STATE(ring)	__RING_REG((ring), _REG_RCS_BB_STATE)
+#define _REG_BB_HEAD(ring)	__RING_REG((ring), _REG_RCS_BB_HEAD)
+#define _REG_BB_HEAD_U(ring)	__RING_REG((ring), _REG_RCS_BB_HEAD_U)
+#define _REG_BB_START(ring)	__RING_REG((ring), _REG_RCS_BB_START)
+#define _REG_BB_START_U(ring)	__RING_REG((ring), _REG_RCS_BB_START_U)
+
+#define _REG_RCS_SBB_STATE	0x2118
+#define _REG_RCS_SBB_HEAD	0x2114
+#define _REG_RCS_SBB_HEAD_U	0x211C
+
+#define _REG_SBB_STATE(ring)	__RING_REG((ring), _REG_RCS_SBB_STATE)
+#define _REG_SBB_HEAD(ring)	__RING_REG((ring), _REG_RCS_SBB_HEAD)
+#define _REG_SBB_HEAD_U(ring)	__RING_REG((ring), _REG_RCS_SBB_HEAD_U)
+
 #endif	/* _VGT_REG_H_ */
