@@ -157,9 +157,6 @@ module_param_named(bypass_scan, bypass_scan_mask, int, 0600);
 bool bypass_dom0_addr_check = false;
 module_param_named(bypass_dom0_addr_check, bypass_dom0_addr_check, bool, 0600);
 
-bool cmd_parser_ip_buf = true;
-module_param_named(cmd_parser_ip_buf, cmd_parser_ip_buf, bool, 0600);
-
 bool enable_panel_fitting = true;
 module_param_named(enable_panel_fitting, enable_panel_fitting, bool, 0600);
 
@@ -191,8 +188,8 @@ module_param_named(vgt_preliminary_hw_support, vgt_preliminary_hw_support, bool,
 int shadow_execlist_context = 0;
 module_param_named(shadow_execlist_context, shadow_execlist_context, int, 0400);
 
-int shadow_ring_buffer = 0;
-module_param_named(shadow_ring_buffer, shadow_ring_buffer, int, 0400);
+int shadow_cmd_buffer = 1;
+module_param_named(shadow_cmd_buffer, shadow_cmd_buffer, int, 0400);
 
 /* Very frequent set/clear write protection can see wrong write trap even if
 + * write protection has been cleared. Below option is to disable the context
@@ -946,6 +943,9 @@ static int vgt_initialize(struct pci_dev *dev)
 	} else {
 		current_config_owner(pdev) = vgt_dom0;
 	}
+
+	if (!IS_BDW(pdev) || bypass_scan_mask)
+		shadow_cmd_buffer = 0;
 
 	pdev->ctx_check = 0;
 	pdev->ctx_switch = 0;

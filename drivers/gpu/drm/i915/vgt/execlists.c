@@ -708,6 +708,9 @@ static void vgt_patch_guest_context(struct execlist_context *el_ctx)
 	ROOTP_CTX_STATE_2_CTX_STATE(guest_state, shadow_state, 1);
 	ROOTP_CTX_STATE_2_CTX_STATE(guest_state, shadow_state, 2);
 	ROOTP_CTX_STATE_2_CTX_STATE(guest_state, shadow_state, 3);
+
+	if (shadow_cmd_buffer)
+		guest_state->rb_start.val = el_ctx->shadow_rb.shadow_rb_base;
 }
 
 /* context shadow: context creation/destroy in execlist */
@@ -1439,7 +1442,7 @@ static void vgt_create_shadow_rb(struct vgt_device *vgt,
 	unsigned long rb_gma;
 	struct reg_state_ctx_header *reg_state;
 
-	if (!shadow_ring_buffer)
+	if (!shadow_cmd_buffer)
 		return;
 
 	ASSERT(el_ctx->shadow_rb.shadow_rb_base == 0);
@@ -1476,7 +1479,7 @@ static void vgt_destroy_shadow_rb(struct vgt_device *vgt,
 				  struct execlist_context *el_ctx)
 {
 	unsigned long hpa;
-	if (!shadow_ring_buffer)
+	if (!shadow_cmd_buffer)
 		return;
 
 	if (el_ctx->shadow_rb.ring_size == 0)
@@ -1501,7 +1504,7 @@ static void vgt_release_shadow_cmdbuf(struct vgt_device *vgt,
 	/* unbind the shadow bb from GGTT */
 	struct shadow_cmd_page *s_page, *next;
 
-	if (!shadow_ring_buffer)
+	if (!shadow_cmd_buffer)
 		return;
 
 	if (!s_buf || s_buf->n_pages == 0) {
@@ -1704,8 +1707,11 @@ void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 				sizeof(struct ctx_desc_format));
 
 		ASSERT_VM(ring_id == ctx->ring_id, vgt);
+
+		if (vgt->vm_id)
+			vgt_manipulate_cmd_buf(vgt, ctx);
+
 		vgt_update_shadow_ctx_from_guest(vgt, ctx);
-		vgt_manipulate_cmd_buf(vgt, ctx);
 
 		trace_ctx_lifecycle(vgt->vm_id, ring_id,
 			ctx->guest_context.lrca, "schedule_to_run");

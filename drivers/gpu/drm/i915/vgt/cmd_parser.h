@@ -487,6 +487,7 @@ struct parser_exec_state {
 	void *ip_buf;
 
 	struct execlist_context *el_ctx;
+	bool shadow;
 };
 
 #define CMD_TAIL_NUM	1024

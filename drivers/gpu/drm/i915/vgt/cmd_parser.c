@@ -146,11 +146,6 @@ static inline int add_patch_entry(struct parser_exec_state *s,
 	patch->addr = addr;
 	patch->new_val = val;
 
-#if 0
-	hypervisor_read_va(s->vgt, addr, &patch->old_val,
-			sizeof(patch->old_val), 1);
-#endif
-
 	patch->request_id = s->request_id;
 
 	list->tail = next;
@@ -218,19 +213,12 @@ static void apply_patch_entry(struct vgt_device *vgt, struct cmd_patch_info *pat
 {
 	ASSERT(patch->addr);
 
-	hypervisor_write_va(vgt, patch->addr, &patch->new_val,
+	if (shadow_cmd_buffer)
+		*((uint32_t *)patch->addr) = patch->new_val;
+	else
+		hypervisor_write_va(vgt, patch->addr, &patch->new_val,
 				sizeof(patch->new_val), 1);
-	clflush(patch->addr);
 }
-
-#if 0
-static void revert_batch_entry(struct batch_info *info)
-{
-	ASSERT(info->addr);
-
-	*(uint32_t *)info->addr = info->old_val;
-}
-#endif
 
 /*
  * Apply all patch entries with request ID before or
@@ -555,7 +543,10 @@ static inline uint32_t cmd_val(struct parser_exec_state *s, int index)
 		ret = *cmd_buf_ptr(s, index);
 	} else {
 		addr = cmd_ptr(s, index);
-		hypervisor_read_va(s->vgt, addr, &ret, sizeof(ret), 1);
+		if (s->shadow)
+			ret = *addr;
+		else
+			hypervisor_read_va(s->vgt, addr, &ret, sizeof(ret), 1);
 	}
 
 	return ret;
@@ -609,6 +600,20 @@ static inline struct vgt_mm *parser_exec_state_to_mm(struct parser_exec_state *s
 		return s->vgt->rb[s->ring_id].active_ppgtt_mm;
 }
 
+/* get the system virtual address of reserved aperture */
+static inline void *rsvd_gma_to_sys_va(struct pgt_device *pdev, unsigned long rsvd_gma)
+{
+	int rsvd_page_idx;
+	void *page_va;
+	void *rsvd_va;
+
+	rsvd_page_idx = aperture_page_idx(pdev, rsvd_gma);
+	page_va = page_address(aperture_page(pdev, rsvd_page_idx));
+	rsvd_va = page_va + (rsvd_gma & (PAGE_SIZE - 1));
+
+	return rsvd_va;
+}
+
 static int ip_gma_set(struct parser_exec_state *s, unsigned long ip_gma)
 {
 	unsigned long gma_next_page;
@@ -622,7 +627,10 @@ static int ip_gma_set(struct parser_exec_state *s, unsigned long ip_gma)
 	}
 
 	s->ip_gma = ip_gma;
-	s->ip_va = vgt_gma_to_va(parser_exec_state_to_mm(s), ip_gma);
+	if (s->shadow)
+		s->ip_va = rsvd_gma_to_sys_va(s->vgt->pdev, ip_gma);
+	else
+		s->ip_va = vgt_gma_to_va(parser_exec_state_to_mm(s), ip_gma);
 	if (s->ip_va == NULL) {
 		vgt_err("ERROR: gma %lx is invalid, fail to set\n", s->ip_gma);
 		dump_stack();
@@ -640,7 +648,11 @@ static int ip_gma_set(struct parser_exec_state *s, unsigned long ip_gma)
 	else
 		gma_next_page = ((ip_gma >> PAGE_SHIFT) + 1) << PAGE_SHIFT;
 
-	s->ip_va_next_page = vgt_gma_to_va(parser_exec_state_to_mm(s), gma_next_page);
+	if (s->shadow)
+		s->ip_va_next_page = rsvd_gma_to_sys_va(s->vgt->pdev, gma_next_page);
+	else
+		s->ip_va_next_page = vgt_gma_to_va(parser_exec_state_to_mm(s),
+							gma_next_page);
 	if (s->ip_va_next_page == NULL) {
 		vgt_err("ERROR: next page gma %lx is invalid, fail to set\n",gma_next_page);
 		dump_stack();
@@ -648,10 +660,11 @@ static int ip_gma_set(struct parser_exec_state *s, unsigned long ip_gma)
 		return -EFAULT;
 	}
 
-	if (s->ip_buf) {
+	if (!s->shadow) {
 		hypervisor_read_va(s->vgt, s->ip_va, s->ip_buf,
 				s->ip_buf_len * sizeof(uint32_t), 1);
-		hypervisor_read_va(s->vgt, s->ip_va_next_page, s->ip_buf + s->ip_buf_len * sizeof(uint32_t),
+		hypervisor_read_va(s->vgt, s->ip_va_next_page,
+				s->ip_buf + s->ip_buf_len * sizeof(uint32_t),
 				PAGE_SIZE, 1);
 		s->ip_buf_va = s->ip_buf;
 	}
@@ -659,19 +672,19 @@ static int ip_gma_set(struct parser_exec_state *s, unsigned long ip_gma)
 	return 0;
 }
 
-static inline int ip_gma_advance(struct parser_exec_state *s, unsigned int len)
+static inline int ip_gma_advance(struct parser_exec_state *s, unsigned int dw_len)
 {
 	int rc = 0;
-	if (s->ip_buf_len > len) {
+	if (s->ip_buf_len > dw_len) {
 		/* not cross page, advance ip inside page */
-		s->ip_gma += len*sizeof(uint32_t);
-		s->ip_va += len;
+		s->ip_gma += dw_len * sizeof(uint32_t);
+		s->ip_va += dw_len;
 		if (s->ip_buf)
-			s->ip_buf_va += len;
-		s->ip_buf_len -= len;
+			s->ip_buf_va += dw_len;
+		s->ip_buf_len -= dw_len;
 	} else {
 		/* cross page, reset ip_va */
-		rc = ip_gma_set(s, s->ip_gma + len*sizeof(uint32_t));
+		rc = ip_gma_set(s, s->ip_gma + dw_len * sizeof(uint32_t));
 	}
 	return rc;
 }
@@ -965,7 +978,6 @@ static inline unsigned long vgt_get_gma_from_bb_start(
 	uint32_t opcode;
 	void *va;
 
-	ASSERT(g_gm_is_valid(vgt, ip_gma));
 	if (g_gm_is_valid(vgt, ip_gma)) {
 		bb_start_gma = 0;
 		va = vgt_gma_to_va(vgt->gtt.ggtt_mm, ip_gma);
@@ -1679,6 +1691,7 @@ static int batch_buffer_needs_scan(struct parser_exec_state *s)
 static int vgt_perform_bb_shadow(struct parser_exec_state *s)
 {
 	struct vgt_device *vgt = s->vgt;
+	unsigned long *reloc_va;
 	unsigned long bb_start_gma = 0;
 	unsigned long bb_start_aligned;
 	uint32_t bb_start_offset;
@@ -1690,7 +1703,8 @@ static int vgt_perform_bb_shadow(struct parser_exec_state *s)
 	unsigned long bb_guest_gma;
 	int i;
 
-	bb_start_gma = get_gma_bb_from_cmd(s, 1);
+	reloc_va = rsvd_gma_to_sys_va(vgt->pdev, s->ip_gma + 4);
+	bb_start_gma = *reloc_va;
 
 	bb_start_offset = bb_start_gma & (PAGE_SIZE - 1);
 	bb_start_aligned = bb_start_gma - bb_start_offset;
@@ -1750,7 +1764,8 @@ static int vgt_perform_bb_shadow(struct parser_exec_state *s)
 				s->ip_gma, bb_size);
 			goto shadow_err;
 		}
-		shadow_bb_va = v_aperture(vgt->pdev, s_cmd_page->bound_gma);
+
+		shadow_bb_va = rsvd_gma_to_sys_va(vgt->pdev, s_cmd_page->bound_gma);
 
 		hypervisor_read_va(vgt, guest_bb_va, shadow_bb_va,
 				   PAGE_SIZE, 1);
@@ -1760,7 +1775,7 @@ static int vgt_perform_bb_shadow(struct parser_exec_state *s)
 	}
 
 	/* perform relocation for mi_batch_buffer_start */
-	//*reloc_va = shadow_bb_start_gma;
+	*reloc_va = shadow_bb_start_gma;
 	trace_shadow_bb_relocate(vgt->vm_id, s->ring_id,
 			      s->el_ctx->guest_context.lrca,
 			      s->ip_gma + 4, bb_start_gma, shadow_bb_start_gma, bb_size);
@@ -1811,7 +1826,7 @@ static int vgt_cmd_handler_mi_batch_buffer_start(struct parser_exec_state *s)
 	}
 
 	if (batch_buffer_needs_scan(s)) {
-		if (shadow_ring_buffer) {
+		if (shadow_cmd_buffer) {
 			rc = vgt_perform_bb_shadow(s);
 			if (rc)
 				return rc;
@@ -2724,7 +2739,8 @@ static inline bool gma_out_of_range(unsigned long gma, unsigned long gma_head, u
 
 #define MAX_PARSER_ERROR_NUM	10
 
-static int __vgt_scan_vring(struct vgt_device *vgt, int ring_id, vgt_reg_t head, vgt_reg_t tail, vgt_reg_t base, vgt_reg_t size)
+static int __vgt_scan_vring(struct vgt_device *vgt, int ring_id, vgt_reg_t head,
+			vgt_reg_t tail, vgt_reg_t base, vgt_reg_t size, bool shadow)
 {
 	unsigned long gma_head, gma_tail, gma_bottom;
 	struct parser_exec_state s;
@@ -2752,20 +2768,22 @@ static int __vgt_scan_vring(struct vgt_device *vgt, int ring_id, vgt_reg_t head,
 
 	s.request_id = rs->request_id;
 	s.el_ctx = rs->el_ctx;
+	s.shadow = shadow;
 
 	if (bypass_scan_mask & (1 << ring_id)) {
 		add_tail_entry(&s, tail, 100, 0, 0);
 		return 0;
 	}
 
-	if (cmd_parser_ip_buf) {
+	if (!shadow) {
 		s.ip_buf = kmalloc(PAGE_SIZE * 2, GFP_ATOMIC);
 		if (!s.ip_buf) {
 			vgt_err("fail to allocate buffer page.\n");
 			return -ENOMEM;
 		}
-	} else
-		s.ip_buf = s.ip_buf_va = NULL;
+	} else {
+		s.ip_buf = NULL;
+	}
 
 	rc = ip_gma_set(&s, base + head);
 	if (rc < 0)
@@ -2856,6 +2874,7 @@ static int vgt_copy_rb_to_shadow(struct vgt_device *vgt,
 		void *ip_va, *ip_sva;
 		uint32_t ip_buf_len;
 		uint32_t copy_len;
+
 		ip_va = vgt_gma_to_va(vgt->gtt.ggtt_mm, vbase + rb_offset);
 		if (ip_va == NULL) {
 			vgt_err("VM-%d(ring-%d): gma %lx is invalid!\n",
@@ -2870,9 +2889,8 @@ static int vgt_copy_rb_to_shadow(struct vgt_device *vgt,
 		else
 			copy_len = ip_buf_len;
 
-		ip_sva = (uint32_t *)v_aperture(vgt->pdev, sbase + rb_offset);
-		hypervisor_read_va(vgt, ip_va, ip_sva,
-				   copy_len, 1);
+		ip_sva = rsvd_gma_to_sys_va(vgt->pdev, sbase + rb_offset);
+		hypervisor_read_va(vgt, ip_va, ip_sva, copy_len, 1);
 
 		left_len -= copy_len;
 		rb_offset = (rb_offset + copy_len) & (rb_size - 1);
@@ -2892,6 +2910,7 @@ int vgt_scan_vring(struct vgt_device *vgt, int ring_id)
 	vgt_ringbuffer_t *vring = &rs->vring;
 	int ret = 0;
 	cycles_t t0, t1;
+	uint32_t rb_base;
 	struct vgt_statistics *stat = &vgt->stat;
 
 	t0 = get_cycles();
@@ -2906,17 +2925,20 @@ int vgt_scan_vring(struct vgt_device *vgt, int ring_id)
 	stat->vring_scan_cnt++;
 	rs->request_id++;
 
+	rb_base = vring->start;
+
 	/* copy the guest rb into shadow rb */
-	if (shadow_ring_buffer) {
+	if (shadow_cmd_buffer) {
 		ret = vgt_copy_rb_to_shadow(vgt, rs->el_ctx,
 				    rs->last_scan_head,
 				    vring->tail & RB_TAIL_OFF_MASK);
+		rb_base = rs->el_ctx->shadow_rb.shadow_rb_base;
 	}
 
 	if (ret == 0) {
 		ret = __vgt_scan_vring(vgt, ring_id, rs->last_scan_head,
-			vring->tail & RB_TAIL_OFF_MASK,
-			vring->start, _RING_CTL_BUF_SIZE(vring->ctl));
+			vring->tail & RB_TAIL_OFF_MASK, rb_base,
+			_RING_CTL_BUF_SIZE(vring->ctl), shadow_cmd_buffer);
 
 		rs->last_scan_head = vring->tail;
 	}

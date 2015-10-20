@@ -97,14 +97,13 @@ extern int reset_dur_threshold;
 extern int reset_max_threshold;
 extern bool vgt_lock_irq;
 extern int shadow_execlist_context;
-extern int shadow_ring_buffer;
+extern int shadow_cmd_buffer;
 extern bool wp_submitted_ctx;
 extern bool propagate_monitor_to_guest;
 extern bool irq_based_ctx_switch;
 extern int preallocated_shadow_pages;
 extern int preallocated_oos_pages;
 extern bool spt_out_of_sync;
-extern bool cmd_parser_ip_buf;
 extern bool timer_based_qos;
 extern int tbs_period_ms;
 extern bool opregion_present;
@@ -878,6 +877,10 @@ extern void state_sreg_init(struct vgt_device *vgt);
 
 #define aperture_2_gm(pdev, addr)	(addr - phys_aperture_base(pdev))
 #define v_aperture(pdev, addr)		(phys_aperture_vbase(pdev) + (addr))
+
+#define aperture_page_idx(pdev, gma)	(((gma) - aperture_2_gm(pdev, pdev->rsvd_aperture_base)) >> GTT_PAGE_SHIFT)
+#define aperture_page(pdev, idx)	 ((*pdev->rsvd_aperture_pages)[idx])
+
 
 #define vm_aperture_sz(pdev)		(pdev->vm_aperture_sz)
 #define vm_gm_sz(pdev)			(pdev->vm_gm_sz)
