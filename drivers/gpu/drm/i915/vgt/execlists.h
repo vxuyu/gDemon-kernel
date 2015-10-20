@@ -179,10 +179,34 @@ struct shadow_ctx_page {
 	struct vgt_device *vgt;
 };
 
+struct shadow_cmd_page {
+	struct list_head list;
+	unsigned long guest_gma;
+	unsigned long bound_gma;
+	//shadow_page_t shadow_page;
+};
+
 struct shadow_ring_buffer {
 	unsigned long guest_rb_base;
 	unsigned long shadow_rb_base;
 	uint32_t ring_size;
+};
+
+/* Relocation for MI_BATCH_BUFFER_START to privilege batch buffers */
+
+/* one context can have one ring buffer, but multiple batch buffers.
+ * Those batch buffers are not necessarily address sequential, and the
+ * mapping between guest gma and shadow gma is needed.
+ *
+ * Ideally each bb has one mapping, and each bb can have multiple pages.
+ * In order to simplify the implementation, the mapping is maintained
+ * in each page of structure "shadow_cmd_page". Then the shadow batch
+ * buffer can be very simple of a link list.
+ *
+ */
+struct shadow_batch_buffer {
+	uint32_t n_pages;
+	struct list_head pages;
 };
 
 struct execlist_context {
@@ -208,7 +232,11 @@ struct execlist_context {
 	/* used for lazy context shadowing optimization */
 	gtt_entry_t shadow_entry_backup[MAX_EXECLIST_CTX_PAGES];
 
+	bool ctx_running;
+	bool sync_needed;
+
 	struct shadow_ring_buffer shadow_rb;
+	struct shadow_batch_buffer shadow_priv_bb;
 
 	struct hlist_node node;
 };

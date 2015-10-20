@@ -365,6 +365,23 @@ TRACE_EVENT(shadow_rb_copy,
 		TP_printk("%s", __entry->buf)
 );
 
+TRACE_EVENT(shadow_bb_relocate,
+		TP_PROTO(int vm_id, int ring_id, uint32_t guest_lrca, uint32_t source_gma, uint32_t value, uint32_t new_value, uint32_t bb_size),
+
+		TP_ARGS(vm_id, ring_id, guest_lrca, source_gma, value, new_value, bb_size),
+
+		TP_STRUCT__entry(
+			__array(char, buf, MAX_BUF_LEN)
+		),
+
+		TP_fast_assign(
+			snprintf(__entry->buf, MAX_BUF_LEN,
+			"VM-%d(ring<%d>, lrca<0x%x>): Relocating source gma<0x%x> from <0x%x> to <0x%x> of size <0x%x>\n",
+			vm_id, ring_id, guest_lrca, source_gma, value, new_value, bb_size);
+		),
+
+		TP_printk("%s", __entry->buf)
+);
 #endif /* _VGT_TRACE_H_ */
 
 /* This part must be out of protection */

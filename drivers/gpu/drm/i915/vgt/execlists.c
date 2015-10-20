@@ -178,6 +178,7 @@ static inline enum vgt_ring_id vgt_get_ringid_from_lrca(struct vgt_device *vgt,
 
 static void vgt_create_shadow_rb(struct vgt_device *vgt, struct execlist_context *el_ctx);
 static void vgt_destroy_shadow_rb(struct vgt_device *vgt, struct execlist_context *el_ctx);
+static void vgt_release_shadow_cmdbuf(struct vgt_device *vgt, struct shadow_batch_buffer *p);
 
 /* a queue implementation
  *
@@ -288,7 +289,8 @@ static void vgt_el_slots_find_submitted_ctx(bool forward_search, vgt_state_ring_
 
 		for (i = 0; i < 2; ++ i) {
 			struct execlist_context *p = el_slot->el_ctxs[i];
-			if (p && p->guest_context.context_id == ctx_id) {
+			if ((p && p->guest_context.context_id == ctx_id) ||
+			    (p && ctx_id == 0)) {
 				*el_slot_idx = forward_search ? head : tail;
 				*el_slot_ctx_idx = i;
 				break;
@@ -922,6 +924,7 @@ static struct execlist_context *vgt_create_execlist_context(struct vgt_device *v
 		return NULL;
 
 	el_ctx->ring_id = ring_id;
+	INIT_LIST_HEAD(&el_ctx->shadow_priv_bb.pages);
 
 	if (vgt_require_shadow_context(vgt))
 		vgt_el_create_shadow_context(vgt, ring_id, el_ctx);
@@ -966,6 +969,7 @@ static void vgt_destroy_execlist_context(struct vgt_device *vgt,
 
 	/* free the shadow cmd buffers */
 	vgt_destroy_shadow_rb(vgt, el_ctx);
+	vgt_release_shadow_cmdbuf(vgt, &el_ctx->shadow_priv_bb);
 
 	// free the shadow context;
 	if (vgt_require_shadow_context(vgt)) {
@@ -1176,7 +1180,7 @@ static void vgt_emulate_context_status_change(struct vgt_device *vgt,
 			vgt_el_slots_delete(vgt, ring_id, el_slot_idx);
 		}
 		el_slot->el_ctxs[el_slot_ctx_idx] = NULL;
-	} else {
+	} else if (!ctx_status->idle_to_active) {
 		goto emulation_done;
 	}
 
@@ -1188,6 +1192,9 @@ static void vgt_emulate_context_status_change(struct vgt_device *vgt,
 
 	if (ctx_status->context_complete)
 		vgt_update_guest_ctx_from_shadow(vgt, ring_id, el_ctx);
+
+	el_ctx->ctx_running = (ctx_status->idle_to_active || ctx_status->lite_restore);
+	el_ctx->sync_needed = !ctx_status->lite_restore;
 
 emulation_done:
 	return;
@@ -1262,6 +1269,20 @@ static void vgt_emulate_csb_updates(struct vgt_device *vgt, enum vgt_ring_id rin
 
 		vgt_emulate_context_status_change(vgt, ring_id, &ctx_status);
 		vgt_add_ctx_switch_status(vgt, ring_id, &ctx_status);
+	}
+
+	if (vgt_require_shadow_context(vgt)) {
+		struct execlist_context *el_ctx;
+		int i;
+		hash_for_each(vgt->gtt.el_ctx_hash_table, i, el_ctx, node) {
+			if (!el_ctx->sync_needed)
+				continue;
+			if (!el_ctx->ctx_running) {
+				vgt_release_shadow_cmdbuf(vgt,
+						&el_ctx->shadow_priv_bb);
+				el_ctx->sync_needed = false;
+			}
+		}
 	}
 
 	read_idx = write_idx % CTX_STATUS_BUF_NUM;
@@ -1408,7 +1429,7 @@ static inline bool vgt_hw_ELSP_write(struct vgt_device *vgt,
 	!(((tail) >= (last_tail)) &&				\
 	  ((tail) <= (head)))))
 
-/* Shadow ring buffer implementation */
+/* Shadow implementation of command buffers */
 static void vgt_create_shadow_rb(struct vgt_device *vgt,
 				 struct execlist_context *el_ctx)
 {
@@ -1472,6 +1493,34 @@ static void vgt_destroy_shadow_rb(struct vgt_device *vgt,
 	el_ctx->shadow_rb.ring_size = 0;
 
 	return;
+}
+
+static void vgt_release_shadow_cmdbuf(struct vgt_device *vgt,
+				      struct shadow_batch_buffer *s_buf)
+{
+	/* unbind the shadow bb from GGTT */
+	struct shadow_cmd_page *s_page, *next;
+
+	if (!shadow_ring_buffer)
+		return;
+
+	if (!s_buf || s_buf->n_pages == 0) {
+		/* no privilege bb to release */
+		return;
+	}
+
+	/* free the shadow pages */
+	list_for_each_entry_safe(s_page, next, &s_buf->pages, list) {
+		unsigned long shadow_hpa;
+		list_del(&s_page->list);
+		shadow_hpa = phys_aperture_base(vgt->pdev) + s_page->bound_gma;
+		rsvd_aperture_free(vgt->pdev, shadow_hpa, PAGE_SIZE);
+		s_page->bound_gma = 0;
+		kfree(s_page);
+	}
+
+	s_buf->n_pages = 0;
+	INIT_LIST_HEAD(&s_buf->pages);
 }
 
 /* perform command buffer scan and shadowing */
@@ -1691,6 +1740,7 @@ void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 		dump_execlist_status((struct execlist_status_format *)&status,
 					ring_id);
 #endif
+		execlist->el_ctxs[0]->ctx_running = true;
 		vgt_hw_ELSP_write(vgt, elsp_reg, &context_descs[0],
 					&context_descs[1]);
 #ifdef EL_SLOW_DEBUG
