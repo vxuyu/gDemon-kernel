@@ -576,7 +576,7 @@ static bool vgt_initialize_device_info(struct pgt_device *pdev)
 		 * GTT offset in BAR0 starts from 2MB to 4MB
 		 */
 		info->gtt_start_offset = (1UL << 21);
-		info->max_gtt_size = (1UL << 22);
+		info->max_gtt_size = (1UL << 21);
 		info->gtt_entry_size = 4;
 		info->gtt_entry_size_shift = 2;
 		info->gmadr_bytes_in_cmd = 4;
