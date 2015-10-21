@@ -47,6 +47,8 @@
 enum ctx_shadow_policy {
 	PATCH_WITHOUT_SHADOW	= 0,
 	NORMAL_CTX_SHADOW	= 1,
+	LAZY_CTX_SHADOW         = 2,
+	OPT_LAZY_CTX_SHADOW     = 3
 };
 
 struct mmio_pair {
@@ -54,7 +56,7 @@ struct mmio_pair {
 	uint32_t val;
 };
 
-/* The first 64 dwords in register state context */
+/* The first 52 dwords in register state context */
 struct reg_state_ctx_header {
 	uint32_t nop1;
 	uint32_t lri_cmd_1;
@@ -85,7 +87,6 @@ struct reg_state_ctx_header {
 	struct mmio_pair pdp1_LDW;
 	struct mmio_pair pdp0_UDW;
 	struct mmio_pair pdp0_LDW;
-	uint32_t nops[12];
 };
 
 struct ctx_desc_format {

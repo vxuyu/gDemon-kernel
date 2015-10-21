@@ -26,7 +26,7 @@
 #include "vgt.h"
 #include "trace.h"
 
-//#define EL_SLOW_DEBUG
+/* #define EL_SLOW_DEBUG */
 
 #define EXECLIST_CTX_PAGES(ring_id)	((ring_id) == RING_BUFFER_RCS ? 20 : 2)
 
@@ -597,74 +597,151 @@ static inline bool ppgtt_update_shadow_ppgtt_for_ctx(struct vgt_device *vgt,
 }
 
 /* not to copy PDP root pointers */
-static void memcpy_reg_state_page(void *dest_page, void *src_page)
+static void update_guest_regstate_from_shadow(void *dest_page, void *src_page)
 {
-	uint32_t pdp_backup[8];
 	struct reg_state_ctx_header *dest_ctx;
 	struct reg_state_ctx_header *src_ctx;
+	int regstate_size = sizeof(struct reg_state_ctx_header);
+	int pdp_offset = offsetof(struct reg_state_ctx_header, pdp3_UDW);
+	int rbctrl_offset = offsetof(struct reg_state_ctx_header, rb_ctrl);
+
 	dest_ctx = (struct reg_state_ctx_header *)(dest_page);
 	src_ctx = (struct reg_state_ctx_header *)(src_page);
 
-	pdp_backup[0] = dest_ctx->pdp0_LDW.val;
-	pdp_backup[1] = dest_ctx->pdp0_UDW.val;
-	pdp_backup[2] = dest_ctx->pdp1_LDW.val;
-	pdp_backup[3] = dest_ctx->pdp1_UDW.val;
-	pdp_backup[4] = dest_ctx->pdp2_LDW.val;
-	pdp_backup[5] = dest_ctx->pdp2_UDW.val;
-	pdp_backup[6] = dest_ctx->pdp3_LDW.val;
-	pdp_backup[7] = dest_ctx->pdp3_UDW.val;
+	dest_ctx->lri_cmd_1 = src_ctx->lri_cmd_1;
+	dest_ctx->ctx_ctrl.addr = src_ctx->ctx_ctrl.addr;
+	dest_ctx->ctx_ctrl.val = src_ctx->ctx_ctrl.val;
+	dest_ctx->ring_header.addr = src_ctx->ring_header.addr;
+	dest_ctx->ring_header.val = src_ctx->ring_header.val;
+	dest_ctx->ring_tail.addr = src_ctx->ring_tail.addr;
+	dest_ctx->rb_start.addr = src_ctx->rb_start.addr;
 
-	memcpy(dest_page, src_page, SIZE_PAGE);
+	memcpy(dest_page + rbctrl_offset, src_page + rbctrl_offset,
+	       pdp_offset - rbctrl_offset);
 
-	dest_ctx->pdp0_LDW.val = pdp_backup[0];
-	dest_ctx->pdp0_UDW.val = pdp_backup[1];
-	dest_ctx->pdp1_LDW.val = pdp_backup[2];
-	dest_ctx->pdp1_UDW.val = pdp_backup[3];
-	dest_ctx->pdp2_LDW.val = pdp_backup[4];
-	dest_ctx->pdp2_UDW.val = pdp_backup[5];
-	dest_ctx->pdp3_LDW.val = pdp_backup[6];
-	dest_ctx->pdp3_UDW.val = pdp_backup[7];
+	dest_ctx->pdp0_LDW.addr = src_ctx->pdp0_LDW.addr;
+	dest_ctx->pdp0_UDW.addr = src_ctx->pdp0_UDW.addr;
+	dest_ctx->pdp1_LDW.addr = src_ctx->pdp1_LDW.addr;
+	dest_ctx->pdp1_UDW.addr = src_ctx->pdp1_UDW.addr;
+	dest_ctx->pdp2_LDW.addr = src_ctx->pdp2_LDW.addr;
+	dest_ctx->pdp2_UDW.addr = src_ctx->pdp2_UDW.addr;
+	dest_ctx->pdp3_LDW.addr = src_ctx->pdp3_LDW.addr;
+	dest_ctx->pdp3_UDW.addr = src_ctx->pdp3_UDW.addr;
+
+	memcpy(dest_page + regstate_size, src_page + regstate_size,
+	       SIZE_PAGE - regstate_size);
+}
+
+static void update_shadow_regstate_from_guest(void *dest_page, void *src_page, bool tail_only)
+{
+	struct reg_state_ctx_header *dest_ctx;
+	struct reg_state_ctx_header *src_ctx;
+	int regstate_size = sizeof(struct reg_state_ctx_header);
+	int pdp_offset = offsetof(struct reg_state_ctx_header, pdp3_UDW);
+
+	dest_ctx = (struct reg_state_ctx_header *)(dest_page);
+	src_ctx = (struct reg_state_ctx_header *)(src_page);
+
+	if (tail_only) {
+		dest_ctx->ring_tail.val = src_ctx->ring_tail.val;
+		return;
+	}
+
+	memcpy(dest_page, src_page, pdp_offset);
+	dest_ctx->pdp0_LDW.addr = src_ctx->pdp0_LDW.addr;
+	dest_ctx->pdp0_UDW.addr = src_ctx->pdp0_UDW.addr;
+	dest_ctx->pdp1_LDW.addr = src_ctx->pdp1_LDW.addr;
+	dest_ctx->pdp1_UDW.addr = src_ctx->pdp1_UDW.addr;
+	dest_ctx->pdp2_LDW.addr = src_ctx->pdp2_LDW.addr;
+	dest_ctx->pdp2_UDW.addr = src_ctx->pdp2_UDW.addr;
+	dest_ctx->pdp3_LDW.addr = src_ctx->pdp3_LDW.addr;
+	dest_ctx->pdp3_UDW.addr = src_ctx->pdp3_UDW.addr;
+
+	memcpy(dest_page + regstate_size, src_page + regstate_size,
+	       SIZE_PAGE - regstate_size);
+}
+
+static void update_shadow_cmdbuf_info(struct execlist_context *el_ctx)
+{
+	void *dest;
+	struct reg_state_ctx_header *dest_ctx;
+
+	dest = el_ctx->ctx_pages[1].shadow_page.vaddr;
+	dest_ctx = (struct reg_state_ctx_header *)(dest);
+
+	dest_ctx->rb_start.val = el_ctx->shadow_rb.shadow_rb_base;
 }
 
 static void vgt_update_shadow_ctx_from_guest(struct vgt_device *vgt,
 			struct execlist_context *el_ctx)
 {
+	bool tail_only = el_ctx->ctx_running;
+	void *dest, *src;
+
 	if (!vgt_require_shadow_context(vgt))
 		return;
+
+	/* normal shadow does not need the guest-to-shadow sync-up
+	 * since the update has been done in guest write protection handler.
+	 */
+	if ((shadow_execlist_context != LAZY_CTX_SHADOW) &&
+	    (shadow_execlist_context != OPT_LAZY_CTX_SHADOW))
+		return;
+
+	/* only update the ring status shadow page. Other pages are not
+	 * expected to be updated by guest driver.
+	 */
+	dest = el_ctx->ctx_pages[1].shadow_page.vaddr;
+	src = el_ctx->ctx_pages[1].guest_page.vaddr;
+
+	update_shadow_regstate_from_guest(dest, src, tail_only);
+	update_shadow_cmdbuf_info(el_ctx);
+
+	if (!tail_only)
+		ppgtt_update_shadow_ppgtt_for_ctx(vgt, el_ctx);
+}
+
+static void update_guest_hws_from_shadow(void *dest, void *src)
+{
+	int data_size = 0x20 << 2;
+	memcpy(dest, src, data_size);
 }
 
 static void vgt_update_guest_ctx_from_shadow(struct vgt_device *vgt,
 			enum vgt_ring_id ring_id,
 			struct execlist_context *el_ctx)
 {
-	int ctx_pages = EXECLIST_CTX_PAGES(ring_id);
+	if (!vgt_require_shadow_context(vgt))
+		return;
 
-	if (shadow_execlist_context == PATCH_WITHOUT_SHADOW) {
-#if 0
-	/* For some unkonw reason, switch back to guest PDP will cause
-	 * strange ring hangup after > ~20hours 3D testing.
-	 * It is not necessary to swith back to guest PDP, since Guest
-	 * will not touch it anymore after submission*/
+	if (shadow_execlist_context == OPT_LAZY_CTX_SHADOW) {
+		/* only copy ring status page */
+		void *dst = el_ctx->ctx_pages[1].guest_page.vaddr;
+		void *src = el_ctx->ctx_pages[1].shadow_page.vaddr;
 
-		struct reg_state_ctx_header *reg_state;
-		uint32_t *g_rootp;
-		g_rootp = (uint32_t *)el_ctx->ppgtt_mm->virtual_page_table;
-		reg_state = (struct reg_state_ctx_header *)
-			el_ctx->ctx_pages[1].guest_page.vaddr;
-		ROOT_POINTER_2_CTX_STATE(reg_state, g_rootp, 0);
-		ROOT_POINTER_2_CTX_STATE(reg_state, g_rootp, 1);
-		ROOT_POINTER_2_CTX_STATE(reg_state, g_rootp, 2);
-		ROOT_POINTER_2_CTX_STATE(reg_state, g_rootp, 3);
-#endif
+		ASSERT(dst && src);
+		update_guest_regstate_from_shadow(dst, src);
+	} else if (shadow_execlist_context == PATCH_WITHOUT_SHADOW) {
+		/* Leave patched guest driver as it is since it is just
+		 * a hack solution. It is working because normally guest
+		 * will not read back the patched value.
+		 */
 	} else {
+		int npages = EXECLIST_CTX_PAGES(ring_id);
 		int i;
-		for (i = 0; i < ctx_pages; ++ i) {
+
+		if (ring_id == RING_BUFFER_RCS)
+			npages -= 8;
+
+		for (i = 0; i < npages; ++ i) {
 			void *dst = el_ctx->ctx_pages[i].guest_page.vaddr;
 			void *src = el_ctx->ctx_pages[i].shadow_page.vaddr;
 
 			ASSERT(dst && src);
-			if (i == 1)
-				memcpy_reg_state_page(dst, src);
+			if (i == 0)
+				update_guest_hws_from_shadow(dst, src);
+			else if (i == 1)
+				update_guest_regstate_from_shadow(dst, src);
 			else
 				memcpy(dst, src, SIZE_PAGE);
 		}
@@ -726,6 +803,7 @@ static int vgt_create_shadow_pages(struct vgt_device *vgt, struct execlist_conte
 {
 	uint32_t ring_id = el_ctx->ring_id;
 	uint32_t ctx_pages = EXECLIST_CTX_PAGES(ring_id);
+	struct vgt_gtt_pte_ops *ops = vgt->pdev->gtt.pte_ops;
 	unsigned long hpa;
 	uint32_t size;
 	uint32_t rsvd_pages_idx;
@@ -753,7 +831,19 @@ static int vgt_create_shadow_pages(struct vgt_device *vgt, struct execlist_conte
 		guest_page_t *p_guest;
 		p_shadow = &el_ctx->ctx_pages[i].shadow_page;
 		p_guest = &el_ctx->ctx_pages[i].guest_page;
-		{
+		if ((shadow_execlist_context == OPT_LAZY_CTX_SHADOW) &&
+			(i != 1)) {
+			gtt_entry_t gtt_entry;
+			/* backup reserved gtt entry and set guest ctx's adddress */
+			el_ctx->shadow_entry_backup[i].pdev = vgt->pdev;
+			el_ctx->shadow_entry_backup[i].type = GTT_TYPE_GGTT_PTE;
+			ops->get_entry(NULL, &el_ctx->shadow_entry_backup[i],
+				s_gma >> GTT_PAGE_SHIFT, false, NULL);
+			gtt_entry.pdev = vgt->pdev;
+			gtt_entry.type = GTT_TYPE_GGTT_PTE;
+			ops->get_entry(NULL, &gtt_entry, g_gma >> GTT_PAGE_SHIFT, false, NULL);
+			ops->set_entry(NULL, &gtt_entry, s_gma >> GTT_PAGE_SHIFT, false, NULL);
+		} else {
 			p_shadow->vaddr = v_aperture(vgt->pdev, s_gma);
 			p_shadow->page = aperture_page(vgt->pdev, rsvd_pages_idx);
 			memcpy(p_shadow->vaddr, p_guest->vaddr, SIZE_PAGE);
@@ -772,9 +862,19 @@ static void vgt_destroy_shadow_pages(struct vgt_device *vgt, struct execlist_con
 	unsigned long hpa;
 	uint32_t ring_id = el_ctx->ring_id;
 	uint32_t ctx_pages = EXECLIST_CTX_PAGES(ring_id);
+	struct vgt_gtt_pte_ops *ops = vgt->pdev->gtt.pte_ops;
+	int i;
 
 	if (el_ctx->shadow_lrca == 0)
 		return;
+
+	for (i = 0; i < ctx_pages; ++ i) {
+		if ((shadow_execlist_context == OPT_LAZY_CTX_SHADOW) &&
+			(i != 1)) {
+			ops->set_entry(NULL, &el_ctx->shadow_entry_backup[i],
+						 el_ctx->shadow_lrca + i, false, NULL);
+		}
+	}
 
 	hpa = phys_aperture_base(vgt->pdev) + (el_ctx->shadow_lrca << GTT_PAGE_SHIFT);
 	rsvd_aperture_free(vgt->pdev, hpa, ctx_pages << GTT_PAGE_SHIFT);
@@ -989,10 +1089,10 @@ static struct execlist_context *vgt_create_execlist_context(
 			vgt_free_el_context(el_ctx);
 			return NULL;
 		}
+		vgt_create_shadow_rb(vgt, el_ctx);
 	}
 
 	vgt_el_create_shadow_ppgtt(vgt, ring_id, el_ctx);
-	vgt_create_shadow_rb(vgt, el_ctx);
 
 	trace_ctx_lifecycle(vgt->vm_id, ring_id,
 			el_ctx->guest_context.lrca, "create");
@@ -1205,6 +1305,30 @@ static void vgt_emulate_context_status_change(struct vgt_device *vgt,
 			vgt_el_slots_delete(vgt, ring_id, el_slot_idx);
 		}
 		el_slot->el_ctxs[el_slot_ctx_idx] = NULL;
+		if (ctx_status->preempted && !ctx_status->lite_restore) {
+			/* In preemption case need to find the next running ctx for status track,
+			 * since the context sync-up between guest and shadow needs that.
+			 * No need for lite_restore case.
+			 */
+			struct vgt_exec_list *next_slot = NULL;
+			struct execlist_context *next_ctx = NULL;
+			uint32_t next_slot_idx = -1;
+			uint32_t next_ctx_idx = -1;
+			vgt_el_slots_find_submitted_ctx(ring_state, 0,
+					&next_slot_idx, &next_ctx_idx);
+			if (next_ctx_idx != -1) {
+				next_slot = &vgt_el_queue_slot(vgt, ring_id, next_slot_idx);
+				next_ctx = next_slot->el_ctxs[next_ctx_idx];
+				next_ctx->ctx_running = true;
+			}
+		} else if (ctx_status->element_switch) {
+			struct execlist_context *next_ctx = NULL;
+			if (el_slot_ctx_idx != 0) {
+				vgt_warn("something wrong of element switch CSB status!\n");
+			}
+			next_ctx = el_slot->el_ctxs[1];
+			next_ctx->ctx_running = true;
+		}
 	} else if (!ctx_status->idle_to_active) {
 		goto emulation_done;
 	}
@@ -1212,14 +1336,16 @@ static void vgt_emulate_context_status_change(struct vgt_device *vgt,
 	if (!vgt_require_shadow_context(vgt))
 		goto emulation_done;
 
+	if (ctx_status->idle_to_active) {
+		el_ctx->ctx_running = true;
+	} else {
+		ASSERT (CTX_IS_SCHEDULED_OUT(ctx_status));
+		el_ctx->ctx_running = ctx_status->lite_restore;
+		el_ctx->sync_needed = !el_ctx->ctx_running;
+	}
+
 	if (vgt_debug & VGT_DBG_EXECLIST)
 		dump_el_context_information(vgt, el_ctx);
-
-	if (ctx_status->context_complete)
-		vgt_update_guest_ctx_from_shadow(vgt, ring_id, el_ctx);
-
-	el_ctx->ctx_running = (ctx_status->idle_to_active || ctx_status->lite_restore);
-	el_ctx->sync_needed = !ctx_status->lite_restore;
 
 emulation_done:
 	return;
@@ -1308,6 +1434,7 @@ static void vgt_emulate_csb_updates(struct vgt_device *vgt, enum vgt_ring_id rin
 		hash_for_each(vgt->gtt.el_ctx_hash_table, i, el_ctx, node) {
 			if (!el_ctx->sync_needed)
 				continue;
+			vgt_update_guest_ctx_from_shadow(vgt, ring_id, el_ctx);
 			if (!el_ctx->ctx_running) {
 				vgt_release_shadow_cmdbuf(vgt,
 						&el_ctx->shadow_priv_bb);
@@ -1668,7 +1795,6 @@ bool vgt_idle_execlist(struct pgt_device *pdev, enum vgt_ring_id ring_id)
 	el_status_reg = el_ring_base + _EL_OFFSET_STATUS;
 	el_status.ldw = VGT_MMIO_READ(pdev, el_status_reg);
 	if (el_status.execlist_0_valid || el_status.execlist_1_valid) {
-		//vgt_info("EXECLIST still have valid items in context switch!\n");
 		return false;
 	}
 
