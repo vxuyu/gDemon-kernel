@@ -327,7 +327,10 @@ static int vgt_show_pregs(struct seq_file *m, void *data)
 	for(i = 0; i < pdev->reg_num; i++) {
 		if (!(i % 16))
 			seq_printf(m, "\n%8llx:", i * REG_SIZE);
-		seq_printf(m, " %x", VGT_MMIO_READ(pdev, i * REG_SIZE));
+		if (!reg_is_accessed(pdev, i * REG_SIZE) && !reg_is_tracked(pdev, i))
+			seq_printf(m, " -");
+		else
+			seq_printf(m, " %x", VGT_MMIO_READ(pdev, i * REG_SIZE));
 	}
 
 	seq_printf(m, "\n");
