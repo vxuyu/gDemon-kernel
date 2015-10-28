@@ -265,8 +265,6 @@ void common_show_ring_buffer(struct pgt_device *pdev, int ring_id, int bytes,
 	u64 ring_len, off;
 	u32 gpa;
 
-	printk("ring buffer(%d): head (0x%x) tail(0x%x), start(0x%x), "
-			"ctl(0x%x)\n", ring_id, p_head, p_tail, p_start, p_ctl);
 	printk("ring xxx:(%d), mi_mode idle:(%d)\n",
 		VGT_MMIO_READ(pdev, pdev->ring_xxx[ring_id]) & (1 << pdev->ring_xxx_bit[ring_id]),
 		VGT_MMIO_READ(pdev, pdev->ring_mi_mode[ring_id]) & MODE_IDLE);
@@ -360,6 +358,9 @@ void legacy_show_ring_buffer(struct pgt_device *pdev, int ring_id, int bytes)
 	p_start = VGT_MMIO_READ(pdev, RB_START(pdev, ring_id));
 	p_ctl = VGT_MMIO_READ(pdev, RB_CTL(pdev, ring_id));
 
+	printk("ring buffer(%d): head(0x%x) tail(0x%x), start(0x%x), ctl(0x%x)\n",
+		ring_id, p_head, p_tail, p_start, p_ctl);
+
 	common_show_ring_buffer(pdev, ring_id, bytes,
 			p_tail, p_head, p_start, p_ctl,
 			VGT_MMIO_READ(pdev, VGT_ACTHD(ring_id)));
@@ -376,7 +377,8 @@ unsigned long ring_id_2_current_desc_reg [] = {
 void execlist_show_ring_buffer(struct pgt_device *pdev, int ring_id, int bytes)
 {
 	struct vgt_device *vgt = current_render_owner(pdev);
-	vgt_reg_t p_tail, p_head, p_start, p_ctl;
+	vgt_reg_t p_tail, p_head, p_start, p_ctl; /* read from context */
+	vgt_reg_t p_tail1, p_head1, p_start1, p_ctl1; /* read from MMIO */
 	unsigned long reg, val;
 	u64 bb_head;
 	u32 *p;
@@ -417,7 +419,29 @@ void execlist_show_ring_buffer(struct pgt_device *pdev, int ring_id, int bytes)
 	bb_head = *(p + 0xc + 1) & 0xFFFF;
 	bb_head <<= 32;
 	bb_head |= *(p + 0xe + 1);
-	reg = RB_TAIL(pdev, ring_id) - 0x30 + 0x140;
+
+	reg = RB_HEAD(pdev, ring_id);
+	p_head1 = VGT_MMIO_READ(pdev, reg);
+	reg = RB_TAIL(pdev, ring_id);
+	p_tail1 = VGT_MMIO_READ(pdev, reg);
+	reg = RB_START(pdev, ring_id);
+	p_start1 = VGT_MMIO_READ(pdev, reg);
+	reg = RB_CTL(pdev, ring_id);
+	p_ctl1 = VGT_MMIO_READ(pdev, reg);
+
+	printk("ring buffer(%d): head(0x%x) tail(0x%x), start(0x%x), ctl(0x%x)\n",
+		ring_id, p_head, p_tail, p_start, p_ctl);
+
+	if (p_head != p_head1 || p_tail != p_tail1) {
+		/* under some condition, MMIO men will be cleared to zero */
+		if (!(p_head1 == 0 && p_tail1 == 0 &&
+			p_start1 == 0 && p_ctl1 == 0)) {
+			p_head = p_head1;
+			p_tail = p_tail1;
+		}
+		printk("rb from mmio(%d): head(0x%x) tail(0x%x), start(0x%x), ctl(0x%x)\n",
+			ring_id, p_head1, p_tail1, p_start1, p_ctl1);
+	}
 
 	common_show_ring_buffer(pdev, ring_id, bytes,
 			p_tail, p_head, p_start, p_ctl,
