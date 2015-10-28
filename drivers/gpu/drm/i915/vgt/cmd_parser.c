@@ -785,15 +785,16 @@ static int cmd_reg_handler(struct parser_exec_state *s,
 		goto reg_handle;
 	}
 
-	if ((reg_is_render(pdev, offset) && !reg_addr_fix(pdev, offset)) ||
-	     reg_passthrough(pdev, offset) ||
-	     (!vgt->vm_id && reg_is_config(pdev, offset)) ) {
+	if ((reg_is_render(pdev, offset) &&
+		!reg_addr_fix(pdev, offset) && offset != 0x24d0) ||
+				reg_passthrough(pdev, offset) ||
+		(!vgt->vm_id && reg_is_config(pdev, offset))) {
 		rc = 0;
 	} else if (offset == _REG_DE_RRMR || offset == FORCEWAKE_MT) {
 		if (!strcmp(cmd, "lri")) {
 			rc = add_post_handle_entry(s, vgt_cmd_handler_lri_emulate);
 			if (rc) {
-					vgt_err("fail to allocate post handle");
+				vgt_err("fail to allocate post handle\n");
 			}
 		}
 	}

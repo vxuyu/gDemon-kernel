@@ -812,12 +812,6 @@ int vgt_surf_base_range_check(struct vgt_device *vgt,
 	struct vgt_sprite_plane_format  sprite_plane;
 	struct vgt_cursor_plane_format  cursor_plane;
 
-	/*
-	 * TODO: Enable range check on SKL.
-	 */
-	if (IS_SKL(vgt->pdev))
-		return surf_base;
-
 	if (!vgt_has_pipe_enabled(vgt, pipe)) {
 		*surf_base = 0;
 		return 0;
@@ -2517,6 +2511,24 @@ static bool vgt_write_ctx_status_ptr(struct vgt_device *vgt, unsigned int offset
 #endif
 	return default_mmio_write(vgt, offset, p_data, bytes);
 }
+static bool vgt_write_force_nonpriv(struct vgt_device *vgt, unsigned int offset,
+			void *p_data, unsigned int bytes)
+{
+	if ((bytes != 4) || ((offset & (bytes - 1)) != 0)) {
+		vgt_err("VM(%d) vgt_write_force_nonpriv: invalid offset(%x) or bytes(%d)\n",
+				vgt->vgt_id, offset, bytes);
+		return false;
+	}
+
+	if (*(vgt_reg_t *)p_data == 0x2248) {
+		return default_mmio_write(vgt, offset, p_data, bytes);
+	} else {
+		vgt_err("Unexpected force_to_nonpriv 0x%x mmio write, value=0x%x\n",
+				offset, *(vgt_reg_t *)p_data);
+		return false;
+	}
+
+}
 
 static bool skl_lcpll_write(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes)
@@ -3663,10 +3675,7 @@ reg_attr_t vgt_reg_info_bdw[] = {
 {0xb110, 4, F_PT, 0, D_BDW, NULL, NULL},
 
 /* NON-PRIV */
-{0x24d0, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
-{0x24d4, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
-{0x24d8, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
-{0x24dc, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
+{0x24d0, 4, F_RDR, 0, D_BDW_PLUS, NULL, vgt_write_force_nonpriv},
 
 {0x83a4, 4, F_RDR, 0, D_BDW, NULL, NULL},
 {0x4dd4, 4, F_PT, 0, D_BDW_PLUS, NULL, NULL},
