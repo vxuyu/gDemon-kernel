@@ -327,22 +327,24 @@ TRACE_EVENT(ctx_protection,
 );
 
 TRACE_EVENT(ctx_write_trap,
-		TP_PROTO(uint64_t pa, int bytes),
+		TP_PROTO(uint32_t guest_lrca, uint32_t shadow_lrca,
+			 uint64_t pa, int bytes, uint32_t val_32),
 
-		TP_ARGS(pa, bytes),
+		TP_ARGS(guest_lrca, shadow_lrca, pa, bytes, val_32),
 
 		TP_STRUCT__entry(
-			__field(u64, pa)
-			__field(int, bytes)
+			__array(char, buf, MAX_BUF_LEN)
 			),
 
 		TP_fast_assign(
-			__entry->pa = pa;
-			__entry->bytes = bytes;
+			snprintf(__entry->buf, MAX_BUF_LEN,
+				 "EXECLIST Context write trapped: guest_lrca: "
+				 "<0x%x>, shadow_lrca: <0x%x>, "
+				 "addr: <0x%llx> idx[0x%x], bytes %i, val_32: <0x%x>\n",
+				 guest_lrca, shadow_lrca, pa, ((pa & 0xfff) >> 2), bytes, val_32)
 		),
 
-		TP_printk("EXECLIST Context Write Protection addr: <0x%llx>, bytes %i\n",
-				__entry->pa, __entry->bytes)
+		TP_printk("%s", __entry->buf)
 );
 
 TRACE_EVENT(shadow_rb_copy,
@@ -360,6 +362,23 @@ TRACE_EVENT(shadow_rb_copy,
 				"size:0x%x, base: 0x%lx(sbase:0x%lx), head: 0x%x, tail: 0x%x\n",
 				vm_id, ring_id, guest_lrca, shadow_lrca,
 				size, vbase, sbase, rb_head, tail);
+		),
+
+		TP_printk("%s", __entry->buf)
+);
+
+TRACE_EVENT(ctx_csb_emulate,
+		TP_PROTO(int vm_id, int ring_id, int csb_entry, int tail, uint32_t udw, uint32_t ldw),
+
+		TP_ARGS(vm_id, ring_id, csb_entry, tail, udw, ldw),
+
+		TP_STRUCT__entry(
+			__array(char, buf, MAX_BUF_LEN)
+		),
+
+		TP_fast_assign(
+			snprintf(__entry->buf, MAX_BUF_LEN,"VM-%d <ring-%d>: Emulate CSB[%d](tail:%d): udw: 0x%x; ldw: 0x%x\n",
+			vm_id, ring_id, csb_entry, tail, udw, ldw);
 		),
 
 		TP_printk("%s", __entry->buf)

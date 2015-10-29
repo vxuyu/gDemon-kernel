@@ -191,15 +191,6 @@ module_param_named(shadow_execlist_context, shadow_execlist_context, int, 0400);
 int shadow_cmd_buffer = 1;
 module_param_named(shadow_cmd_buffer, shadow_cmd_buffer, int, 0400);
 
-/* Very frequent set/clear write protection can see wrong write trap even if
-+ * write protection has been cleared. Below option is to disable the context
-+ * protection between ctx submission and ctx completion. Normal context shadow
-+ * will not be impacted by this option, which will have ctx write protection
-+ * between ctx creation and ctx destroy.
-+ */
-bool wp_submitted_ctx = false;
-module_param_named(wp_submitted_ctx, wp_submitted_ctx, bool, 0400);
-
 static struct vgt_ops __vgt_ops = {
 	.emulate_read = vgt_emulate_read,
 	.emulate_write = vgt_emulate_write,

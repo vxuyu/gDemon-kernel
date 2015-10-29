@@ -34,8 +34,6 @@
 do{							\
 	state->pdp##i##_LDW.val = root[(i)<<1];		\
 	state->pdp##i##_UDW.val = root[((i) << 1) + 1];	\
-	vgt_dbg(VGT_DBG_EXECLIST, "New root[%d] in state is: 0x%x(high)-0x%x(low)\n",	\
-		i, root[((i) << 1) + 1], root[(i) << 1]);	\
 }while(0);
 
 #define CTX_STATE_2_ROOT_POINTER(root, state, i)	\
@@ -474,21 +472,8 @@ static bool vgt_validate_status_entry(struct vgt_device *vgt,
 static inline void vgt_set_wp_guest_ctx(struct vgt_device *vgt,
 			struct execlist_context *el_ctx, int idx)
 {
-	enum vgt_ring_id ring_id;
+	enum vgt_ring_id ring_id = el_ctx->ring_id;
 
-	if (!wp_submitted_ctx &&
-		(shadow_execlist_context != NORMAL_CTX_SHADOW)) {
-		/* If option is set not to protect submitted_ctx, write
-		 * protection will be disabled, except that the shadow policy
-		 * is NORMAL_CTX_SHADOW. In normal shadowing case, the write
-		 * protection is from context creation to the context destroy.
-		 * It is needed for guest-shadow data sync-up, and cannot be
-		 * disabled.
-		 */
-		return;
-	}
-
-	ring_id = el_ctx->ring_id;
 	hypervisor_set_wp_pages(vgt,
 				&el_ctx->ctx_pages[idx].guest_page);
 	trace_ctx_protection(vgt->vm_id, ring_id, el_ctx->guest_context.lrca,
@@ -499,14 +484,8 @@ static inline void vgt_set_wp_guest_ctx(struct vgt_device *vgt,
 static inline void vgt_clear_wp_guest_ctx(struct vgt_device *vgt,
 			struct execlist_context *el_ctx, int idx)
 {
-	enum vgt_ring_id ring_id;
+	enum vgt_ring_id ring_id = el_ctx->ring_id;
 
-	if (!wp_submitted_ctx &&
-		(shadow_execlist_context != NORMAL_CTX_SHADOW)) {
-		return;
-	}
-
-	ring_id = el_ctx->ring_id;
 	hypervisor_unset_wp_pages(vgt,
 				&el_ctx->ctx_pages[idx].guest_page);
 	trace_ctx_protection(vgt->vm_id, ring_id, el_ctx->guest_context.lrca,
@@ -517,16 +496,19 @@ static inline void vgt_clear_wp_guest_ctx(struct vgt_device *vgt,
 static bool sctx_mirror_state_wp_handler(void *gp, uint64_t pa, void *p_data, int bytes)
 {
 	guest_page_t *guest_page = (guest_page_t *)gp;
+	struct execlist_context *el_ctx = (struct execlist_context *)guest_page->data;
 	struct shadow_ctx_page *ctx_page = container_of(guest_page,
 					struct shadow_ctx_page, guest_page);
 	uint32_t offset = pa & (PAGE_SIZE - 1);
 
-	trace_ctx_write_trap(pa, bytes);
 	if (!guest_page->writeprotection) {
 		vgt_err("EXECLIST Ctx mirror wp handler is called without write protection! "
 			"addr <0x%llx>, bytes %i\n", pa, bytes);
 		return false;
 	}
+
+	trace_ctx_write_trap(el_ctx->guest_context.lrca,
+				el_ctx->shadow_lrca, pa, bytes, *(uint32_t *)p_data);
 
 	if ((offset & (bytes -1)) != 0)
 		vgt_warn("Not aligned EXECLIST context update!");
@@ -567,7 +549,6 @@ static bool sctx_reg_state_wp_handler(void *gp, uint64_t pa, void *p_data, int b
 	int idx;
 	bool rc;
 
-	trace_ctx_write_trap(pa, bytes);
 	if (!guest_page->writeprotection) {
 		vgt_err("EXECLIST Ctx regstate wp handler is called without write protection! "
 			"addr <0x%llx>, bytes %i\n", pa, bytes);
@@ -692,6 +673,7 @@ static void vgt_update_guest_ctx_from_shadow(struct vgt_device *vgt,
 				memcpy(dst, src, SIZE_PAGE);
 		}
 	}
+	trace_ctx_lifecycle(vgt->vm_id, ring_id, el_ctx->guest_context.lrca, "sync to guest");
 }
 
 static void vgt_patch_guest_context(struct execlist_context *el_ctx)
@@ -952,7 +934,7 @@ static void vgt_destroy_execlist_context(struct vgt_device *vgt,
 
 	ring_id = el_ctx->ring_id;
 	if (ring_id == MAX_ENGINES) {
-		vgt_err("Invalid execlist context!\n");
+		vgt_err("VM-%d: Invalid execlist context!\n", vgt->vm_id);
 		ASSERT_VM(0, vgt);
 	}
 
@@ -1269,6 +1251,12 @@ static void vgt_emulate_csb_updates(struct vgt_device *vgt, enum vgt_ring_id rin
 
 		if (!vgt_validate_status_entry(vgt, ring_id, &ctx_status))
 			continue;
+
+		trace_ctx_csb_emulate(vgt->vm_id,
+				      ring_id,
+				      read_idx % CTX_STATUS_BUF_NUM,
+				      write_idx % CTX_STATUS_BUF_NUM,
+				      ctx_status.udw, ctx_status.ldw);
 
 		vgt_emulate_context_status_change(vgt, ring_id, &ctx_status);
 		vgt_add_ctx_switch_status(vgt, ring_id, &ctx_status);

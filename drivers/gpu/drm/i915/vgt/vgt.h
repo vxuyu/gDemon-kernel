@@ -98,7 +98,6 @@ extern int reset_max_threshold;
 extern bool vgt_lock_irq;
 extern int shadow_execlist_context;
 extern int shadow_cmd_buffer;
-extern bool wp_submitted_ctx;
 extern bool propagate_monitor_to_guest;
 extern bool irq_based_ctx_switch;
 extern int preallocated_shadow_pages;
