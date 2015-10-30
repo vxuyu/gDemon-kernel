@@ -64,7 +64,7 @@ static ssize_t vgt_create_instance_store(struct kobject *kobj, struct kobj_attri
 
 		if (param_cnt == 5) {
 			/* -1/0/1 means: not-specified, non-primary, primary */
-			if (vp.vgt_primary < -1 && vp.vgt_primary > 1)
+			if (vp.vgt_primary < -1 || vp.vgt_primary > 1)
 				return -EINVAL;
 		} else {
 			vp.vgt_primary = -1; /* no valid value specified. */

@@ -1125,6 +1125,7 @@ static int vgt_handle_mi_display_flip(struct parser_exec_state *s, bool resubmit
 
 
 	if (!display_flip_decode_plane_info(plane_code, &pipe, &plane)) {
+		vgt_warn("Invalid pipe/plane in MI_DISPLAY_FLIP!\n");
 		goto wrong_command;
 	}
 
@@ -1135,11 +1136,6 @@ static int vgt_handle_mi_display_flip(struct parser_exec_state *s, bool resubmit
 		goto wrong_command;
 	} else if (length != 3) {
 		vgt_warn("Flip length not equal to 3, ignore handling flipping");
-		goto wrong_command;
-	}
-
-	if ((pipe == I915_MAX_PIPES) || (plane == MAX_PLANE)) {
-		vgt_warn("Invalid pipe/plane in MI_DISPLAY_FLIP!\n");
 		goto wrong_command;
 	}
 
@@ -2377,6 +2373,7 @@ static int cmd_hash_init(struct pgt_device *pdev)
 		info = vgt_find_cmd_entry_any_ring(e->info->opcode, e->info->rings);
 		if (info) {
 			vgt_err("%s %s duplicated\n", e->info->name, info->name);
+			kfree(e);
 			return -EINVAL;
 		}
 
