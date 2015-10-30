@@ -848,8 +848,13 @@ static int vgt_cmd_handler_lri(struct parser_exec_state *s)
 {
 	int i, rc = 0;
 	int cmd_len = cmd_length(s);
+	struct pgt_device *pdev = s->vgt->pdev;
 
 	for (i = 1; i < cmd_len; i += 2) {
+		if (IS_BDW(pdev) && (s->ring_id != RING_BUFFER_RCS))
+			rc |= (cmd_val(s, i) & BIT_RANGE_MASK(22, 18)) ? -1 : 0;
+		if (rc)
+			break;
 		rc |= cmd_reg_handler(s,
 			cmd_val(s, i) & BIT_RANGE_MASK(22, 2), i, "lri");
 	}
@@ -861,9 +866,17 @@ static int vgt_cmd_handler_lrr(struct parser_exec_state *s)
 {
 	int i, rc = 0;
 	int cmd_len = cmd_length(s);
+	struct pgt_device *pdev = s->vgt->pdev;
 
 	for (i = 1; i < cmd_len; i += 2) {
-		rc = cmd_reg_handler(s,
+		if (IS_BDW(pdev))
+			rc |= ((cmd_val(s, i) & BIT_RANGE_MASK(22, 18)) ||
+			       (cmd_val(s, i + 1) & BIT_RANGE_MASK(22, 18))) ?
+				-1 : 0;
+		if (rc)
+			break;
+
+		rc |= cmd_reg_handler(s,
 			cmd_val(s, i) & BIT_RANGE_MASK(22, 2), i, "lrr-src");
 		rc |= cmd_reg_handler(s,
 			cmd_val(s, i+1) & BIT_RANGE_MASK(22, 2), i, "lrr-dst");
@@ -878,8 +891,14 @@ static int vgt_cmd_handler_lrm(struct parser_exec_state *s)
 	unsigned long gma;
 	int i, rc = 0;
 	int cmd_len = cmd_length(s);
+	struct pgt_device *pdev = s->vgt->pdev;
 
 	for (i = 1; i < cmd_len;) {
+		if (IS_BDW(pdev))
+			rc |= (cmd_val(s, i) & BIT_RANGE_MASK(22, 18)) ? -1 : 0;
+		if (rc)
+			break;
+
 		rc |= cmd_reg_handler(s,
 			cmd_val(s, i) & BIT_RANGE_MASK(22, 2), i, "lrm");
 
