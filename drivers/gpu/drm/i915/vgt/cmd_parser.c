@@ -128,7 +128,11 @@ static inline int add_patch_entry(struct parser_exec_state *s,
 	struct cmd_patch_info *patch;
 	int next;
 
-	ASSERT(addr != NULL);
+	if (addr == NULL) {
+		vgt_err("VM(%d) CMD_SCAN: NULL address to be patched\n",
+				s->vgt->vgt_id);
+		return -EINVAL;
+	}
 
 	next = get_next_entry(list);
 	if (next == list->count) {
@@ -2564,7 +2568,12 @@ static int __vgt_scan_vring(struct vgt_device *vgt, int ring_id, vgt_reg_t head,
 	while(s.ip_gma != gma_tail){
 		s.cmd_issue_irq = false;
 		if (s.buf_type == RING_BUFFER_INSTRUCTION){
-			ASSERT((s.ip_gma >= base) && (s.ip_gma < gma_bottom));
+			if (!(s.ip_gma >= base) || !(s.ip_gma < gma_bottom)) {
+				vgt_err("VM(%d) vgt_scan_vring: GMA(%lx)'s out of range\n",
+						vgt->vgt_id, s.ip_gma);
+				rc = -EINVAL;
+				goto out;
+			};
 			if (gma_out_of_range(s.ip_gma, gma_head, gma_tail)) {
 				vgt_err("ERROR: ip_gma %lx out of range."
 					"(base:0x%x, head: 0x%x, tail: 0x%x)\n",
