@@ -804,7 +804,9 @@ static bool vgt_hvm_write_cfg_space(struct vgt_device *vgt,
 
 	ASSERT(((bytes == 4) && ((port & 3) == 0)) ||
 		((bytes == 2) && ((port & 1) == 0)) || (bytes == 1));
-	vgt_ops->emulate_cfg_write(vgt, port, &val, bytes);
+	if (!vgt_ops->emulate_cfg_write(vgt, port, &val, bytes)) {
+		return false;
+	}
 	return true;
 }
 
@@ -817,7 +819,9 @@ static bool vgt_hvm_read_cfg_space(struct vgt_device *vgt,
 
 	ASSERT (((bytes == 4) && ((port & 3) == 0)) ||
 		((bytes == 2) && ((port & 1) == 0)) || (bytes == 1));
-	vgt_ops->emulate_cfg_read(vgt, port, &data, bytes);
+	if (!vgt_ops->emulate_cfg_read(vgt, port, &data, bytes)) {
+		return false;
+	}
 	memcpy(val, &data, bytes);
 	return true;
 }
