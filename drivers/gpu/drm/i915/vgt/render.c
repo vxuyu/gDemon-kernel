@@ -274,6 +274,34 @@ static void __vgt_rendering_save(struct vgt_device *vgt, int num, vgt_reg_t *reg
 	}
 }
 
+static void gen9_save_mocs(struct vgt_device *vgt)
+{
+	struct pgt_device *pdev = vgt->pdev;
+	u32 reg;
+
+	for (reg = 0xc800; reg < 0xcff8; reg += 4)
+		__vreg(vgt, reg) = VGT_MMIO_READ(pdev, reg);
+
+	for (reg = 0xb020; reg < 0xb09c; reg += 4)
+		__vreg(vgt, reg) = VGT_MMIO_READ(pdev, reg);
+}
+
+static void gen9_restore_mocs(struct vgt_device *vgt)
+{
+	struct pgt_device *pdev = vgt->pdev;
+	u32 reg;
+
+	for (reg = 0xc800; reg < 0xcff8; reg += 4) {
+		VGT_MMIO_WRITE(pdev, reg, __vreg(vgt, reg));
+		VGT_POST_READ(pdev, reg);
+	}
+
+	for (reg = 0xb020; reg < 0xb09c; reg += 4) {
+		VGT_MMIO_WRITE(pdev, reg, __vreg(vgt, reg));
+		VGT_POST_READ(pdev, reg);
+	}
+}
+
 /* For save/restore global states difference between VMs.
  * Other context states should be covered by normal context switch later. */
 static void vgt_rendering_save_mmio(struct vgt_device *vgt)
@@ -294,11 +322,12 @@ static void vgt_rendering_save_mmio(struct vgt_device *vgt)
 		__vgt_rendering_save(vgt,
 				vgt_get_extra_ctx_regs_num(),
 				vgt_get_extra_ctx_regs());
-	else if (IS_SKL(pdev))
+	else if (IS_SKL(pdev)) {
+		gen9_save_mocs(vgt);
 		__vgt_rendering_save(vgt,
 				ARRAY_NUM(vgt_gen9_render_regs),
 				&vgt_gen9_render_regs[0]);
-
+	}
 	pdev->in_ctx_switch = 0;
 }
 
@@ -357,10 +386,12 @@ static void vgt_rendering_restore_mmio(struct vgt_device *vgt)
 		__vgt_rendering_restore(vgt,
 				vgt_get_extra_ctx_regs_num(),
 				vgt_get_extra_ctx_regs());
-	else if (IS_SKL(pdev))
+	else if (IS_SKL(pdev)) {
+		gen9_restore_mocs(vgt);
 		__vgt_rendering_restore(vgt,
 				ARRAY_NUM(vgt_gen9_render_regs),
 				&vgt_gen9_render_regs[0]);
+	}
 }
 
 void vgt_ring_init(struct pgt_device *pdev, int id)
