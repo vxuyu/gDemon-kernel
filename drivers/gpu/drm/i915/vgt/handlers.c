@@ -2156,6 +2156,24 @@ static bool power_well_ctl_write(struct vgt_device *vgt, unsigned int offset,
 	return rc;
 }
 
+static bool skl_power_well_ctl_write(struct vgt_device *vgt, unsigned int offset,
+	void *p_data, unsigned int bytes)
+{
+	u32 v = *(u32 *)p_data;
+
+	ASSERT(bytes <= 4);
+
+	if (is_current_display_owner(vgt))
+		return default_mmio_write(vgt, offset, p_data, bytes);
+
+	v &= (1 << 31) | (1 << 29) | (1 << 9) |
+		(1 << 7) | (1 << 5) | (1 << 3) | (1 << 1);
+
+	v |= (v >> 1);
+
+	return default_mmio_write(vgt, offset, &v, bytes);
+}
+
 static bool ring_mmio_read(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes)
 {
@@ -3112,12 +3130,12 @@ reg_attr_t vgt_reg_info_general[] = {
 {GEN6_RC6p_THRESHOLD, 4, F_DOM0, 0, D_ALL, NULL, NULL},
 {GEN6_RC6pp_THRESHOLD, 4, F_DOM0, 0, D_ALL, NULL, NULL},
 {GEN6_PMINTRMSK, 4, F_DOM0, 0, D_ALL, NULL, NULL},
-{HSW_PWR_WELL_BIOS, 4, F_DOM0, 0, D_ALL, power_well_ctl_read, power_well_ctl_write},
-{HSW_PWR_WELL_DRIVER, 4, F_DOM0, 0, D_ALL, power_well_ctl_read, power_well_ctl_write},
-{HSW_PWR_WELL_KVMR, 4, F_DOM0, 0, D_ALL, power_well_ctl_read, power_well_ctl_write},
-{HSW_PWR_WELL_DEBUG, 4, F_DOM0, 0, D_ALL, power_well_ctl_read, power_well_ctl_write},
-{HSW_PWR_WELL_CTL5, 4, F_DOM0, 0, D_ALL, power_well_ctl_read, power_well_ctl_write},
-{HSW_PWR_WELL_CTL6, 4, F_DOM0, 0, D_ALL, power_well_ctl_read, power_well_ctl_write},
+{HSW_PWR_WELL_BIOS, 4, F_DOM0, 0, D_HSW | D_BDW, power_well_ctl_read, power_well_ctl_write},
+{HSW_PWR_WELL_DRIVER, 4, F_DOM0, 0, D_HSW | D_BDW, power_well_ctl_read, power_well_ctl_write},
+{HSW_PWR_WELL_KVMR, 4, F_DOM0, 0, D_HSW | D_BDW, power_well_ctl_read, power_well_ctl_write},
+{HSW_PWR_WELL_DEBUG, 4, F_DOM0, 0, D_HSW | D_BDW, power_well_ctl_read, power_well_ctl_write},
+{HSW_PWR_WELL_CTL5, 4, F_DOM0, 0, D_HSW | D_BDW, power_well_ctl_read, power_well_ctl_write},
+{HSW_PWR_WELL_CTL6, 4, F_DOM0, 0, D_HSW | D_BDW, power_well_ctl_read, power_well_ctl_write},
 
 {RSTDBYCTL, 4, F_DOM0, 0, D_ALL, NULL, NULL},
 
@@ -3535,6 +3553,8 @@ reg_attr_t vgt_reg_info_skl[] = {
 {DPB_AUX_CH_CTL, 6*4, F_DPY, 0, D_SKL, NULL, dp_aux_ch_ctl_mmio_write},
 {DPC_AUX_CH_CTL, 6*4, F_DPY, 0, D_SKL, NULL, dp_aux_ch_ctl_mmio_write},
 {DPD_AUX_CH_CTL, 6*4, F_DPY, 0, D_SKL, NULL, dp_aux_ch_ctl_mmio_write},
+{HSW_PWR_WELL_BIOS, 4, F_DOM0, 0, D_SKL, NULL, NULL},
+{HSW_PWR_WELL_DRIVER, 4, F_DOM0, 0, D_SKL, NULL, skl_power_well_ctl_write},
 {0xa210, 4, F_DOM0, 0, D_SKL_PLUS, NULL, NULL},
 {0x4ddc, 4, F_PT, 0, D_SKL, NULL, NULL},
 {0x42080, 4, F_PT, 0, D_SKL_PLUS, NULL, NULL},
