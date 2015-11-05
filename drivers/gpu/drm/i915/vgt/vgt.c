@@ -543,6 +543,12 @@ static bool vgt_set_device_type(struct pgt_device *pdev)
 		return true;
 	}
 
+	if (_is_skylake(pdev->pdev->device)) {
+		pdev->gen_dev_type = IGD_SKL;
+		vgt_info("Detected Skylake\n");
+		return true;
+	}
+
 	vgt_err("Unknown chip 0x%x\n", pdev->pdev->device);
 	return false;
 }
@@ -554,15 +560,15 @@ static bool vgt_initialize_device_info(struct pgt_device *pdev)
 	if (!vgt_set_device_type(pdev))
 		return false;
 
-	if (!IS_HSW(pdev) && !IS_BDW(pdev)) {
+	if (!IS_HSW(pdev) && !IS_BDW(pdev) && !IS_SKL(pdev)) {
 		vgt_err("Unsupported gen_dev_type(%s)!\n",
 			IS_IVB(pdev) ?
 			"IVB" : "SNB(or unknown GEN types)");
 		return false;
 	}
 
-	if (IS_BDW(pdev) && !vgt_preliminary_hw_support) {
-		vgt_err("VGT haven't fully supported preliminary platform: broadwell.\n");
+	if (IS_SKL(pdev) && !vgt_preliminary_hw_support) {
+		vgt_err("VGT haven't fully supported preliminary platform: skylake.\n");
 		return false;
 	}
 
@@ -580,8 +586,10 @@ static bool vgt_initialize_device_info(struct pgt_device *pdev)
 		info->gtt_entry_size = 4;
 		info->gtt_entry_size_shift = 2;
 		info->gmadr_bytes_in_cmd = 4;
-	} else if (IS_BDW(pdev)) {
-		info->gen = MKGEN(8, 0, ((pdev->pdev->device >> 4) & 0xf) + 1);
+	} else if (IS_BDW(pdev) || IS_SKL(pdev)) {
+		int gen = IS_BDW(pdev) ? 8 : 9;
+
+		info->gen = MKGEN(gen, 0, ((pdev->pdev->device >> 4) & 0xf) + 1);
 		info->max_gtt_gm_sz = (1UL << 32);
 		/*
 		 * The layout of BAR0 in BDW:
@@ -614,7 +622,7 @@ static bool vgt_initialize_device_info(struct pgt_device *pdev)
 static bool vgt_initialize_platform(struct pgt_device *pdev)
 {
 	/* check PPGTT enabling. */
-	if (IS_IVB(pdev) || IS_HSW(pdev) || IS_BDW(pdev))
+	if (IS_IVB(pdev) || IS_HSW(pdev) || IS_BDWPLUS(pdev))
 		pdev->enable_ppgtt = 1;
 
 	/* execlist depends on ppgtt */
@@ -654,7 +662,7 @@ static bool vgt_initialize_platform(struct pgt_device *pdev)
 		pdev->ring_xxx_bit[RING_BUFFER_BCS] = 2;
 		pdev->ring_xxx_bit[RING_BUFFER_VECS] = 10;
 		pdev->ring_xxx_valid = 1;
-	} else if (IS_BDW(pdev)) {
+	} else if (IS_BDWPLUS(pdev)) {
 		pdev->max_engines = 4;
 		pdev->ring_mmio_base[RING_BUFFER_VECS] = _REG_VECS_TAIL;
 		pdev->ring_mi_mode[RING_BUFFER_VECS] = _REG_VECS_MI_MODE;

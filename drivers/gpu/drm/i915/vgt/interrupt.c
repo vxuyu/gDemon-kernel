@@ -2051,7 +2051,7 @@ int vgt_irq_init(struct pgt_device *pdev)
 	} else if (IS_IVB(pdev) || IS_HSW(pdev)) {
 		hstate->ops = &vgt_base_irq_ops;
 		hstate->irq_map = base_irq_map;
-	} else if (IS_BDW(pdev)) {
+	} else if (IS_BDW(pdev) || IS_SKL(pdev)) {
 		hstate->ops = &vgt_gen8_irq_ops;
 		hstate->irq_map = gen8_irq_map;
 	} else {

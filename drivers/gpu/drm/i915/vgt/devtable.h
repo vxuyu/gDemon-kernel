@@ -144,4 +144,35 @@ static inline int _is_broadwell(int devid)
 	return 1;
 }
 
+static inline int _is_skylake(int devid)
+{
+	switch ((devid >> 4) & 0xf) {
+		case 0:
+		case 1:
+		case 2:
+		case 3:
+			break;
+		default:
+			return 0;
+	}
+
+	devid &= ~0xf0;
+
+	switch (devid) {
+		case 0x1901:
+		case 0x1902:
+		case 0x1906:
+		case 0x190B:
+		case 0x190E:
+		case 0x190A:
+		case 0x190D:
+			break;
+		default:
+			return 0;
+	}
+
+	return 1;
+}
+
+
 #endif  /* _VGT_DEVTABLE_H */

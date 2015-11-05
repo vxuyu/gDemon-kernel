@@ -2052,7 +2052,7 @@ bool vgt_gtt_init(struct pgt_device *pdev)
 			preallocated_shadow_pages = 512;
 		if (preallocated_oos_pages == -1)
 			preallocated_oos_pages = 2048;
-	} else if (IS_BDW(pdev)) {
+	} else if (IS_BDW(pdev) || IS_SKL(pdev)) {
 		pdev->gtt.pte_ops = &gen8_gtt_pte_ops;
 		pdev->gtt.gma_ops = &gen8_gtt_gma_ops;
 		pdev->gtt.mm_alloc_page_table = gen8_mm_alloc_page_table;

@@ -28,7 +28,7 @@
 
 #define vgt_require_shadow_context(vgt)	(!((vgt) && (vgt->vgt_id == 0)))
 
-#define MAX_EXECLIST_CTX_PAGES	20
+#define MAX_EXECLIST_CTX_PAGES	22
 #define ELSP_BUNDLE_NUM		4
 #define EXECLIST_CTX_SIZE (SIZE_PAGE * MAX_EXECLIST_CTX_PAGES)
 
