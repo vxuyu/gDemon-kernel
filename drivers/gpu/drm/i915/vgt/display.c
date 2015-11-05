@@ -113,19 +113,10 @@ int prepare_for_display_switch(struct pgt_device *pdev)
 	return ret;
 }
 
-/*
- * Do foreground vm switch.
- */
-void do_vgt_fast_display_switch(struct pgt_device *pdev)
+void legacy_do_vgt_fast_display_switch(struct pgt_device *pdev)
 {
 	struct vgt_device *to_vgt = pdev->next_foreground_vm;
 	enum pipe pipe;
-
-	vgt_dbg(VGT_DBG_DPY, "vGT: doing display switch: from %p to %p\n",
-			current_foreground_vm(pdev), to_vgt);
-
-	ASSERT(fastpath_dpy_switch);
-	ASSERT(spin_is_locked(&pdev->lock));
 
 	for (pipe = PIPE_A; pipe < I915_MAX_PIPES; ++ pipe) {
 		vgt_restore_state(to_vgt, pipe);
@@ -133,6 +124,76 @@ void do_vgt_fast_display_switch(struct pgt_device *pdev)
 			set_panel_fitting(to_vgt, pipe);
 		}
 	}
+}
+
+void skl_restore_wm_dbuf_state(struct vgt_device *vgt, enum pipe pipe)
+{
+	int level;
+
+	vgt_restore_sreg(vgt, PIPE_WM_LINETIME(pipe));
+
+	for (level = 0; level <= 7; level++) {
+		vgt_restore_sreg(vgt, PLANE_WM(pipe, 0, level));
+		vgt_restore_sreg(vgt, PLANE_WM(pipe, 1, level));
+		vgt_restore_sreg(vgt, PLANE_WM(pipe, 2, level));
+		vgt_restore_sreg(vgt, CUR_WM(pipe, level));
+	}
+
+	vgt_restore_sreg(vgt, PLANE_WM_TRANS(pipe, 0));
+	vgt_restore_sreg(vgt, PLANE_WM_TRANS(pipe, 1));
+	vgt_restore_sreg(vgt, PLANE_WM_TRANS(pipe, 2));
+	vgt_restore_sreg(vgt, CUR_WM_TRANS(pipe));
+
+	vgt_restore_sreg(vgt, PLANE_BUF_CFG(pipe, 0));
+	vgt_restore_sreg(vgt, PLANE_BUF_CFG(pipe, 1));
+	vgt_restore_sreg(vgt, PLANE_BUF_CFG(pipe, 2));
+
+	vgt_restore_sreg(vgt, PLANE_NV12_BUF_CFG(pipe, 0));
+	vgt_restore_sreg(vgt, PLANE_NV12_BUF_CFG(pipe, 1));
+	vgt_restore_sreg(vgt, PLANE_NV12_BUF_CFG(pipe, 2));
+	vgt_restore_sreg(vgt, CUR_BUF_CFG(pipe));
+}
+
+void skl_do_vgt_fast_display_switch(struct pgt_device *pdev)
+{
+	struct vgt_device *to_vgt = pdev->next_foreground_vm;
+	enum pipe pipe;
+
+	/*
+	 * Step 1: Restore all WM/DBUF registers for each pipe.
+	 */
+	for (pipe = PIPE_A; pipe < I915_MAX_PIPES; ++ pipe)
+		skl_restore_wm_dbuf_state(to_vgt, pipe);
+
+	/*
+	 * Step 2: Restore the other pipe state.
+	 * TODO: Figure out the pipe state restore sequence.
+	 */
+	for (pipe = PIPE_A; pipe < I915_MAX_PIPES; ++ pipe) {
+		vgt_restore_state(to_vgt, pipe);
+		if (DISPLAY_PLANE_ENABLE & __vreg(to_vgt, VGT_DSPCNTR(pipe))) {
+			set_panel_fitting(to_vgt, pipe);
+		}
+	}
+}
+
+/*
+ * Do foreground vm switch.
+ */
+void do_vgt_fast_display_switch(struct pgt_device *pdev)
+{
+	struct vgt_device *to_vgt = pdev->next_foreground_vm;
+
+	vgt_dbg(VGT_DBG_DPY, "vGT: doing display switch: from %p to %p\n",
+			current_foreground_vm(pdev), to_vgt);
+
+	ASSERT(fastpath_dpy_switch);
+	ASSERT(spin_is_locked(&pdev->lock));
+
+	if (IS_SKLPLUS(pdev))
+		skl_do_vgt_fast_display_switch(pdev);
+	else
+		legacy_do_vgt_fast_display_switch(pdev);
 
 	current_foreground_vm(pdev) = to_vgt;
 }
