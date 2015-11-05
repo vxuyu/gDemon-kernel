@@ -630,7 +630,7 @@ bool vgt_do_render_context_switch(struct pgt_device *pdev)
 
 		if (IS_PREBDW(pdev))
 			gen7_ring_switch(pdev, i, prev, next);
-		else
+		else if (IS_BDW(pdev))
 			gen8_ring_switch(pdev, i, prev, next);
 	}
 
