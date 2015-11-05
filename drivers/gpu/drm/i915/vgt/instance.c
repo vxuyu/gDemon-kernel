@@ -315,6 +315,8 @@ int create_vgt_instance(struct pgt_device *pdev, struct vgt_device **ptr_vgt, vg
 
 	vgt_init_i2c_edid(vgt);
 
+	vgt_reset_virtual_interrupt_registers(vgt);
+
 	*ptr_vgt = vgt;
 
 	/* initialize context scheduler infor */

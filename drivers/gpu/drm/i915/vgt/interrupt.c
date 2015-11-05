@@ -200,6 +200,36 @@ void reset_cached_interrupt_registers(struct pgt_device *pdev)
 	}
 }
 
+void vgt_reset_virtual_interrupt_registers(struct vgt_device *vgt)
+{
+	struct pgt_device *pdev = vgt->pdev;
+	struct vgt_irq_host_state *hstate = pdev->irq_hstate;
+	struct vgt_irq_info *info;
+	u32 reg_base, ier, imr, iir, isr;
+	int i;
+
+	for_each_set_bit(i, hstate->irq_info_bitmap, IRQ_INFO_MAX) {
+		info = hstate->info[i];
+		if (!info)
+			continue;
+
+		reg_base = hstate->info[i]->reg_base;
+
+		imr = regbase_to_imr(reg_base);
+		ier = regbase_to_ier(reg_base);
+		iir = regbase_to_iir(reg_base);
+		isr = regbase_to_isr(reg_base);
+
+		__vreg(vgt, imr) = 0xffffffff;
+		__vreg(vgt, ier) = __vreg(vgt, iir) = __vreg(vgt, isr) = 0x0;
+	}
+
+	for (i = 0; i < pdev->max_engines; i++) {
+		imr = pdev->ring_mmio_base[i] - 0x30 + 0xa8;
+		__vreg(vgt, imr) = 0xffffffff;
+	}
+}
+
 static inline u32 vgt_read_cached_interrupt_register(struct pgt_device *pdev,
 		vgt_reg_t reg)
 {
