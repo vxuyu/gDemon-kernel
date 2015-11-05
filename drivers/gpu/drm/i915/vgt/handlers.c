@@ -1156,10 +1156,10 @@ static bool pch_adpa_mmio_write(struct vgt_device *vgt, unsigned int offset,
 	return true;
 }
 
-bool vgt_map_plane_reg(struct vgt_device *vgt, unsigned int reg, unsigned int *p_real_reg)
+bool inline vgt_legacy_map_plane_reg(struct vgt_device *vgt, unsigned int reg, unsigned int *p_real_reg)
 {
 	enum pipe virtual_pipe;
-	enum pipe real_pipe ;
+	enum pipe real_pipe;
 
 	switch (reg)
 	{
@@ -1235,6 +1235,46 @@ bool vgt_map_plane_reg(struct vgt_device *vgt, unsigned int reg, unsigned int *p
 
 	return true;
 
+}
+
+bool inline vgt_skl_map_plane_reg(struct vgt_device *vgt,
+	unsigned int reg, unsigned int *p_real_reg)
+{
+	enum pipe virtual_pipe;
+	enum pipe real_pipe;
+
+	if (reg >= PIPE_WM_LINETIME(PIPE_A) && reg <= PIPE_WM_LINETIME(PIPE_C)) {
+		virtual_pipe = (reg - PIPE_WM_LINETIME(PIPE_A)) / 4;
+	} else {
+		virtual_pipe = (reg >> 12) & 0xf;
+		if (virtual_pipe > I915_MAX_PIPES) {
+			vgt_warn("try to map invalid plane mmio, reg: %x\n", reg);
+			ASSERT(0);
+		}
+	}
+
+	real_pipe = vgt->pipe_mapping[virtual_pipe];
+	if(real_pipe == I915_MAX_PIPES) {
+		vgt_err("the mapping for pipe %d is not ready or created!\n", virtual_pipe);
+		return false;
+	}
+
+	if (reg >= PIPE_WM_LINETIME(PIPE_A) && reg <= PIPE_WM_LINETIME(PIPE_C)) {
+		*p_real_reg = reg + 4 * real_pipe - 4 * virtual_pipe;
+	} else {
+		*p_real_reg = reg + 0x1000 * real_pipe - 0x1000 * virtual_pipe;
+	}
+	return true;
+}
+
+bool vgt_map_plane_reg(struct vgt_device *vgt, unsigned int reg, unsigned int *p_real_reg)
+{
+	if (IS_SKLPLUS(vgt->pdev))
+		return vgt_skl_map_plane_reg(vgt, reg, p_real_reg);
+	else
+		return vgt_legacy_map_plane_reg(vgt, reg, p_real_reg);
+
+	return false;
 }
 
 static bool dpy_plane_mmio_read(struct vgt_device *vgt, unsigned int offset,
@@ -3627,101 +3667,101 @@ reg_attr_t vgt_reg_info_skl[] = {
 {SKL_PS_CTRL(PIPE_C, 0), 4, F_DPY, 0, D_SKL, NULL, NULL},
 {SKL_PS_CTRL(PIPE_C, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
 
-{PLANE_BUF_CFG(PIPE_A, 0), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_BUF_CFG(PIPE_A, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_BUF_CFG(PIPE_A, 2), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_BUF_CFG(PIPE_A, 3), 4, F_DPY, 0, D_SKL, NULL, NULL},
+{PLANE_BUF_CFG(PIPE_A, 0), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_BUF_CFG(PIPE_A, 1), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_BUF_CFG(PIPE_A, 2), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_BUF_CFG(PIPE_A, 3), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{PLANE_BUF_CFG(PIPE_B, 0), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_BUF_CFG(PIPE_B, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_BUF_CFG(PIPE_B, 2), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_BUF_CFG(PIPE_B, 3), 4, F_DPY, 0, D_SKL, NULL, NULL},
+{PLANE_BUF_CFG(PIPE_B, 0), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_BUF_CFG(PIPE_B, 1), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_BUF_CFG(PIPE_B, 2), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_BUF_CFG(PIPE_B, 3), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{PLANE_BUF_CFG(PIPE_C, 0), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_BUF_CFG(PIPE_C, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_BUF_CFG(PIPE_C, 2), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_BUF_CFG(PIPE_C, 3), 4, F_DPY, 0, D_SKL, NULL, NULL},
+{PLANE_BUF_CFG(PIPE_C, 0), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_BUF_CFG(PIPE_C, 1), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_BUF_CFG(PIPE_C, 2), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_BUF_CFG(PIPE_C, 3), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
 {CUR_BUF_CFG(PIPE_A), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 {CUR_BUF_CFG(PIPE_B), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 {CUR_BUF_CFG(PIPE_C), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{PLANE_WM(PIPE_A, 0, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_WM(PIPE_A, 1, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_WM(PIPE_A, 2, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, NULL},
+{PLANE_WM(PIPE_A, 0, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_WM(PIPE_A, 1, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_WM(PIPE_A, 2, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{PLANE_WM(PIPE_B, 0, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_WM(PIPE_B, 1, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_WM(PIPE_B, 2, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, NULL},
+{PLANE_WM(PIPE_B, 0, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_WM(PIPE_B, 1, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_WM(PIPE_B, 2, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{PLANE_WM(PIPE_C, 0, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_WM(PIPE_C, 1, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_WM(PIPE_C, 2, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, NULL},
+{PLANE_WM(PIPE_C, 0, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_WM(PIPE_C, 1, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_WM(PIPE_C, 2, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
 {CUR_WM(PIPE_A, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 {CUR_WM(PIPE_B, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 {CUR_WM(PIPE_C, 0), 4 * 8, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{PLANE_WM_TRANS(PIPE_A, 0), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_WM_TRANS(PIPE_A, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_WM_TRANS(PIPE_A, 2), 4, F_DPY, 0, D_SKL, NULL, NULL},
+{PLANE_WM_TRANS(PIPE_A, 0), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_WM_TRANS(PIPE_A, 1), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_WM_TRANS(PIPE_A, 2), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{PLANE_WM_TRANS(PIPE_B, 0), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_WM_TRANS(PIPE_B, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_WM_TRANS(PIPE_B, 2), 4, F_DPY, 0, D_SKL, NULL, NULL},
+{PLANE_WM_TRANS(PIPE_B, 0), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_WM_TRANS(PIPE_B, 1), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_WM_TRANS(PIPE_B, 2), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{PLANE_WM_TRANS(PIPE_C, 0), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_WM_TRANS(PIPE_C, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_WM_TRANS(PIPE_C, 2), 4, F_DPY, 0, D_SKL, NULL, NULL},
+{PLANE_WM_TRANS(PIPE_C, 0), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_WM_TRANS(PIPE_C, 1), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_WM_TRANS(PIPE_C, 2), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
 {CUR_WM_TRANS(PIPE_A), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 {CUR_WM_TRANS(PIPE_B), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 {CUR_WM_TRANS(PIPE_C), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{PLANE_NV12_BUF_CFG(PIPE_A, 0), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_NV12_BUF_CFG(PIPE_A, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_NV12_BUF_CFG(PIPE_A, 2), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_NV12_BUF_CFG(PIPE_A, 3), 4, F_DPY, 0, D_SKL, NULL, NULL},
+{PLANE_NV12_BUF_CFG(PIPE_A, 0), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_NV12_BUF_CFG(PIPE_A, 1), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_NV12_BUF_CFG(PIPE_A, 2), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_NV12_BUF_CFG(PIPE_A, 3), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{PLANE_NV12_BUF_CFG(PIPE_B, 0), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_NV12_BUF_CFG(PIPE_B, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_NV12_BUF_CFG(PIPE_B, 2), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_NV12_BUF_CFG(PIPE_B, 3), 4, F_DPY, 0, D_SKL, NULL, NULL},
+{PLANE_NV12_BUF_CFG(PIPE_B, 0), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_NV12_BUF_CFG(PIPE_B, 1), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_NV12_BUF_CFG(PIPE_B, 2), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_NV12_BUF_CFG(PIPE_B, 3), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{PLANE_NV12_BUF_CFG(PIPE_C, 0), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_NV12_BUF_CFG(PIPE_C, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_NV12_BUF_CFG(PIPE_C, 2), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{PLANE_NV12_BUF_CFG(PIPE_C, 3), 4, F_DPY, 0, D_SKL, NULL, NULL},
+{PLANE_NV12_BUF_CFG(PIPE_C, 0), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_NV12_BUF_CFG(PIPE_C, 1), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_NV12_BUF_CFG(PIPE_C, 2), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{PLANE_NV12_BUF_CFG(PIPE_C, 3), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{_REG_701C0(PIPE_A, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C0(PIPE_A, 2), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C0(PIPE_A, 3), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C0(PIPE_A, 4), 4, F_DPY, 0, D_SKL, NULL, NULL},
+{_REG_701C0(PIPE_A, 1), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C0(PIPE_A, 2), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C0(PIPE_A, 3), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C0(PIPE_A, 4), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{_REG_701C0(PIPE_B, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C0(PIPE_B, 2), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C0(PIPE_B, 3), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C0(PIPE_B, 4), 4, F_DPY, 0, D_SKL, NULL, NULL},
+{_REG_701C0(PIPE_B, 1), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C0(PIPE_B, 2), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C0(PIPE_B, 3), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C0(PIPE_B, 4), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{_REG_701C0(PIPE_C, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C0(PIPE_C, 2), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C0(PIPE_C, 3), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C0(PIPE_C, 4), 4, F_DPY, 0, D_SKL, NULL, NULL},
+{_REG_701C0(PIPE_C, 1), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C0(PIPE_C, 2), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C0(PIPE_C, 3), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C0(PIPE_C, 4), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{_REG_701C4(PIPE_A, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C4(PIPE_A, 2), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C4(PIPE_A, 3), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C4(PIPE_A, 4), 4, F_DPY, 0, D_SKL, NULL, NULL},
+{_REG_701C4(PIPE_A, 1), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C4(PIPE_A, 2), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C4(PIPE_A, 3), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C4(PIPE_A, 4), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{_REG_701C4(PIPE_B, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C4(PIPE_B, 2), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C4(PIPE_B, 3), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C4(PIPE_B, 4), 4, F_DPY, 0, D_SKL, NULL, NULL},
+{_REG_701C4(PIPE_B, 1), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C4(PIPE_B, 2), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C4(PIPE_B, 3), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C4(PIPE_B, 4), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
-{_REG_701C4(PIPE_C, 1), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C4(PIPE_C, 2), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C4(PIPE_C, 3), 4, F_DPY, 0, D_SKL, NULL, NULL},
-{_REG_701C4(PIPE_C, 4), 4, F_DPY, 0, D_SKL, NULL, NULL},
+{_REG_701C4(PIPE_C, 1), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C4(PIPE_C, 2), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C4(PIPE_C, 3), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
+{_REG_701C4(PIPE_C, 4), 4, F_DPY, 0, D_SKL, NULL, dpy_plane_mmio_write},
 
 {0x70380, 4, F_DPY, 0, D_SKL, NULL, NULL},
 {0x7039c, 4, F_DPY, 0, D_SKL, NULL, NULL},
