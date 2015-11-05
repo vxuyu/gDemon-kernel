@@ -465,6 +465,8 @@ struct pgt_device {
 	bool ctx_switch_pending;
 
 	uint32_t el_read_ptr[MAX_ENGINES];
+
+	u32 memory_latency[2];
 };
 
 /*

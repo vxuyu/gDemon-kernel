@@ -2457,6 +2457,38 @@ out:
 	return default_mmio_read(vgt, offset, p_data, bytes);
 }
 
+static bool mailbox_write(struct vgt_device *vgt, unsigned int offset,
+		void *p_data, unsigned int bytes)
+{
+	u32 v = *(u32 *)p_data;
+	u32 cmd = v & 0xff;
+	u32 *data0 = &__vreg(vgt, 0x138128);
+
+	if (!vgt->vm_id)
+		goto out;
+
+	switch (cmd) {
+		case 0x6:
+			/* "Read memory latency" command on gen9. */
+			if (!*data0)
+				*data0 = vgt->pdev->memory_latency[0];
+			else
+				*data0 = vgt->pdev->memory_latency[1];
+			break;
+		case 0x5:
+			*data0 |= 0x1;
+			break;
+	}
+
+	vgt_info("VM %d write %x to mailbox, return data0 %x\n", vgt->vm_id,
+		v, *data0);
+
+	v &= ~(1 << 31);
+out:
+	return default_mmio_write(vgt, offset, &v, bytes);
+}
+
+
 /*
  * Track policies of all captured registers
  *
@@ -3154,7 +3186,7 @@ reg_attr_t vgt_reg_info_general[] = {
 
 {_REG_SWF, 0x90, F_VIRT, 0, D_ALL, NULL, NULL},
 
-{GEN6_PCODE_MAILBOX, 4, F_DOM0, 0, D_ALL, NULL, NULL},
+{GEN6_PCODE_MAILBOX, 4, F_DOM0, 0, D_PRE_SKL, NULL, NULL},
 {GEN6_PCODE_DATA, 4, F_DOM0, 0, D_ALL, NULL, NULL},
 {0x13812c, 4, F_DOM0, 0, D_ALL, NULL, NULL},
 {GEN7_ERR_INT, 4, F_VIRT, 0, D_ALL, err_int_r, err_int_w},
@@ -3555,6 +3587,7 @@ reg_attr_t vgt_reg_info_skl[] = {
 {DPD_AUX_CH_CTL, 6*4, F_DPY, 0, D_SKL, NULL, dp_aux_ch_ctl_mmio_write},
 {HSW_PWR_WELL_BIOS, 4, F_DOM0, 0, D_SKL, NULL, NULL},
 {HSW_PWR_WELL_DRIVER, 4, F_DOM0, 0, D_SKL, NULL, skl_power_well_ctl_write},
+{GEN6_PCODE_MAILBOX, 4, F_DOM0, 0, D_SKL, NULL, mailbox_write},
 {0xa210, 4, F_DOM0, 0, D_SKL_PLUS, NULL, NULL},
 {0x4ddc, 4, F_PT, 0, D_SKL, NULL, NULL},
 {0x42080, 4, F_PT, 0, D_SKL_PLUS, NULL, NULL},

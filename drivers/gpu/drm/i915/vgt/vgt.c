@@ -619,6 +619,43 @@ static bool vgt_initialize_device_info(struct pgt_device *pdev)
 	return true;
 }
 
+static bool vgt_get_memory_latency(struct pgt_device *pdev)
+{
+	if (VGT_MMIO_READ(pdev, 0x138124) & (1 << 31))
+		goto timeout;
+
+	/* first set */
+	VGT_MMIO_WRITE(pdev, 0x138128, 0);
+	VGT_MMIO_WRITE(pdev, 0x13812c, 0);
+
+	VGT_MMIO_WRITE(pdev, 0x138124, (1 << 31) | 0x6);
+
+	if (wait_for_atomic(!(VGT_MMIO_READ(pdev, 0x138124) & (1 << 31)), 500))
+		goto timeout;
+
+	pdev->memory_latency[0] = VGT_MMIO_READ(pdev, 0x138128);
+
+	/* second set */
+	VGT_MMIO_WRITE(pdev, 0x138128, 1);
+	VGT_MMIO_WRITE(pdev, 0x13812c, 0);
+
+	VGT_MMIO_WRITE(pdev, 0x138124, (1 << 31) | 0x6);
+
+	if (wait_for_atomic(!(VGT_MMIO_READ(pdev, 0x138124) & (1 << 31)), 500))
+		goto timeout;
+
+	pdev->memory_latency[1] = VGT_MMIO_READ(pdev, 0x138128);
+
+	printk("vgt: memory latency: [0] %x [1] %x\n", pdev->memory_latency[0],
+		pdev->memory_latency[1]);
+
+	return true;
+
+timeout:
+	vgt_err("wait mailbox idle timeout!\n");
+	return false;
+}
+
 static bool vgt_initialize_platform(struct pgt_device *pdev)
 {
 	/* check PPGTT enabling. */
@@ -678,6 +715,9 @@ static bool vgt_initialize_platform(struct pgt_device *pdev)
 			pdev->ring_xxx[RING_BUFFER_VCS2] = 0x8008;
 			pdev->ring_xxx_bit[RING_BUFFER_VCS2] = 0;
 		}
+
+		if (IS_SKL(pdev))
+			vgt_get_memory_latency(pdev);
 	} else {
 		vgt_err("Unsupported platform.\n");
 		return false;
