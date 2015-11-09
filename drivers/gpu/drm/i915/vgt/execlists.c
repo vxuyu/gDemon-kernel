@@ -1545,28 +1545,9 @@ void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 
 	for (i = 0; i < 2; ++ i) {
 		struct execlist_context *ctx = execlist->el_ctxs[i];
-		struct reg_state_ctx_header *guest_state;
 
 		if (ctx == NULL)
 			continue;
-
-		if (vgt_require_shadow_context(vgt)) {
-			guest_state = (struct reg_state_ctx_header *)
-				ctx->ctx_pages[1].guest_page.vaddr;
-		} else {
-			ASSERT(vgt->vm_id == 0);
-			guest_state = vgt_get_reg_state_from_lrca(vgt,
-					ctx->guest_context.lrca);
-		}
-
-		if ((guest_state->ring_tail.val & RB_TAIL_OFF_MASK)
-				== (guest_state->ring_header.val & RB_HEAD_OFF_MASK)) {
-			if ((!guest_state->bb_cur_head_UDW.val
-				&& !guest_state->bb_cur_head_LDW.val) &&
-				(!guest_state->second_bb_addr_UDW.val &&
-				!guest_state->second_bb_addr_LDW.val))
-				continue;
-		}
 
 		memcpy(&context_descs[j++], &ctx->guest_context,
 				sizeof(struct ctx_desc_format));
