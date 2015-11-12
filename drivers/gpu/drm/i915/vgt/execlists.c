@@ -260,7 +260,8 @@ static void vgt_el_slots_delete(struct vgt_device *vgt,
 	el_slot->el_ctxs[1] = NULL;
 }
 
-static void vgt_el_slots_find_submitted_ctx(bool forward_search, vgt_state_ring_t *ring_state,
+/* search the queue with FIFO order */
+static void vgt_el_slots_find_submitted_ctx(vgt_state_ring_t *ring_state,
 			uint32_t ctx_id, int *el_slot_idx, int *el_slot_ctx_idx)
 {
 	int head = ring_state->el_slots_head;
@@ -273,15 +274,7 @@ static void vgt_el_slots_find_submitted_ctx(bool forward_search, vgt_state_ring_
 		int i;
 		struct vgt_exec_list *el_slot;
 
-		if (forward_search) {
-			el_slot = &ring_state->execlist_slots[head];
-		} else {
-			if (tail == 0)
-				tail = EL_QUEUE_SLOT_NUM;
-			tail --;
-			el_slot = &ring_state->execlist_slots[tail];
-		}
-
+		el_slot = &ring_state->execlist_slots[head];
 		if (el_slot->status != EL_SUBMITTED)
 			continue;
 
@@ -289,17 +282,15 @@ static void vgt_el_slots_find_submitted_ctx(bool forward_search, vgt_state_ring_
 			struct execlist_context *p = el_slot->el_ctxs[i];
 			if ((p && p->guest_context.context_id == ctx_id) ||
 			    (p && ctx_id == 0)) {
-				*el_slot_idx = forward_search ? head : tail;
+				*el_slot_idx = head;
 				*el_slot_ctx_idx = i;
 				break;
 			}
 		}
 
-		if (forward_search) {
-			head ++;
-			if (head == EL_QUEUE_SLOT_NUM)
-				head = 0;
-		}
+		head ++;
+		if (head == EL_QUEUE_SLOT_NUM)
+			head = 0;
 	}
 }
 
@@ -1171,7 +1162,6 @@ static void vgt_emulate_context_status_change(struct vgt_device *vgt,
 				enum vgt_ring_id ring_id,
 				struct context_status_format *ctx_status)
 {
-	bool forward_search = true;
 	vgt_state_ring_t *ring_state;
 	uint32_t el_slot_ctx_idx = -1;
 	uint32_t el_slot_idx = -1;
@@ -1181,16 +1171,7 @@ static void vgt_emulate_context_status_change(struct vgt_device *vgt,
 	bool lite_restore;
 
 	ring_state = &vgt->rb[ring_id];
-	if (vgt_el_slots_number(ring_state) > 1) {
-		if (!ctx_status->preempted) {
-			/* TODO we may give warning here.
-			 * It is not expected but still work.
-			 */
-			forward_search = false;
-		}
-	}
-
-	vgt_el_slots_find_submitted_ctx(forward_search, ring_state, ctx_id,
+	vgt_el_slots_find_submitted_ctx(ring_state, ctx_id,
 				&el_slot_idx, &el_slot_ctx_idx);
 	if (el_slot_idx == -1)
 		goto err_ctx_not_found;
