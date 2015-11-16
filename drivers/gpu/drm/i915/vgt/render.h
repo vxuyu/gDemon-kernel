@@ -100,7 +100,7 @@ struct vgt_elsp_store {
 	uint32_t element[4];
 };
 
-#define EL_QUEUE_SLOT_NUM 3
+#define EL_QUEUE_SLOT_NUM 6
 
 typedef struct {
 	vgt_ringbuffer_t	vring;		/* guest view ring */
