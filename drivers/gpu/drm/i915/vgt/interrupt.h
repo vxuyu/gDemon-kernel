@@ -203,6 +203,7 @@ struct vgt_irq_info {
 #define	EVENT_FW_ALL 0	/* event forwarded to all instances */
 #define	EVENT_FW_DOM0 1	/* event forwarded to dom0 only */
 #define	EVENT_FW_NONE 2	/* no forward */
+#define	EVENT_FW_RDR  3	/* event forward to render owner only */
 
 /* the handoff state from p-event to v-event */
 union vgt_event_state {
