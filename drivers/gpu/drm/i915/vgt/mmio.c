@@ -318,7 +318,7 @@ bool vgt_emulate_read(struct vgt_device *vgt, uint64_t pa, void *p_data,int byte
 
 	/* FENCE registers / GTT entries(sometimes) are accessed in 8 bytes. */
 	if (bytes > 8 || (offset & (bytes - 1)))
-		goto err_common_chk;
+		goto err_mmio;
 
 	if (bytes > 4)
 		vgt_dbg(VGT_DBG_GENERIC,"vGT: capture >4 bytes read to %x\n", offset);
@@ -374,7 +374,6 @@ bool vgt_emulate_read(struct vgt_device *vgt, uint64_t pa, void *p_data,int byte
 	return true;
 err_mmio:
 	vgt_unlock_dev_flags(pdev, cpu, flags);
-err_common_chk:
 	vgt_err("VM(%d): invalid MMIO offset(%08x), bytes(%d)!\n",
 		vgt->vm_id, offset, bytes);
 	show_debug(pdev);

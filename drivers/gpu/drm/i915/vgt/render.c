@@ -537,9 +537,8 @@ bool vgt_do_render_context_switch(struct pgt_device *pdev)
 
 	vgt_sched_update_prev(prev, t0);
 
-	if ( prev )
-		prev->stat.allocated_cycles +=
-			(t0 - prev->stat.schedule_in_time);
+	prev->stat.allocated_cycles +=
+		(t0 - prev->stat.schedule_in_time);
 	vgt_ctx_switch(pdev)++;
 
 	/* STEP-1: manually save render context */
