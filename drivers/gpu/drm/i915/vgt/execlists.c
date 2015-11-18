@@ -174,7 +174,7 @@ static inline enum vgt_ring_id vgt_get_ringid_from_lrca(struct vgt_device *vgt,
 	return ring_id;
 }
 
-static void vgt_create_shadow_rb(struct vgt_device *vgt, struct execlist_context *el_ctx);
+static int vgt_create_shadow_rb(struct vgt_device *vgt, struct execlist_context *el_ctx);
 static void vgt_destroy_shadow_rb(struct vgt_device *vgt, struct execlist_context *el_ctx);
 static void vgt_release_shadow_cmdbuf(struct vgt_device *vgt, struct shadow_batch_buffer *p);
 
@@ -1089,7 +1089,13 @@ static struct execlist_context *vgt_create_execlist_context(
 			vgt_free_el_context(el_ctx);
 			return NULL;
 		}
-		vgt_create_shadow_rb(vgt, el_ctx);
+
+		ret = vgt_create_shadow_rb(vgt, el_ctx);
+		if (ret) {
+			vgt_el_destroy_shadow_context(vgt, ring_id, el_ctx);
+			vgt_free_el_context(el_ctx);
+			return NULL;
+		}
 	}
 
 	vgt_el_create_shadow_ppgtt(vgt, ring_id, el_ctx);
@@ -1588,7 +1594,7 @@ static inline bool vgt_hw_ELSP_write(struct vgt_device *vgt,
 	  ((tail) <= (head)))))
 
 /* Shadow implementation of command buffers */
-static void vgt_create_shadow_rb(struct vgt_device *vgt,
+static int vgt_create_shadow_rb(struct vgt_device *vgt,
 				 struct execlist_context *el_ctx)
 {
 	unsigned long shadow_hpa;
@@ -1598,7 +1604,7 @@ static void vgt_create_shadow_rb(struct vgt_device *vgt,
 	struct reg_state_ctx_header *reg_state;
 
 	if (!shadow_cmd_buffer)
-		return;
+		return 0;
 
 	ASSERT(el_ctx->shadow_rb.shadow_rb_base == 0);
 
@@ -1610,7 +1616,7 @@ static void vgt_create_shadow_rb(struct vgt_device *vgt,
 		vgt_err("VM-%d: RB size <0x%x> is invalid. "
 			"Shadow RB will not be created!\n",
 			vgt->vm_id, rb_size);
-		return;
+		return -1;
 	}
 
 	rb_gma = reg_state->rb_start.val;
@@ -1618,7 +1624,7 @@ static void vgt_create_shadow_rb(struct vgt_device *vgt,
 	if (shadow_hpa == 0) {
 		vgt_err("VM-%d: Failed to allocate gm for shadow privilege bb!\n",
 			vgt->vm_id);
-		return;
+		return -1;
 	}
 
 	shadow_gma = aperture_2_gm(vgt->pdev, shadow_hpa);
@@ -1627,7 +1633,7 @@ static void vgt_create_shadow_rb(struct vgt_device *vgt,
 	el_ctx->shadow_rb.shadow_rb_base = shadow_gma;
 	el_ctx->shadow_rb.ring_size = rb_size;
 
-	return;
+	return 0;
 }
 
 static void vgt_destroy_shadow_rb(struct vgt_device *vgt,

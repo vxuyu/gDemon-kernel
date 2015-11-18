@@ -111,12 +111,7 @@ vgt_reg_t mmio_h2g_gmadr(struct vgt_device *vgt, unsigned long reg, vgt_reg_t h_
 }
 
 /* Allocate pages in reserved aperture.
- * TODO: rsvd_aperture_alloc() and rsvd_aperture_free() are invoked on both vgt
- * driver initialization/destroy and vgt instance creation/destroy: for the
- * latter case, we use vgt_sysfs_lock to achieve mutual exclusive. However,
- * it looks vgt_sysfs_lock is not the correct mechanism: we should lock the
- * the data, not the sysfs code. We could need use small granularity locks for
- * different GFX resources and data structures.
+ * Return 0 if failed.
  */
 unsigned long rsvd_aperture_alloc(struct pgt_device *pdev, unsigned long size)
 {
@@ -131,7 +126,7 @@ unsigned long rsvd_aperture_alloc(struct pgt_device *pdev, unsigned long size)
 	if (start >= VGT_RSVD_APERTURE_BITMAP_BITS) {
 		vgt_err("Out of memory for reserved aperture allocation "
 				"of size 0x%lx!\n", size);
-		BUG();
+		return 0;
 	}
 
 	bitmap_set(pdev->rsvd_aperture_bitmap, start, nr_pages);
