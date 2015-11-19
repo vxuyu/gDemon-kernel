@@ -569,6 +569,11 @@ static void parser_exec_state_dump(struct parser_exec_state *s)
 	} else {
 		int cnt = 0;
 		/* print the whole page to trace */
+		if (s->ip_buf) {
+			kfree(s->ip_buf);
+			s->ip_buf = s->ip_buf_va = NULL;
+		}
+
 		vgt_err("  ip_va=%p: %08x %08x %08x %08x \n",
 				s->ip_va, cmd_val(s, 0), cmd_val(s, 1), cmd_val(s, 2), cmd_val(s, 3));
 
@@ -1620,7 +1625,7 @@ static int vgt_cmd_handler_mi_noop(struct parser_exec_state* s)
 		} else {
 			vgt_err("VM %d: Guest reuse cmd buffer that is not handled!\n",
 					s->vgt->vm_id);
-			parser_exec_state_dump(s);
+			return -EFAULT;
 		}
 	}
 
@@ -2468,6 +2473,7 @@ static int vgt_cmd_parser_exec(struct parser_exec_state *s)
 
 		if (rc < 0) {
 			vgt_err("%s handler error", info->name);
+			parser_exec_state_dump(s);
 			return rc;
 		}
 	}
