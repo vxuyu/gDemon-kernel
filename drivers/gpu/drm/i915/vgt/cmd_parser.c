@@ -1328,13 +1328,15 @@ static int vgt_handle_mi_display_flip(struct parser_exec_state *s, bool resubmit
 		if (plane == PRIMARY_PLANE) {
 			struct vgt_primary_plane_format pri_fmt;
 			if (!vgt_decode_primary_plane_format(vgt, real_pipe, &pri_fmt))
-				surf_size = pri_fmt.height * pri_fmt.stride;
+				if (pri_fmt.enabled)
+					surf_size = pri_fmt.height * pri_fmt.stride;
 			else
 				return -1;
 		} else {
 			struct vgt_sprite_plane_format spr_fmt;
 			if (!vgt_decode_sprite_plane_format(vgt, real_pipe, &spr_fmt))
-				surf_size = spr_fmt.height * spr_fmt.width * spr_fmt.bpp / 8 ;
+				if (spr_fmt.enabled)
+					surf_size = spr_fmt.height * spr_fmt.width * spr_fmt.bpp / 8 ;
 			else
 				return -1;
 		}
@@ -1496,7 +1498,10 @@ static inline int cmd_address_audit(struct parser_exec_state *s, unsigned long g
 	int i;
 	int rc = 0;
 
-	ASSERT(op_size <= max_surface_size);
+	if (op_size > max_surface_size) {
+		vgt_err("cmd_parser: misusage of the address audit or malicious %s detected!\n", s->info->name);
+		return -1;
+	}
 
 	if (s->vgt->vgt_id == 0)
 		return rc;
