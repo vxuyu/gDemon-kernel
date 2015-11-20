@@ -77,6 +77,8 @@ do {								\
 	} while(1);						\
 } while(0);
 
+static inline struct reg_state_ctx_header *
+vgt_get_reg_state_from_lrca(struct vgt_device *vgt, uint32_t lrca);
 /* trace the queue ops: 0 for enqueue, 1 for dequeue, 2 for delete */
 static void inline trace_el_queue_ops(struct vgt_device *vgt, int ring_id, int el_idx, int ops)
 {
@@ -91,17 +93,27 @@ static void inline trace_el_queue_ops(struct vgt_device *vgt, int ring_id, int e
 
 	for (i = 0; i < 2; ++ i) {
 		struct execlist_context *ctx;
+		struct reg_state_ctx_header *guest_state;
 		uint32_t lrca;
 		ctx = vgt_el_queue_ctx(vgt, ring_id, el_idx, i);
 		if (!ctx)
 			continue;
 
+		if (vgt_require_shadow_context(vgt))
+			guest_state = (struct reg_state_ctx_header *)
+				ctx->ctx_pages[1].guest_page.vaddr;
+		else
+			guest_state = vgt_get_reg_state_from_lrca(vgt,
+				ctx->guest_context.lrca);
+
 		lrca = ctx->guest_context.lrca;
 		snprintf(str, 128, "slot[%d] ctx[%d] %s "
-				"(queue head: %d; tail: %d)",
+				"(queue head: %d; tail: %d) "
+				"(guest rb head: 0x%x; tail: 0x%x)",
 			el_idx, i,
 			(ops == 0 ? "enqueue" : (ops == 1 ? "dequeue" : "delete")),
-			head, tail);
+			head, tail,
+			guest_state->ring_header.val, guest_state->ring_tail.val);
 		trace_ctx_lifecycle(vgt->vm_id, ring_id, lrca, str);
 	}
 }
@@ -1855,6 +1867,8 @@ void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 
 	for (i = 0; i < 2; ++ i) {
 		struct execlist_context *ctx = execlist->el_ctxs[i];
+		struct reg_state_ctx_header *shadow_state;
+		char str[128];
 
 		if (ctx == NULL) {
 			if (i == 0) {
@@ -1874,8 +1888,18 @@ void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 
 		vgt_update_shadow_ctx_from_guest(vgt, ctx);
 
+		if (vgt_require_shadow_context(vgt))
+			shadow_state = (struct reg_state_ctx_header *)
+				ctx->ctx_pages[1].shadow_page.vaddr;
+		else
+			shadow_state = vgt_get_reg_state_from_lrca(vgt,
+				ctx->shadow_lrca);
+		snprintf(str, 128, "schedule_to_run "
+			 "(shadow rb head: 0x%x; tail: 0x%x)",
+			 shadow_state->ring_header.val,
+			 shadow_state->ring_tail.val);
 		trace_ctx_lifecycle(vgt->vm_id, ring_id,
-			ctx->guest_context.lrca, "schedule_to_run");
+			ctx->guest_context.lrca, str);
 
 		if (!vgt_require_shadow_context(vgt))
 			continue;
