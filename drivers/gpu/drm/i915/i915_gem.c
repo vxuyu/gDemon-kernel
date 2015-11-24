@@ -4788,7 +4788,7 @@ i915_gem_init_hw(struct drm_device *dev)
 	}
 
 	/* We can't enable contexts until all firmware is loaded */
-	if (HAS_GUC_UCODE(dev)) {
+	if (HAS_GUC_UCODE(dev) && !intel_vgpu_active(dev)) {
 		ret = intel_guc_ucode_load(dev);
 		if (ret) {
 			/*
@@ -4804,7 +4804,8 @@ i915_gem_init_hw(struct drm_device *dev)
 			if (ret)
 				goto out;
 		}
-	}
+	} else
+		i915.enable_guc_submission = false;
 
 	/*
 	 * Increment the next seqno by 0x100 so we have a visible break
