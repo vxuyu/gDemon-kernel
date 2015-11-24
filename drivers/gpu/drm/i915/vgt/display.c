@@ -556,9 +556,9 @@ bool rebuild_pipe_mapping(struct vgt_device *vgt, unsigned int reg, uint32_t new
 				pport = (hw_value & TRANS_DDI_PORT_MASK) >>
 						TRANS_DDI_PORT_SHIFT;
 
-				printk("%s: Enable. pport = %d, vport = %d, "
+				vgt_dbg(VGT_DBG_DPY, "Enable. pport = %d, vport = %d, "
 					"hw_value = 0x%08x, new_data = 0x%08x\n",
-			       		__FUNCTION__, pport, vport, hw_value, new_data);
+					pport, vport, hw_value, new_data);
 
 				if (!(TRANS_DDI_FUNC_ENABLE & hw_value)) {
 					continue;
@@ -629,7 +629,7 @@ bool update_pipe_mapping(struct vgt_device *vgt, unsigned int physical_reg, uint
 				TRANS_DDI_PORT_SHIFT;
 		vport_override = vgt->ports[vport].port_override;
 
-		printk("%s: Enable. pport = %d, vport = %d\n", __FUNCTION__, pport, vport);
+		vgt_dbg(VGT_DBG_DPY, "Enable. pport = %d, vport = %d\n", pport, vport);
 
 		if (!(TRANS_DDI_FUNC_ENABLE & virtual_wr_data) ||
 			(vport_override == I915_MAX_PORTS)) {

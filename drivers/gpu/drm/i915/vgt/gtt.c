@@ -1576,7 +1576,6 @@ static inline unsigned long vgt_gma_to_gpa(struct vgt_mm *mm, unsigned long gma)
 
 	return gpa;
 err:
-	vgt_err("invalid mm type: %d, gma %lx\n", mm->type, gma);
 	return INVALID_ADDR;
 }
 
@@ -1587,8 +1586,13 @@ void *vgt_gma_to_va(struct vgt_mm *mm, unsigned long gma)
 
 	gpa = vgt_gma_to_gpa(mm, gma);
 	if (gpa == INVALID_ADDR) {
-		vgt_warn("invalid gpa! gma 0x%lx, mm type %d\n", gma, mm->type);
-		return NULL;
+		if (g_gm_is_reserved(vgt, gma)) {
+			return v_aperture(vgt->pdev, gma);
+		} else {
+			vgt_warn("invalid gpa! gma 0x%lx, mm type %d\n",
+				 gma, mm->type);
+			return NULL;
+		}
 	}
 
 	return hypervisor_gpa_to_va(vgt, gpa);
