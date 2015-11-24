@@ -945,9 +945,6 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 
 	intel_uncore_init(dev);
 
-	/* Load CSR Firmware for SKL */
-	intel_csr_ucode_init(dev);
-
 	if (i915_start_vgt(dev->pdev))
 		i915_host_mediate = true;
 	printk("i915_start_vgt: %s\n", i915_host_mediate ? "success" : "fail");
@@ -964,6 +961,9 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 
 	if (intel_vgpu_active(dev))
 		i915.enable_ips = 0;
+
+	/* Load CSR Firmware for SKL */
+	intel_csr_ucode_init(dev);
 
 	ret = i915_gem_gtt_init(dev);
 	if (ret)
