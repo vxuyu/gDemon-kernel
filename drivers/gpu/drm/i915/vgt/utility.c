@@ -854,6 +854,9 @@ int setup_gtt(struct pgt_device *pdev)
 	gtt_entry_t e;
 	u64 v;
 
+	if (!pci_set_dma_mask(pdev->pdev, DMA_BIT_MASK(39)))
+		pci_set_consistent_dma_mask(pdev->pdev, DMA_BIT_MASK(39));
+
 	check_gtt(pdev);
 
 	printk("vGT: clear all GTT entries.\n");
@@ -864,7 +867,6 @@ int setup_gtt(struct pgt_device *pdev)
 	pdev->dummy_page = dummy_page;
 
 	get_page(dummy_page);
-	set_pages_uc(dummy_page, 1);
 	dma_addr = pci_map_page(pdev->pdev, dummy_page, 0, PAGE_SIZE, PCI_DMA_BIDIRECTIONAL);
 	if (pci_dma_mapping_error(pdev->pdev, dma_addr)) {
 		ret = -EINVAL;
@@ -906,8 +908,7 @@ int setup_gtt(struct pgt_device *pdev)
 		}
 
 		get_page(page);
-		/* use wc instead! */
-		set_pages_uc(page, 1);
+		set_memory_wc(page_address(page), 1);
 
 		(*pages)[i] = page;
 

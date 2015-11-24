@@ -844,8 +844,8 @@ static int vgt_create_shadow_pages(struct vgt_device *vgt, struct execlist_conte
 			ops->get_entry(NULL, &gtt_entry, g_gma >> GTT_PAGE_SHIFT, false, NULL);
 			ops->set_entry(NULL, &gtt_entry, s_gma >> GTT_PAGE_SHIFT, false, NULL);
 		} else {
-			p_shadow->vaddr = v_aperture(vgt->pdev, s_gma);
 			p_shadow->page = aperture_page(vgt->pdev, rsvd_pages_idx);
+			p_shadow->vaddr = page_address(p_shadow->page);
 			memcpy(p_shadow->vaddr, p_guest->vaddr, SIZE_PAGE);
 		}
 
