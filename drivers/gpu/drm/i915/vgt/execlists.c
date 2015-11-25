@@ -1059,6 +1059,7 @@ static void vgt_emulate_submit_execlist(struct vgt_device *vgt, int ring_id,
 		 * injected because of HW GPU status change. Meanwhile, the status register
 		 * is emulated to reflect the port submission operation.
 		 */
+		status.udw = ctx0->guest_context.context_id;
 		status.execlist_queue_full = 1;
 		vgt_dbg(VGT_DBG_EXECLIST,"VM-%d: ring(%d) EXECLISTS becomes "
 			"full due to workload submission!\n",
