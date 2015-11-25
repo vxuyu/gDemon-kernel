@@ -191,6 +191,9 @@ module_param_named(shadow_execlist_context, shadow_execlist_context, int, 0400);
 int shadow_cmd_buffer = 1;
 module_param_named(shadow_cmd_buffer, shadow_cmd_buffer, int, 0400);
 
+int shadow_ctx_check = 0;
+module_param_named(shadow_ctx_check, shadow_ctx_check, int, 0600);
+
 static struct vgt_ops __vgt_ops = {
 	.emulate_read = vgt_emulate_read,
 	.emulate_write = vgt_emulate_write,

@@ -230,9 +230,12 @@ struct execlist_context {
 
 	struct vgt_mm *ppgtt_mm;
 	struct shadow_ctx_page ctx_pages[MAX_EXECLIST_CTX_PAGES];
+	struct reg_state_ctx_header *g_ctx_buf;
+	unsigned char *s_ctx_buf;
 	/* used for lazy context shadowing optimization */
 	gtt_entry_t shadow_entry_backup[MAX_EXECLIST_CTX_PAGES];
 
+	bool initialized;
 	bool ctx_running;
 	bool sync_needed;
 
