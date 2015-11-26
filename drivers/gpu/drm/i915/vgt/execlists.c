@@ -819,7 +819,7 @@ static int vgt_create_shadow_pages(struct vgt_device *vgt, struct execlist_conte
 		return -1;
 	}
 
-	g_gma = el_ctx->guest_context.lrca << GTT_PAGE_SHIFT;
+	g_gma = ((unsigned long)el_ctx->guest_context.lrca) << GTT_PAGE_SHIFT;
 	s_gma = aperture_2_gm(vgt->pdev, hpa);
 
 	el_ctx->shadow_lrca = s_gma >> GTT_PAGE_SHIFT;
