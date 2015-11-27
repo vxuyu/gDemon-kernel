@@ -1433,7 +1433,9 @@ static void vgt_update_ring_info(struct vgt_device *vgt,
 		IS_PREEMPTION_RESUBMISSION(vring->head, vring->tail,
 		el_ctx->last_scan_head), current_foreground_vm(vgt->pdev) == vgt);
 #endif
-	if (el_ctx->last_guest_head == vring->head) {
+	if ((el_ctx->last_guest_head == vring->head)
+		&& !IS_PREEMPTION_RESUBMISSION(vring->head, vring->tail,
+			el_ctx->last_scan_head)) {
 		/* For lite-restore case from Guest, Headers are fixed,
 		 HW only resample tail */
 		vgt->rb[ring_id].last_scan_head = el_ctx->last_scan_head;
