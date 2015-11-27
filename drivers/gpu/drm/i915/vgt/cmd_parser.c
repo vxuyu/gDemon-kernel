@@ -813,6 +813,9 @@ static int cmd_reg_handler(struct parser_exec_state *s,
 	struct pgt_device *pdev = vgt->pdev;
 	int rc = -1;
 
+	if (!IS_BDW(s->vgt->pdev))
+		return 0;
+
 	if (!reg_is_mmio(pdev, offset + 3)) {
 		rc = -1;
 		goto reg_handle;
@@ -1327,18 +1330,20 @@ static int vgt_handle_mi_display_flip(struct parser_exec_state *s, bool resubmit
 
 		if (plane == PRIMARY_PLANE) {
 			struct vgt_primary_plane_format pri_fmt;
-			if (!vgt_decode_primary_plane_format(vgt, real_pipe, &pri_fmt))
+			if (!vgt_decode_primary_plane_format(vgt, real_pipe, &pri_fmt)) {
 				if (pri_fmt.enabled)
 					surf_size = pri_fmt.height * pri_fmt.stride;
-			else
+			} else {
 				return -1;
+			}
 		} else {
 			struct vgt_sprite_plane_format spr_fmt;
-			if (!vgt_decode_sprite_plane_format(vgt, real_pipe, &spr_fmt))
+			if (!vgt_decode_sprite_plane_format(vgt, real_pipe, &spr_fmt)) {
 				if (spr_fmt.enabled)
 					surf_size = spr_fmt.height * spr_fmt.width * spr_fmt.bpp / 8 ;
-			else
+			} else {
 				return -1;
+			}
 		}
 		rc = cmd_address_audit(s, surf_val & BIT_RANGE_MASK(31, 12), surf_size, false);
 		if (rc < 0)
@@ -1497,6 +1502,9 @@ static inline int cmd_address_audit(struct parser_exec_state *s, unsigned long g
 	int max_surface_size = vgt->pdev->device_info.max_surface_size;
 	int i;
 	int rc = 0;
+
+	if (!IS_BDW(s->vgt->pdev))
+		return 0;
 
 	if (op_size > max_surface_size) {
 		vgt_err("cmd_parser: misusage of the address audit or malicious %s detected!\n", s->info->name);
