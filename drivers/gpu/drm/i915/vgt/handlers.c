@@ -2686,7 +2686,7 @@ reg_attr_t vgt_reg_info_general[] = {
 {0x2438, 4, F_RDR, 0, D_ALL, NULL, NULL},
 {0x243c, 4, F_RDR, 0, D_ALL, NULL, NULL},
 {0x7018, 4, F_RDR, 0, D_ALL, NULL, NULL},
-{0xe184, 4, F_RDR, 0, D_ALL, NULL, NULL},
+{0xe184, 4, F_RDR_MODE, 0, D_ALL, NULL, NULL},
 	/* -------display regs---------- */
 
 {0x60220, 0x20, F_DPY, 0, D_ALL, NULL, NULL},
@@ -3330,7 +3330,7 @@ reg_attr_t vgt_reg_info_general[] = {
 {PS_DEPTH_COUNT, 8, F_RDR, 0, D_ALL, NULL, NULL},
 
 /* BDW */
-{0xe100, 4, F_RDR, 0, D_ALL, NULL, NULL},
+{0xe100, 4, F_RDR_MODE, 0, D_ALL, NULL, NULL},
 };
 
 reg_attr_t vgt_reg_info_bdw[] = {
