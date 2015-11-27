@@ -556,8 +556,8 @@ static inline uint32_t cmd_val(struct parser_exec_state *s, int index)
 
 static void parser_exec_state_dump(struct parser_exec_state *s)
 {
-	vgt_err("  vgt%d RING%d: ring_start(%08lx) ring_end(%08lx)"
-			" ring_head(%08lx) ring_tail(%08lx)\n", s->vgt->vgt_id,
+	vgt_err("  vgt%d RING%d: ring_start(%08lx) ring_end(%08lx), ring_scan_head(%08lx) ring_scan_tail(%08lx)\n"
+			, s->vgt->vgt_id,
 			s->ring_id, s->ring_start, s->ring_start + s->ring_size, s->ring_head, s->ring_tail);
 
 	vgt_err("  %s %s ip_gma(%08lx) ",
