@@ -3882,7 +3882,7 @@ bool vgt_post_setup_mmio_hooks(struct pgt_device *pdev)
 				ring_pp_mode_read,
 				ring_pp_mode_write);
 
-	if (IS_BDWGT3(pdev)) {
+	if (IS_BDWGT3(pdev) || IS_SKLGT3(pdev) || IS_SKLGT4(pdev)) {
 		reg_update_handlers(pdev, _REG_VCS2_MFX_MODE_BDW, 4,
 				ring_pp_mode_read,
 				ring_pp_mode_write);

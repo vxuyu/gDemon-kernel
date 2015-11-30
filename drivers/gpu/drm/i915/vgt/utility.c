@@ -184,7 +184,7 @@ void show_mode_settings(struct pgt_device *pdev)
 		SHOW_MODE(CACHE_MODE_0_GEN7);
 		SHOW_MODE(CACHE_MODE_1);
 		SHOW_MODE(GEN7_GT_MODE);
-	} else if (IS_BDWGT3(pdev)) {
+	} else if (IS_BDWGT3(pdev) || IS_SKLGT3(pdev) || IS_SKLGT4(pdev)) {
 		SHOW_MODE(_REG_VCS2_MI_MODE);
 		SHOW_MODE(_REG_VCS2_MFX_MODE_BDW);
 		SHOW_MODE(_REG_VCS2_INSTPM);

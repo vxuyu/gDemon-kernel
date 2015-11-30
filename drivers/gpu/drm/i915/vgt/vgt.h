@@ -724,6 +724,8 @@ static inline bool reg_hw_access(struct vgt_device *vgt, unsigned int reg)
 #define IS_PRESKL(pdev) (IS_BDW(pdev) || IS_HSW(pdev) || IS_IVB(pdev) || IS_SNB(pdev))
 #define IS_SKLPLUS(pdev) (IS_SKL(pdev))
 #define IS_BDWGT3(pdev) (IS_BDW(pdev) && (GEN_REV(pdev->device_info.gen) == 3))
+#define IS_SKLGT3(pdev) (IS_SKL(pdev) && (GEN_REV(pdev->device_info.gen) == 3))
+#define IS_SKLGT4(pdev) (IS_SKL(pdev) && (GEN_REV(pdev->device_info.gen) == 4))
 
 #define D_SNB	(1 << 0)
 #define D_IVB	(1 << 1)

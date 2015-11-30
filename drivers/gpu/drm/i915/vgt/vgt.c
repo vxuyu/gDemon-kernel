@@ -706,9 +706,9 @@ static bool vgt_initialize_platform(struct pgt_device *pdev)
 		pdev->ring_xxx_valid = 0;
 
 		/*
-		 * Add GT3 VCS2 ring for BDW GT3
+		 * Add GT3 VCS2 ring for BDW and SKL GT3/4
 		 */
-		if (IS_BDWGT3(pdev)) {
+		if (IS_BDWGT3(pdev) || IS_SKLGT3(pdev) || IS_SKLGT4(pdev)) {
 			pdev->max_engines = 5;
 			pdev->ring_mmio_base[RING_BUFFER_VCS2] = _REG_VCS2_TAIL;
 			pdev->ring_mi_mode[RING_BUFFER_VCS2] = _REG_VCS2_MI_MODE;
