@@ -3791,7 +3791,7 @@ reg_attr_t vgt_reg_info_skl[] = {
 {0x4dec, 4, F_RDR, 0, D_SKL, NULL, NULL},
 {0x4df0, 4, F_RDR, 0, D_SKL, NULL, NULL},
 {0x4df4, 4, F_RDR, 0, D_SKL, NULL, NULL},
-{0x4dfc, 4, F_PT, 0, D_SKL, NULL, NULL},
+{0x4dfc, 4, F_VIRT, 0, D_SKL, NULL, NULL},
 
 {0x45008, 4, F_VIRT, 0, D_SKL, NULL, NULL},
 
