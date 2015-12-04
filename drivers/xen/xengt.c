@@ -180,7 +180,8 @@ static int xen_hvm_memory_mapping(int vm_id, uint64_t first_gfn, uint64_t first_
 				  uint32_t nr_mfns, uint32_t add_mapping)
 {
 	struct xen_domctl arg;
-	int rc;
+	int rc = 0, err = 0;
+	unsigned long done = 0, mapping_sz = 64;
 
 	if (add_mapping) {
 		rc = xen_domain_iomem_perm(vm_id, first_mfn, nr_mfns, 1);
@@ -193,14 +194,38 @@ static int xen_hvm_memory_mapping(int vm_id, uint64_t first_gfn, uint64_t first_
 	arg.domain = vm_id;
 	arg.cmd = XEN_DOMCTL_memory_mapping;
 	arg.interface_version = XEN_DOMCTL_INTERFACE_VERSION;
-	arg.u.memory_mapping.first_gfn = first_gfn;
-	arg.u.memory_mapping.first_mfn = first_mfn;
-	arg.u.memory_mapping.nr_mfns = nr_mfns;
 	arg.u.memory_mapping.add_mapping = add_mapping;
 
-	rc = HYPERVISOR_domctl(&arg);
+retry:
+	if (nr_mfns > 0 && mapping_sz > 0) {
+		while (done < nr_mfns) {
+			mapping_sz = min(nr_mfns - done, mapping_sz);
+			arg.u.memory_mapping.nr_mfns = mapping_sz;
+			arg.u.memory_mapping.first_gfn = first_gfn + done;
+			arg.u.memory_mapping.first_mfn = first_mfn + done;
+			err = HYPERVISOR_domctl(&arg);
+			if (err == -E2BIG) {
+				mapping_sz /= 2;
+				goto retry;
+			}
+			//Save first error status.
+			if (!rc)
+				rc = err;
+
+			if (err && add_mapping != DPCI_REMOVE_MAPPING)
+				break;
+			done += mapping_sz;
+		}
+
+		//Undo operation, if some error to mapping.
+		if (rc && add_mapping != DPCI_REMOVE_MAPPING) {
+			xen_hvm_memory_mapping(vm_id, first_gfn, first_mfn,
+						nr_mfns, DPCI_REMOVE_MAPPING);
+		}
+	}
+
 	if (rc < 0) {
-		printk(KERN_ERR "HYPERVISOR_domctl failed: %d\n", rc);
+		printk(KERN_ERR "xen_hvm_memory_mapping, memory mapping failed: %d\n", rc);
 		return rc;
 	}
 
