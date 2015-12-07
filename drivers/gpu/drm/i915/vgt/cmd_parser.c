@@ -989,8 +989,6 @@ static int vgt_cmd_advance_default(struct parser_exec_state *s)
 	return ip_gma_advance(s, cmd_length(s));
 }
 
-#define MAX_BB_SIZE 0x10000000
-
 static inline unsigned long vgt_get_gma_from_bb_start(
 				struct vgt_device *vgt,
 				int ring_id, unsigned long ip_gma)
@@ -1028,9 +1026,14 @@ static uint32_t vgt_find_bb_size(struct vgt_device *vgt,
 	bool met_bb_end = false;
 	uint32_t *va;
 	struct cmd_info *info;
+	uint32_t max_bb_size = 0;
 
 	/* set gma as the start gm address of the batch buffer */
 	gma = vgt_get_gma_from_bb_start(vgt, ring_id, bb_start_cmd_gma);
+	if (!g_gm_is_valid(vgt, gma))
+		return 0;
+	max_bb_size = (g_gm_is_visible(vgt, gma) ? vgt_guest_visible_gm_end(vgt)
+			: vgt_guest_hidden_gm_end(vgt)) - gma;
 	do {
 		uint32_t cmd;
 		uint32_t cmd_length;
@@ -1061,9 +1064,9 @@ static uint32_t vgt_find_bb_size(struct vgt_device *vgt,
 		cmd_length = get_cmd_length(info, cmd) << 2;
 		bb_size += cmd_length;
 		gma += cmd_length;
-	} while (!met_bb_end && (bb_size < MAX_BB_SIZE));
+	} while (!met_bb_end && (bb_size < max_bb_size));
 
-	if (bb_size >= MAX_BB_SIZE) {
+	if (bb_size >= max_bb_size) {
 		vgt_err("ERROR: VM-%d: Failed to get batch buffer length! "
 			"Not be able to find mi_batch_buffer_end command.\n",
 			vgt->vm_id);
@@ -1834,14 +1837,6 @@ static int vgt_cmd_handler_mi_batch_buffer_start(struct parser_exec_state *s)
 	if (second_level && (s->buf_type != BATCH_BUFFER_INSTRUCTION)) {
 		vgt_err("Jumping to 2nd level batch buffer from ring buffer is not allowd\n");
 		return -EINVAL;
-	}
-	/* check ggtt  */
-	if (!(cmd_val(s, 0) & (1 << 8))) {
-		/* assume guest driver use 4k page, need confirm */
-		/*TODO: get the length of the privileged BB from shadow BB*/
-		rc = cmd_address_audit(s, get_gma_bb_from_cmd(s, 1), PAGE_SIZE, false);
-		if (rc < 0)
-			return rc;
 	}
 
 	s->saved_buf_addr_type = s->buf_addr_type;
