@@ -191,6 +191,7 @@ struct execlist_context {
 	 */
 	vgt_reg_t last_guest_head;
 	vgt_reg_t last_scan_head;
+	bool scan_head_valid;
 	uint64_t request_id;
 	//uint64_t cmd_nr;
 	//vgt_reg_t uhptr;

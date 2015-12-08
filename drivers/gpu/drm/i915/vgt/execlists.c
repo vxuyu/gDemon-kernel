@@ -1123,6 +1123,7 @@ static void vgt_emulate_context_status_change(struct vgt_device *vgt,
 	struct vgt_exec_list *el_slot = NULL;
 	struct execlist_context *el_ctx = NULL;
 	uint32_t ctx_id = ctx_status->context_id;
+	bool lite_restore;
 
 	ring_state = &vgt->rb[ring_id];
 	if (vgt_el_slots_number(ring_state) > 1) {
@@ -1144,12 +1145,24 @@ static void vgt_emulate_context_status_change(struct vgt_device *vgt,
 	ASSERT((el_slot_ctx_idx == 0) || (el_slot_ctx_idx == 1));
 	el_ctx = el_slot->el_ctxs[el_slot_ctx_idx];
 
+	lite_restore = ctx_status->preempted && ctx_status->lite_restore;
+
 	if (CTX_IS_SCHEDULED_OUT(ctx_status)) {
 		char str[64];
 		snprintf(str, 64, "finish_running. status[0x%x]", ctx_status->ldw);
 		trace_ctx_lifecycle(vgt->vm_id, ring_id,
 			el_ctx->guest_context.lrca,
 			str);
+
+		if (!lite_restore) {
+			el_ctx->scan_head_valid = false;
+
+			if (ctx_status->preempted && el_slot_ctx_idx == 0) {
+				if (el_slot->el_ctxs[1])
+					el_slot->el_ctxs[1]->scan_head_valid = false;
+			}
+		}
+
 		if ((((el_slot_ctx_idx == 0) || (el_slot->el_ctxs[0] == NULL)) &&
 			((el_slot_ctx_idx == 1) || (el_slot->el_ctxs[1] == NULL))) ||
 			(ctx_status->preempted)) {
@@ -1433,16 +1446,12 @@ static void vgt_update_ring_info(struct vgt_device *vgt,
 		IS_PREEMPTION_RESUBMISSION(vring->head, vring->tail,
 		el_ctx->last_scan_head), current_foreground_vm(vgt->pdev) == vgt);
 #endif
-	if ((el_ctx->last_guest_head == vring->head)
-		&& !IS_PREEMPTION_RESUBMISSION(vring->head, vring->tail,
-			el_ctx->last_scan_head)) {
-		/* For lite-restore case from Guest, Headers are fixed,
-		 HW only resample tail */
-		vgt->rb[ring_id].last_scan_head = el_ctx->last_scan_head;
-	}
-	else {
+	if (!el_ctx->scan_head_valid) {
 		vgt->rb[ring_id].last_scan_head = vring->head;
 		el_ctx->last_guest_head = vring->head;
+		el_ctx->scan_head_valid = true;
+	} else {
+		vgt->rb[ring_id].last_scan_head = el_ctx->last_scan_head;
 	}
 
 	vgt_scan_vring(vgt, ring_id);
