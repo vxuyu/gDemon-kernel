@@ -240,7 +240,6 @@ int create_vgt_instance(struct pgt_device *pdev, struct vgt_device **ptr_vgt, vg
 		__vreg(vgt, vgt_info_off(avail_rs.mappable_gmadr.size)) = vgt_aperture_sz(vgt);
 		__vreg(vgt, vgt_info_off(avail_rs.nonmappable_gmadr.base)) = vgt_hidden_gm_base(vgt);
 		__vreg(vgt, vgt_info_off(avail_rs.nonmappable_gmadr.size)) = vgt_hidden_gm_sz(vgt);
-		__vreg(vgt, vgt_info_off(vgt_caps)) = (1 << 1);
 
 		__vreg(vgt, vgt_info_off(avail_rs.fence_num)) = vgt->fence_sz;
 		vgt_info("filling VGT_PVINFO_PAGE for dom%d:\n"
