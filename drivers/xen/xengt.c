@@ -382,11 +382,13 @@ static int hvm_wp_page_to_ioreq_server(struct vgt_device *vgt, unsigned long pag
 	start = page << PAGE_SHIFT;
 	end = ((page + 1) << PAGE_SHIFT) - 1;
 
-	rc = hvm_map_io_range_to_ioreq_server(vgt, 1, start, end, set);
-	if (rc < 0) {
-		printk(KERN_ERR "Failed to %s page 0x%lx to ioreq_server: %d!\n",
-			set ? "map":"unmap", page , rc);
-		return rc;
+	if (set) {
+		rc = hvm_map_io_range_to_ioreq_server(vgt, 1, start, end, true);
+		if (rc < 0) {
+			printk(KERN_ERR "Failed to map page 0x%lx to ioreq_server: %d!\n",
+				page , rc);
+			return rc;
+		}
 	}
 
 	mem_type = set ? HVMMEM_mmio_write_dm : HVMMEM_ram_rw;
@@ -396,6 +398,16 @@ static int hvm_wp_page_to_ioreq_server(struct vgt_device *vgt, unsigned long pag
 			set ? "HVMMEM_mmio_write_dm":"HVMMEM_ram_rw");
 		return rc;
 	}
+
+	if (!set) {
+		rc = hvm_map_io_range_to_ioreq_server(vgt, 1, start, end, false);
+		if (rc < 0) {
+			printk(KERN_ERR "Failed to unmap page 0x%lx to ioreq_server: %d!\n",
+				page , rc);
+			return rc;
+		}
+	}
+
 	return rc;
 }
 
