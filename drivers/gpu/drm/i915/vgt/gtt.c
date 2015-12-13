@@ -1185,36 +1185,13 @@ static bool ppgtt_handle_guest_write_page_table_bytes(void *gp,
 	ppgtt_get_guest_entry(spt, &we, index);
 	memcpy((char *)&we.val64 + (pa & (info->gtt_entry_size - 1)), p_data, bytes);
 
-	if (partial_access && !hi) {
+	if (partial_access && hi) {
 		trace_gpt_change(vgt->vm_id, "partial access - LOW",
 				NULL, we.type, *(u32 *)(p_data), index);
 
-		ppgtt_check_partial_access(vgt);
-
 		ppgtt_set_guest_entry(spt, &we, index);
-		ppgtt_get_shadow_entry(spt, &se, index);
-
-		if (!ops->test_present(&se))
-			return true;
-
-		if (gtt_type_is_pt(get_next_pt_type(se.type)))
-			if (!ppgtt_invalidate_shadow_page_by_shadow_entry(vgt, &se))
-				return false;
-
-		se.val64 = 0;
-		ppgtt_set_shadow_entry(spt, &se, index);
-
-		gtt->last_partial_ppgtt_access_index = index;
-		gtt->last_partial_ppgtt_access_gpt = gpt;
-		gtt->last_partial_ppgtt_access_entry = we;
-
 		return true;
-	} else
-		gtt->last_partial_ppgtt_access_index = -1;
-
-	if (hi)
-		trace_gpt_change(vgt->vm_id, "partial access - HIGH",
-				NULL, we.type, *(u32 *)(p_data), index);
+	}
 
 	ops->test_pse(&we);
 
