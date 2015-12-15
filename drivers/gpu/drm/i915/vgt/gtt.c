@@ -1884,15 +1884,13 @@ bool vgt_expand_shadow_page_mempool(struct pgt_device *pdev)
 	 */
 	new_min_nr = preallocated_shadow_pages - 1;
 	if (mempool_resize(mempool, new_min_nr)) {
-		vgt_err("fail to resize the mempool.\n");
-		rc = false;
+		vgt_warn("fail to resize the mempool.\n");
 		goto out;
 	}
 
 	new_min_nr = preallocated_shadow_pages;
 	if (mempool_resize(mempool, new_min_nr)) {
-		vgt_err("fail to resize the mempool.\n");
-		rc = false;
+		vgt_warn("fail to resize the mempool.\n");
 		goto out;
 	}
 
