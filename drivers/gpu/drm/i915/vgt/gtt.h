@@ -228,6 +228,9 @@ struct vgt_vgtt_info {
 	gtt_entry_t last_partial_ppgtt_access_entry;
 	struct guest_page *last_partial_ppgtt_access_gpt;
 	bool warn_partial_ppgtt_access_once;
+	struct page *scratch_page;
+	unsigned long scratch_page_mfn;
+
 };
 
 extern bool vgt_init_vgtt(struct vgt_device *vgt);

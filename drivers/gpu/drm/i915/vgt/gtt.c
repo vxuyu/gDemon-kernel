@@ -901,6 +901,9 @@ static bool ppgtt_handle_guest_entry_removal(guest_page_t *gpt,
 	if (!ops->test_present(&e))
 		return true;
 
+	if (ops->get_pfn(&e) == vgt->gtt.scratch_page_mfn)
+		return true;
+
 	if (gtt_type_is_pt(get_next_pt_type(we->type))) {
 		guest_page_t *g = vgt_find_guest_page(vgt, ops->get_pfn(we));
 		if (!g) {
@@ -910,7 +913,7 @@ static bool ppgtt_handle_guest_entry_removal(guest_page_t *gpt,
 		if (!ppgtt_invalidate_shadow_page(guest_page_to_ppgtt_spt(g)))
 			goto fail;
 	}
-	e.val64 = 0;
+	ops->set_pfn(&e, vgt->gtt.scratch_page_mfn);
 	ppgtt_set_shadow_entry(spt, &e, index);
 	return true;
 fail:
@@ -1922,6 +1925,49 @@ static void mempool_free_spt(void *element, void *pool_data)
 	kfree(spt);
 }
 
+bool vgt_create_scratch_page(struct vgt_device *vgt)
+{
+	struct vgt_vgtt_info *gtt = &vgt->gtt;
+	void *p;
+	void *vaddr;
+	unsigned long mfn;
+
+	gtt->scratch_page = alloc_page(GFP_KERNEL | GFP_ATOMIC);
+	if (!gtt->scratch_page) {
+		vgt_err("Failed to allocate scratch page.\n");
+		return false;
+	}
+
+	/* set to zero */
+	p = kmap_atomic(gtt->scratch_page);
+	memset(p, 0, PAGE_SIZE);
+	kunmap_atomic(p);
+
+	/* translate page to mfn */
+	vaddr = page_address(gtt->scratch_page);
+	mfn = hypervisor_virt_to_mfn(vaddr);
+
+	if (mfn == INVALID_MFN) {
+		vgt_err("fail to translate vaddr:0x%llx\n", (u64)vaddr);
+		__free_page(gtt->scratch_page);
+		gtt->scratch_page = NULL;
+		return false;
+	}
+
+	gtt->scratch_page_mfn = mfn;
+	vgt_info("VM%d create scratch page: mfn=0x%lx\n", vgt->vm_id, mfn);
+	return true;
+}
+
+void vgt_release_scratch_page(struct vgt_device *vgt)
+{
+	if (vgt->gtt.scratch_page != NULL) {
+		__free_page(vgt->gtt.scratch_page);
+		vgt->gtt.scratch_page = NULL;
+		vgt->gtt.scratch_page_mfn = 0;
+	}
+}
+
 bool vgt_init_vgtt(struct vgt_device *vgt)
 {
 	struct vgt_vgtt_info *gtt = &vgt->gtt;
@@ -1949,6 +1995,8 @@ bool vgt_init_vgtt(struct vgt_device *vgt)
 	}
 
 	gtt->ggtt_mm = ggtt_mm;
+
+	vgt_create_scratch_page(vgt);
 	return true;
 }
 
@@ -1958,6 +2006,7 @@ void vgt_clean_vgtt(struct vgt_device *vgt)
 	struct vgt_mm *mm;
 
 	ppgtt_free_all_shadow_page(vgt);
+	vgt_release_scratch_page(vgt);
 
 	list_for_each_safe(pos, n, &vgt->gtt.mm_list_head) {
 		mm = container_of(pos, struct vgt_mm, list);
