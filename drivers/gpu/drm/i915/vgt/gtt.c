@@ -751,6 +751,9 @@ static bool ppgtt_invalidate_shadow_page_by_shadow_entry(struct vgt_device *vgt,
 	if (!gtt_type_is_pt(get_next_pt_type(e->type)))
 		return false;
 
+	if (ops->get_pfn(e) == vgt->gtt.scratch_page_mfn)
+		return true;
+
 	s = ppgtt_find_shadow_page(vgt, ops->get_pfn(e));
 	if (!s) {
 		vgt_err("VM %d fail to find shadow page: mfn: 0x%lx.\n",
