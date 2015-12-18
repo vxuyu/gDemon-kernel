@@ -745,7 +745,8 @@ static void update_shadow_regstate_from_guest(struct vgt_device *vgt,
 	memcpy(ref_ctx, src_ctx, sizeof(struct reg_state_ctx_header));
 
 	/* update the shadow fields */
-	dest_ctx->rb_start.val = el_ctx->shadow_rb.shadow_rb_base;
+	if (shadow_cmd_buffer)
+		dest_ctx->rb_start.val = el_ctx->shadow_rb.shadow_rb_base;
 	ppgtt_update_shadow_ppgtt_for_ctx(vgt, el_ctx);
 }
 

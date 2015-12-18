@@ -942,7 +942,7 @@ static int vgt_initialize(struct pci_dev *dev)
 		current_config_owner(pdev) = vgt_dom0;
 	}
 
-	if (!IS_BDW(pdev) || bypass_scan_mask)
+	if (!IS_BDWPLUS(pdev) || bypass_scan_mask)
 		shadow_cmd_buffer = 0;
 
 	pdev->ctx_check = 0;
