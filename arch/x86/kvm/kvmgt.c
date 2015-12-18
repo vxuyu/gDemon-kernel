@@ -43,6 +43,8 @@ struct kvmgt_hvm_info {
 	struct kvm *kvm;
 	struct vgt_device *vgt;
 	struct kvmgt_trap_info trap_mmio;
+#define NR_BKT (1 << 18)
+	struct hlist_head ptable[NR_BKT];
 };
 
 static struct kvm *kvmgt_find_by_domid(int domid)
@@ -90,12 +92,11 @@ void kvmgt_exit(struct kvm *kvm)
 	if (!kvm->vgt_enabled || !kvm->vgt)
 		return;
 
-	vgt_info("release vgt resrouce for KVM\n");
+	vgt_info("release vgt resource for KVM\n");
 
 	vp.vm_id = -kvm->domid;
 	vgt_ops->del_state_sysfs(vp);
 
-	kvmgt_protect_table_destroy(kvm);
 	kvmgt_unpin_guest(kvm);
 
 	kvm->vgt_enabled = false;
@@ -464,12 +465,11 @@ static int kvmgt_hvm_init(struct vgt_device *vgt)
 	kvm->vgt_enabled = true;
 	kvm->vgt = vgt;
 
-	info = kzalloc(sizeof(struct kvmgt_hvm_info), GFP_KERNEL);
+	info = vzalloc(sizeof(struct kvmgt_hvm_info));
 	if (!info) {
 		vgt_err("cannot alloc hvm info\n");
 		return -ENOMEM;
 	}
-
 	vgt->hvm_info = info;
 	info->vgt = vgt;
 	info->kvm = kvm;
@@ -515,7 +515,11 @@ static int kvmgt_inject_msi(int vm_id, u32 addr_lo, u16 data)
 
 static void kvmgt_hvm_exit(struct vgt_device *vgt)
 {
-	kfree(vgt->hvm_info);
+	struct kvmgt_hvm_info *info;
+
+	info = vgt->hvm_info;
+	kvmgt_protect_table_destroy(info->kvm);
+	vfree(info);
 }
 
 static bool kvmgt_read_hva(struct vgt_device *vgt, void *hva,
@@ -665,8 +669,10 @@ EXPORT_SYMBOL(kvmgt_kdm);
 
 void kvmgt_protect_table_init(struct kvm *kvm)
 {
+	struct kvmgt_hvm_info *hvm = kvm->vgt->hvm_info;
+
 	if (kvm->vgt_enabled)
-		hash_init(kvm->ptable);
+		hash_init(hvm->ptable);
 }
 
 void kvmgt_protect_table_destroy(struct kvm *kvm)
@@ -674,11 +680,12 @@ void kvmgt_protect_table_destroy(struct kvm *kvm)
 	kvmgt_pgfn_t *p;
 	struct hlist_node *tmp;
 	int i;
+	struct kvmgt_hvm_info *hvm = kvm->vgt->hvm_info;
 
 	if (!kvm->vgt_enabled)
 		return;
 
-	hash_for_each_safe(kvm->ptable, i, tmp, p, hnode) {
+	hash_for_each_safe(hvm->ptable, i, tmp, p, hnode) {
 		hash_del(&p->hnode);
 		kfree(p);
 	}
@@ -687,6 +694,7 @@ void kvmgt_protect_table_destroy(struct kvm *kvm)
 void kvmgt_protect_table_add(struct kvm *kvm, gfn_t gfn)
 {
 	kvmgt_pgfn_t *p;
+	struct kvmgt_hvm_info *hvm = kvm->vgt->hvm_info;
 
 	if (!kvm->vgt_enabled)
 		return;
@@ -701,14 +709,15 @@ void kvmgt_protect_table_add(struct kvm *kvm, gfn_t gfn)
 	}
 
 	p->gfn = gfn;
-	hash_add(kvm->ptable, &p->hnode, gfn);
+	hash_add(hvm->ptable, &p->hnode, gfn);
 }
 
 static kvmgt_pgfn_t *__kvmgt_protect_table_find(struct kvm *kvm, gfn_t gfn)
 {
 	kvmgt_pgfn_t *p, *res = NULL;
+	struct kvmgt_hvm_info *hvm = kvm->vgt->hvm_info;
 
-	hash_for_each_possible(kvm->ptable, p, hnode, gfn) {
+	hash_for_each_possible(hvm->ptable, p, hnode, gfn) {
 		if (gfn == p->gfn) {
 			res = p;
 			break;

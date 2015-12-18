@@ -417,8 +417,6 @@ struct kvm {
 	struct vgt_device *vgt;
 	u32 opregion_gpa;
 	u64 aperture_hpa;
-#define NR_BKT (1 << 18)
-	struct hlist_head ptable[NR_BKT];
 #endif
 };
 
