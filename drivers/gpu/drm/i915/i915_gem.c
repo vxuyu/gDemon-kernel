@@ -3242,8 +3242,7 @@ static int __i915_vma_unbind(struct i915_vma *vma, bool wait)
 	if (vma->pin_count)
 		return -EBUSY;
 
-	if (!obj->has_vmfb_mapping)
-		BUG_ON(obj->pages == NULL);
+	BUG_ON(obj->pages == NULL);
 
 	if (wait) {
 		ret = i915_gem_object_wait_rendering(obj, false);
@@ -3252,7 +3251,7 @@ static int __i915_vma_unbind(struct i915_vma *vma, bool wait)
 	}
 
 	if (i915_is_ggtt(vma->vm) &&
-	    vma->ggtt_view.type == I915_GGTT_VIEW_NORMAL && !obj->has_vmfb_mapping) {
+	    vma->ggtt_view.type == I915_GGTT_VIEW_NORMAL) {
 		i915_gem_object_finish_gtt(obj);
 
 		/* release the fence reg _after_ flushing */
@@ -3277,15 +3276,13 @@ static int __i915_vma_unbind(struct i915_vma *vma, bool wait)
 		vma->ggtt_view.pages = NULL;
 	}
 
-	if (!(obj->has_vmfb_mapping && i915_is_ggtt(vma->vm)))
-		drm_mm_remove_node(&vma->node);
+	drm_mm_remove_node(&vma->node);
 
 	i915_gem_vma_destroy(vma);
 
 	/* Since the unbound list is global, only move to that list if
 	 * no more VMAs exist. */
-	if (list_empty(&obj->vma_list) && !obj->has_vmfb_mapping) {
-		i915_gem_gtt_finish_object(obj);
+	if (list_empty(&obj->vma_list)) {
 		list_move_tail(&obj->global_list, &dev_priv->mm.unbound_list);
 	}
 
@@ -3460,13 +3457,11 @@ i915_gem_object_bind_to_vm(struct drm_i915_gem_object *obj,
 		return ERR_PTR(-E2BIG);
 	}
 
-	if (!obj->has_vmfb_mapping) {
-		ret = i915_gem_object_get_pages(obj);
-		if (ret)
-			return ERR_PTR(ret);
+	ret = i915_gem_object_get_pages(obj);
+	if (ret)
+		return ERR_PTR(ret);
 
-		i915_gem_object_pin_pages(obj);
-	}
+	i915_gem_object_pin_pages(obj);
 
 	vma = ggtt_view ? i915_gem_obj_lookup_or_create_ggtt_vma(obj, ggtt_view) :
 			  i915_gem_obj_lookup_or_create_vma(obj, vm);
@@ -3480,13 +3475,6 @@ i915_gem_object_bind_to_vm(struct drm_i915_gem_object *obj,
 	} else {
 		search_flag = DRM_MM_SEARCH_DEFAULT;
 		alloc_flag = DRM_MM_CREATE_DEFAULT;
-	}
-	if (obj->has_vmfb_mapping && i915_is_ggtt(vm)) {
-		vma->node.allocated = 1;
-		trace_i915_vma_bind(vma, flags);
-		i915_vma_bind(vma, obj->cache_level,
-			flags & PIN_GLOBAL ? GLOBAL_BIND : 0);
-		return vma;
 	}
 
 search_free:
@@ -4536,9 +4524,6 @@ struct i915_vma *i915_gem_obj_to_ggtt_view(struct drm_i915_gem_object *obj,
 void i915_gem_vma_destroy(struct i915_vma *vma)
 {
 	struct i915_address_space *vm = NULL;
-
-	if (vma->obj->has_vmfb_mapping)
-		vma->node.allocated = 0;
 
 	WARN_ON(vma->node.allocated);
 

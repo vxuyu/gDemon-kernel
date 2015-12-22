@@ -2152,8 +2152,6 @@ struct drm_i915_gem_object {
 	unsigned int cache_level:3;
 	unsigned int cache_dirty:1;
 
-	unsigned int has_vmfb_mapping:1;
-
 	unsigned int frontbuffer_bits:INTEL_FRONTBUFFER_BITS;
 
 	unsigned int pin_display;
@@ -2941,15 +2939,11 @@ i915_gem_object_get_page(struct drm_i915_gem_object *obj, int n)
 
 static inline void i915_gem_object_pin_pages(struct drm_i915_gem_object *obj)
 {
-	if (obj->has_vmfb_mapping)
-		return;
 	BUG_ON(obj->pages == NULL);
 	obj->pages_pin_count++;
 }
 static inline void i915_gem_object_unpin_pages(struct drm_i915_gem_object *obj)
 {
-	if (obj->has_vmfb_mapping)
-		return;
 	BUG_ON(obj->pages_pin_count == 0);
 	obj->pages_pin_count--;
 }

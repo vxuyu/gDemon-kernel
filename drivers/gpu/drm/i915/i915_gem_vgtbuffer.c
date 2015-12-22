@@ -199,7 +199,6 @@ i915_gem_vgtbuffer_ioctl(struct drm_device *dev, void *data,
 
 	i915_gem_object_init(obj, &i915_gem_vgtbuffer_ops);
 	obj->cache_level = I915_CACHE_L3_LLC;
-	obj->has_vmfb_mapping = true;
 	obj->pages = NULL;
 
 	struct i915_address_space *ggtt_vm = &dev_priv->gtt.base;

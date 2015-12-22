@@ -92,18 +92,6 @@
  *
  */
 
-#ifdef DRM_I915_VGT_SUPPORT
-static void (*insert_vmfb_entries)(struct i915_address_space *vm,
-					   uint32_t num_pages,
-					   uint64_t start);
-static void gen6_ppgtt_insert_vmfb_entries(struct i915_address_space *vm,
-					   uint32_t num_pages,
-					   uint64_t start);
-static void gen8_ppgtt_insert_vmfb_entries(struct i915_address_space *vm,
-					   uint32_t num_pages,
-					   uint64_t start);
-#endif
-
 static int
 i915_get_ggtt_vma_pages(struct i915_vma *vma);
 
@@ -173,12 +161,7 @@ static int ppgtt_bind_vma(struct i915_vma *vma,
 	if (vma->obj->gt_ro)
 		pte_flags |= PTE_READ_ONLY;
 
-	if (vma->obj->has_vmfb_mapping)
-		gen6_ppgtt_insert_vmfb_entries(vma->vm,
-				    vma->obj->base.size >> PAGE_SHIFT,
-				    vma->node.start);
-	else
-		vma->vm->insert_entries(vma->vm, vma->obj->pages, vma->node.start,
+	vma->vm->insert_entries(vma->vm, vma->obj->pages, vma->node.start,
 				cache_level, pte_flags);
 
 	return 0;
@@ -796,67 +779,6 @@ static void gen8_ppgtt_clear_range(struct i915_address_space *vm,
 	}
 }
 
-static void gen8_ppgtt_insert_vmfb_entries(struct i915_address_space *vm,
-					   uint32_t num_pages,
-					   uint64_t start)
-{
-	struct i915_hw_ppgtt *ppgtt =
-		container_of(vm, struct i915_hw_ppgtt, base);
-	gen8_pte_t *pt_vaddr = NULL;
-	unsigned pdpe = start >> GEN8_PDPE_SHIFT & GEN8_PDPE_MASK;
-	unsigned pde = start >> GEN8_PDE_SHIFT & GEN8_PDE_MASK;
-	unsigned pte = start >> GEN8_PTE_SHIFT & GEN8_PTE_MASK;
-	unsigned first_entry = start >> PAGE_SHIFT;
-	struct i915_page_directory *pd;
-	struct i915_page_table *pt;
-	struct page *page_table;
-	int i;
-
-	struct drm_i915_private *dev_priv = ppgtt->base.dev->dev_private;
-	uint64_t __iomem *vmfb_start = dev_priv->gtt.gsm;
-
-	vmfb_start += first_entry;
-
-	if (WARN_ON(!ppgtt->pdp.page_directory[pdpe]))
-		return;
-
-	pd = ppgtt->pdp.page_directory[pdpe];
-
-	if (WARN_ON(!pd->page_table[pde]))
-		return;
-
-	pt = pd->page_table[pde];
-
-	if (WARN_ON(!pt->base.page))
-		return;
-
-	page_table = pt->base.page;
-
-	for (i = 0; i < num_pages; i++) {
-		if (pt_vaddr == NULL)
-			pt_vaddr = kmap_atomic(page_table);
-
-		pt_vaddr[pte] = GTT_READ64(vmfb_start);
-		vmfb_start++;
-
-		if (++pte == GEN8_PTES) {
-			if (!HAS_LLC(ppgtt->base.dev))
-				drm_clflush_virt_range(pt_vaddr, PAGE_SIZE);
-			kunmap_atomic(pt_vaddr);
-			pt_vaddr = NULL;
-			if (++pde == GEN8_PDES) {
-				pdpe++;
-				pde = 0;
-			}
-			pte = 0;
-		}
-	}
-	if (pt_vaddr) {
-		if (!HAS_LLC(ppgtt->base.dev))
-			drm_clflush_virt_range(pt_vaddr, PAGE_SIZE);
-		kunmap_atomic(pt_vaddr);
-	}
-}
 static void
 gen8_ppgtt_insert_pte_entries(struct i915_address_space *vm,
 			      struct i915_page_directory_pointer *pdp,
@@ -1640,8 +1562,6 @@ free_scratch:
 
 static void gen6_dump_ppgtt(struct i915_hw_ppgtt *ppgtt, struct seq_file *m)
 {
-	struct drm_device *dev = ppgtt->base.dev;
-
 	struct i915_address_space *vm = &ppgtt->base;
 	struct i915_page_table *unused;
 	gen6_pte_t scratch_pte;
@@ -1924,41 +1844,6 @@ static void gen6_ppgtt_clear_range(struct i915_address_space *vm,
 		first_pte = 0;
 		act_pt++;
 	}
-}
-
-static void gen6_ppgtt_insert_vmfb_entries(struct i915_address_space *vm,
-					   uint32_t num_pages,
-					   uint64_t start)
-{
-	struct i915_hw_ppgtt *ppgtt =
-		container_of(vm, struct i915_hw_ppgtt, base);
-	gen6_pte_t *pt_vaddr = NULL;
-	unsigned first_entry = start >> PAGE_SHIFT;
-	unsigned act_pt = first_entry / GEN6_PTES;
-	unsigned act_pte = first_entry % GEN6_PTES;
-
-	struct drm_i915_private *dev_priv = ppgtt->base.dev->dev_private;
-	uint32_t __iomem *vmfb_start = dev_priv->gtt.gsm;
-	int i;
-
-	vmfb_start += first_entry;
-
-	for (i = 0; i < num_pages; i++) {
-		if (pt_vaddr == NULL)
-			pt_vaddr = kmap_atomic(ppgtt->pd.page_table[act_pt]->base.page);
-
-		pt_vaddr[act_pte] = GTT_READ32(vmfb_start);
-		vmfb_start++;
-
-		if (++act_pte == GEN6_PTES) {
-			kunmap_atomic(pt_vaddr);
-			pt_vaddr = NULL;
-			act_pt++;
-			act_pte = 0;
-		}
-	}
-	if (pt_vaddr)
-		kunmap_atomic(pt_vaddr);
 }
 
 static void gen6_ppgtt_insert_entries(struct i915_address_space *vm,
@@ -2458,9 +2343,6 @@ void i915_gem_suspend_gtt_mappings(struct drm_device *dev)
 
 int i915_gem_gtt_prepare_object(struct drm_i915_gem_object *obj)
 {
-	if (obj->has_vmfb_mapping)
-		return 0;
-
 	if (!dma_map_sg(&obj->base.dev->pdev->dev,
 			obj->pages->sgl, obj->pages->nents,
 			PCI_DMA_BIDIRECTIONAL))
@@ -2688,25 +2570,17 @@ static int aliasing_gtt_bind_vma(struct i915_vma *vma,
 	if (obj->gt_ro)
 		pte_flags |= PTE_READ_ONLY;
 
-
 	if (flags & GLOBAL_BIND) {
-		if (!obj->has_vmfb_mapping)
-			vma->vm->insert_entries(vma->vm, pages,
+		vma->vm->insert_entries(vma->vm, pages,
 					vma->node.start,
 					cache_level, pte_flags);
 	}
 
 	if (flags & LOCAL_BIND) {
 		struct i915_hw_ppgtt *appgtt = dev_priv->mm.aliasing_ppgtt;
-		if (obj->has_vmfb_mapping)
-			insert_vmfb_entries(&appgtt->base,
-					    obj->base.size >> PAGE_SHIFT,
-					    vma->node.start);
-		else
-			appgtt->base.insert_entries(&appgtt->base,
-							    pages,
-							    vma->node.start,
-							    cache_level, pte_flags);
+		appgtt->base.insert_entries(&appgtt->base, pages,
+					    vma->node.start,
+					    cache_level, pte_flags);
 	}
 
 	return 0;
@@ -2722,20 +2596,19 @@ static void ggtt_unbind_vma(struct i915_vma *vma)
 				    vma->node.size);
 
 	if (vma->bound & GLOBAL_BIND) {
-		if (!obj->has_vmfb_mapping)
-			vma->vm->clear_range(vma->vm,
-					     vma->node.start,
-					     size,
-					     true);
+		vma->vm->clear_range(vma->vm,
+				     vma->node.start,
+				     size,
+				     true);
 	}
 
 	if (dev_priv->mm.aliasing_ppgtt && vma->bound & LOCAL_BIND) {
 		struct i915_hw_ppgtt *appgtt = dev_priv->mm.aliasing_ppgtt;
-		if (!obj->has_vmfb_mapping)
-			appgtt->base.clear_range(&appgtt->base,
-						 vma->node.start,
-						 size,
-						 true);
+
+		appgtt->base.clear_range(&appgtt->base,
+					 vma->node.start,
+					 size,
+					 true);
 	}
 }
 
@@ -3376,13 +3249,8 @@ __i915_gem_vma_create(struct drm_i915_gem_object *obj,
 	switch (INTEL_INFO(vm->dev)->gen) {
 	case 9:
 	case 8:
-		if (vma->obj->has_vmfb_mapping && !insert_vmfb_entries)
-			insert_vmfb_entries = gen8_ppgtt_insert_vmfb_entries;
 	case 7:
 	case 6:
-		if (vma->obj->has_vmfb_mapping && !insert_vmfb_entries)
-			insert_vmfb_entries = gen6_ppgtt_insert_vmfb_entries;
-		break;
 	case 5:
 	case 4:
 	case 3:
