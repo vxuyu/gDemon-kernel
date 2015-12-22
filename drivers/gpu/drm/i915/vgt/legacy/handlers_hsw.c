@@ -25,8 +25,8 @@
 #include <linux/delay.h>
 #include <linux/acpi.h>
 
-#include "fb_decoder.h"
 #include "vgt.h"
+#include "fb_decoder.h"
 
 static bool dpy_plane_mmio_read(struct vgt_device *vgt, unsigned int offset,
 			void *p_data, unsigned int bytes)
