@@ -32,17 +32,78 @@ struct vgt_device;
 
 static int i915_gem_vgtbuffer_get_pages(struct drm_i915_gem_object *obj)
 {
-	return 0;
+	BUG();
+	return -EINVAL;
 }
 
 static void i915_gem_vgtbuffer_put_pages(struct drm_i915_gem_object *obj)
 {
+	/* backing storage is pinned */
+	BUG();
+}
+
+static void i915_gem_vgtbuffer_release(struct drm_i915_gem_object *obj)
+{
+	sg_free_table(obj->pages);
+	kfree(obj->pages);
 }
 
 static const struct drm_i915_gem_object_ops i915_gem_vgtbuffer_ops = {
 	.get_pages = i915_gem_vgtbuffer_get_pages,
 	.put_pages = i915_gem_vgtbuffer_put_pages,
+	.release = i915_gem_vgtbuffer_release,
 };
+
+#define GEN8_DECODE_PTE(pte) \
+	((dma_addr_t)(((((u64)pte) >> 12) & 0x7ffffffULL) << 12))
+
+#define GEN7_DECODE_PTE(pte) \
+	((dma_addr_t)(((((u64)pte) & 0x7f0) << 28) | (u64)(pte & 0xfffff000)))
+
+static struct sg_table *
+i915_create_sg_pages_for_vgtbuffer(struct drm_device *dev,
+			     u32 start, u32 num_pages)
+{
+	struct drm_i915_private *dev_priv = dev->dev_private;
+	struct sg_table *st;
+	struct scatterlist *sg;
+	int i;
+
+	st = kmalloc(sizeof(*st), GFP_KERNEL);
+	if (st == NULL)
+		return NULL;
+
+	if (sg_alloc_table(st, num_pages, GFP_KERNEL)) {
+		kfree(st);
+		return NULL;
+	}
+
+	if (INTEL_INFO(dev)->gen >= 8) {
+		gen8_pte_t __iomem *gtt_entries =
+			(gen8_pte_t __iomem *)dev_priv->gtt.gsm +
+			(start >> PAGE_SHIFT);
+		for_each_sg(st->sgl, sg, num_pages, i) {
+			sg->offset = 0;
+			sg->length = PAGE_SIZE;
+			sg_dma_address(sg) =
+				GEN8_DECODE_PTE(readq(&gtt_entries[i]));
+			sg_dma_len(sg) = PAGE_SIZE;
+		}
+	} else {
+		gen6_pte_t __iomem *gtt_entries =
+			(gen6_pte_t __iomem *)dev_priv->gtt.gsm +
+			(start >> PAGE_SHIFT);
+		for_each_sg(st->sgl, sg, num_pages, i) {
+			sg->offset = 0;
+			sg->length = PAGE_SIZE;
+			sg_dma_address(sg) =
+				GEN7_DECODE_PTE(readq(&gtt_entries[i]));
+			sg_dma_len(sg) = PAGE_SIZE;
+		}
+	}
+
+	return st;
+}
 
 struct drm_i915_gem_object *
 i915_gem_object_create_vgtbuffer(struct drm_device *dev,
@@ -54,10 +115,16 @@ i915_gem_object_create_vgtbuffer(struct drm_device *dev,
 		return NULL;
 
 	drm_gem_private_object_init(dev, &obj->base, num_pages << PAGE_SHIFT);
-
 	i915_gem_object_init(obj, &i915_gem_vgtbuffer_ops);
+
+	obj->pages = i915_create_sg_pages_for_vgtbuffer(dev, start, num_pages);
+	if (obj->pages == NULL) {
+		i915_gem_object_free(obj);
+		return NULL;
+	}
+
+	i915_gem_object_pin_pages(obj);
 	obj->cache_level = I915_CACHE_L3_LLC;
-	obj->pages = NULL;
 
 	DRM_DEBUG_DRIVER("VGT_GEM: backing store base = 0x%x pages = 0x%x\n",
 			 start, num_pages);
