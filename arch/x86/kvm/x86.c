@@ -2119,8 +2119,8 @@ int kvm_set_msr_common(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 		if (kvm_pmu_is_valid_msr(vcpu, msr))
 			return kvm_pmu_set_msr(vcpu, msr_info);
 #ifdef CONFIG_KVMGT
-		if (kvmgt_is_disabled_msr(msr))
-			break;
+		if (kvmgt_is_passthrough_msr(msr))
+			break; /* will be ingored */
 #endif
 		if (!ignore_msrs) {
 			vcpu_unimpl(vcpu, "unhandled wrmsr: 0x%x data %llx\n",
@@ -2333,8 +2333,16 @@ int kvm_get_msr_common(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 		if (kvm_pmu_is_valid_msr(vcpu, msr_info->index))
 			return kvm_pmu_get_msr(vcpu, msr_info->index, &msr_info->data);
 #ifdef CONFIG_KVMGT
-		if (kvmgt_is_disabled_msr(msr_info->index)) {
-			msr_info->data = 0;
+		if (kvmgt_is_passthrough_msr(msr_info->index)) {
+			u64 val;
+			int err;
+
+			val = native_read_msr_safe(msr_info->index, &err);
+			if (!err)
+				msr_info->data = val;
+			else
+				msr_info->data = 0;
+
 			return 0;
 		}
 #endif

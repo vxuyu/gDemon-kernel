@@ -48,7 +48,7 @@ bool kvmgt_emulate_write(struct kvm *kvm, gpa_t gpa, const void *val, int len);
 
 pfn_t kvmgt_gfn_to_pfn_by_rmap(struct kvm *kvm, gfn_t gfn);
 
-static inline bool kvmgt_is_disabled_msr(u32 msr)
+static inline bool kvmgt_is_passthrough_msr(u32 msr)
 {
 	switch (msr) {
 	case 0x95: /* enable/disable cache cos */
