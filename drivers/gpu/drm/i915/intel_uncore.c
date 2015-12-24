@@ -1237,8 +1237,6 @@ void intel_uncore_init(struct drm_device *dev)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
 
-	i915_check_vgpu(dev);
-
 	intel_uncore_ellc_detect(dev);
 	intel_uncore_fw_domains_init(dev);
 	__intel_uncore_early_sanitize(dev, false);
