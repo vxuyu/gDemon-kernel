@@ -2511,9 +2511,9 @@ static bool vgt_write_force_nonpriv(struct vgt_device *vgt, unsigned int offset,
 		return false;
 	}
 
-	if (*(vgt_reg_t *)p_data == 0x2248) {
+	if (reg_is_render(vgt->pdev, *(vgt_reg_t *)p_data))
 		return default_mmio_write(vgt, offset, p_data, bytes);
-	} else {
+	else {
 		vgt_err("Unexpected force_to_nonpriv 0x%x mmio write, value=0x%x\n",
 				offset, *(vgt_reg_t *)p_data);
 		return false;
@@ -3667,6 +3667,9 @@ reg_attr_t vgt_reg_info_bdw[] = {
 
 /* NON-PRIV */
 {0x24d0, 4, F_RDR, 0, D_BDW_PLUS, NULL, vgt_write_force_nonpriv},
+{0x24d4, 4, F_RDR, 0, D_SKL_PLUS, NULL, vgt_write_force_nonpriv},
+{0x24d8, 4, F_RDR, 0, D_SKL_PLUS, NULL, vgt_write_force_nonpriv},
+
 
 {0x83a4, 4, F_RDR, 0, D_BDW, NULL, NULL},
 {0x4dd4, 4, F_PT, 0, D_BDW_PLUS, NULL, NULL},
@@ -3685,6 +3688,8 @@ reg_attr_t vgt_reg_info_bdw[] = {
 {0xe188, 4, F_RDR_MODE, 0, D_BDW_PLUS, NULL, NULL},
 {0xe180, 4, F_RDR_MODE, 0, D_BDW_PLUS, NULL, NULL},
 {0x2580, 4, F_RDR_MODE, 0, D_BDW_PLUS, NULL, NULL},
+
+{0x2248, 4, F_RDR, 0, D_BDW, NULL, NULL},
 };
 
 reg_attr_t vgt_reg_info_skl[] = {

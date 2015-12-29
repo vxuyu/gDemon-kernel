@@ -201,6 +201,8 @@ vgt_reg_t vgt_gen8_render_regs[] = {
         _REG_VECS_EXECLIST_STATUS,
         _REG_VCS2_EXECLIST_STATUS,
         _REG_BCS_EXECLIST_STATUS,
+	/*this register is from NONPRIV usage*/
+	0x2248,
 };
 
 vgt_reg_t vgt_gen9_render_regs[] = {
@@ -214,8 +216,12 @@ vgt_reg_t vgt_gen9_render_regs[] = {
 	GEN8_PRIVATE_PAT_HI,
 
 	0x7004,
-	0x7014,
+	COMMON_SLICE_CHICKEN2,
 	0x7300,
+
+	/*this register is from NONPRIV usage*/
+	GEN8_L3SQCREG4,
+
 	0xe100,
 	0xe180,
 	0xe184,
