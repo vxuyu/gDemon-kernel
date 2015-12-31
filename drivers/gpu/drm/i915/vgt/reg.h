@@ -320,6 +320,7 @@ static inline uint32_t __RING_REG(int32_t ring_id, uint32_t rcs_reg)
 
 #define	_PRI_PLANE_STRIDE_SHIFT	6
 #define	_PRI_PLANE_STRIDE_MASK	(0x3ff << _PRI_PLANE_STRIDE_SHIFT)
+#define	SKL_PLANE_STRIDE_MASK	0x3ff
 
 #define	_PRI_PLANE_X_OFF_SHIFT	0
 #define	_PRI_PLANE_X_OFF_MASK	(0x1fff << _PRI_PLANE_X_OFF_SHIFT)
