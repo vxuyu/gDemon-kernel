@@ -2595,6 +2595,143 @@ out:
 }
 
 
+/* BDW PAT index definion.
+PAT_INDEX_H(0x40E4)
+Bit[63:56]: PAT Index#7 definition for page tables.
+Bit[55:48]: PAT Index#6 definition for page tables.
+Bit[47:40]: PAT Index#5 definition for page tables.
+Bit[39:32]: PAT Index#4 definition for page tables.
+PAT_INDEX_L(0x40E0)
+Bit[31:24]: PAT Index#3 definition for page tables.
+Bit[23:16]: PAT Index#2 definition for page tables.
+Bit[15:8]: PAT Index#1 definition for page tables.
+Bit[7:0]: PAT Index#0 definition for page tables.
+*/
+
+static inline bool gen8_translate_ppat(struct vgt_device *vgt,
+		u8 p_index, u8 *m_index)
+{
+	u8 pat_index, pat_reg_index;
+	unsigned long v_pat_value, s_pat_value;
+	unsigned long v_cache_attr, s_cache_attr;
+	unsigned long v_tc, s_tc;
+	unsigned long val;
+	bool found = false;
+
+	/*
+	Translate rules:
+	1.If Target Cache and Cache Attribute exactly match, translate it.
+	2.If they are not exactly match, find which has same Cache Attribute.
+	3.Target Cache is accepted to mismatch, and LRU Age is igron.
+	*/
+
+	*m_index = -1;
+
+	pat_index = p_index;
+	if (pat_index > VGT_MAX_PPAT_TABLE_SIZE) {
+		vgt_err("Invalid guest PAT index: %x\n", pat_index);
+		return false;
+	}
+
+	/* Find the Hi/Lo register for the index. */
+	pat_reg_index = pat_index / 4;
+	/* Find the offset within the register. */
+	pat_index -= pat_reg_index * 4;
+
+	val = __vreg(vgt, _REG_GEN8_PRIVATE_PAT + pat_reg_index * 4);
+	v_pat_value = (val >> (pat_index * 8)) & 0xf;
+
+	v_cache_attr = v_pat_value & 0x3;
+	v_tc = v_pat_value >> 2 & 0x3;
+
+	for (pat_reg_index = 0; pat_reg_index < 2; pat_reg_index++) {
+		val = __vreg(vgt_dom0, _REG_GEN8_PRIVATE_PAT + pat_reg_index * 4);
+		for (pat_index = 0; pat_index < 4; pat_index++) {
+			s_pat_value = (val >> (pat_index * 8)) & 0xf;
+			s_cache_attr = s_pat_value & 0x3;
+			s_tc = s_pat_value >> 2 & 0x3;
+
+			if (s_cache_attr != v_cache_attr)
+				continue;
+
+			/* Target Cache & Cache Attribute exactly match. */
+			if (s_tc == v_tc) {
+				*m_index = pat_reg_index * 4 + pat_index;
+				return true;
+			}
+
+			if (found)
+				continue;
+
+			/* Cache Attribute match, mark in case for not exactly
+			match. */
+			found = true;
+			*m_index = pat_reg_index * 4 + pat_index;
+		}
+	}
+
+	if (!found) {
+		vgt_err("fail to find guest PAT value from DOM0 PAT table.\n"
+			"ppat index: %d, ppat value: %lx. (cache targer: %lx, cache attribute: %lx)\n",
+			p_index, v_pat_value, v_tc, v_cache_attr);
+		return false;
+	}
+
+	vgt_warn("gen8_translate_ppat is not exactly match, mapping item: %d -> %d.\n"
+			"ppat value: %lx. (cache targer: %lx, cache attribute: %lx)\n",
+			p_index, *m_index, v_pat_value, v_tc, v_cache_attr);
+
+	return true;
+}
+
+
+bool gen8_ppat_update_mapping_table(struct vgt_device *vgt)
+{
+	struct vgt_ppat_table *pt = &vgt->ppat_table;
+	int i = 0;
+	bool ret = false;
+
+	pt->is_vaild = true;
+
+	for (; i < VGT_MAX_PPAT_TABLE_SIZE; i++) {
+		ret = gen8_translate_ppat(vgt, i, &(pt->mapping_table[i]));
+			if (ret)
+				vgt_info("ppat mapping table entry --> success: %d -> %d:\n",
+					i, pt->mapping_table[i]);
+			else
+				vgt_err("ppat mapping table entry: --> fail: %d -> %d:\n",
+					i, pt->mapping_table[i]);
+	}
+
+	gen8_dump_ppat_registers(vgt);
+
+	return true;
+}
+
+static bool gen8_ppat_write(struct vgt_device *vgt, unsigned int offset,
+			void *p_data, unsigned int bytes)
+{
+	unsigned int virtual = 0;
+	unsigned int shadow = 0;
+	bool ret = false;
+
+	ret = default_mmio_write(vgt, offset, p_data, bytes);
+
+	if (vgt->vgt_id == 0)
+		return ret;
+
+	virtual = __vreg(vgt, _REG_GEN8_PRIVATE_PAT);
+	shadow = __vreg(vgt_dom0, _REG_GEN8_PRIVATE_PAT);
+
+	gen8_ppat_update_mapping_table(vgt);
+
+        if ((virtual & 0x3) != (shadow & 0x3))
+                vgt_err("VM(%d) gen8_ppat_write, error value at ppat index 0.\n"
+                        , vgt->vgt_id);
+
+	return ret;
+}
+
 /*
  * Track policies of all captured registers
  *
@@ -3562,8 +3699,8 @@ reg_attr_t vgt_reg_info_bdw[] = {
 
 {0x1C054, 4, F_DOM0, 0, D_BDW_PLUS, NULL, NULL},
 /* BDW */
-{GEN8_PRIVATE_PAT_LO, 4, F_PT, 0, D_BDW_PLUS, NULL, NULL},
-{GEN8_PRIVATE_PAT_HI, 4, F_PT, 0, D_BDW_PLUS, NULL, NULL},
+{GEN8_PRIVATE_PAT_LO, 4, F_PT, 0, D_BDW_PLUS, NULL, gen8_ppat_write},
+{GEN8_PRIVATE_PAT_HI, 4, F_PT, 0, D_BDW_PLUS, NULL, gen8_ppat_write},
 
 {GAMTARBMODE, 4, F_DOM0, 0, D_BDW_PLUS, NULL, NULL},
 

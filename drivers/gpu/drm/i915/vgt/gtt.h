@@ -108,6 +108,8 @@ struct vgt_gtt_pte_ops {
 	bool (*test_pse)(gtt_entry_t *e);
 	void (*set_pfn)(gtt_entry_t *e, unsigned long pfn);
 	unsigned long (*get_pfn)(gtt_entry_t *e);
+	void (*set_pat_index)(gtt_entry_t *e, unsigned long index);
+	unsigned long (*get_pat_index)(gtt_entry_t *e);
 };
 
 struct vgt_gtt_gma_ops {

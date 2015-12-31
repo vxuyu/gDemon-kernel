@@ -238,6 +238,19 @@ static struct dentry *vgt_debugfs_create_blob(const char *name, mode_t mode,
 	return debugfs_create_file(name, mode, parent, p, &u32_array_fops);
 }
 
+void gen8_dump_ppat_registers(struct vgt_device *vgt)
+{
+	vgt_info("Linux host ppat register:\n"
+			"    0x40e0: %08x\n"
+			"    0x40e4: %08x\n"
+			"Guest VM(%d) ppat register:\n"
+			"    0x40e0: %08x\n"
+			"    0x40e4: %08x\n",
+			__vreg(vgt_dom0, _REG_GEN8_PRIVATE_PAT), __vreg(vgt_dom0, _REG_GEN8_PRIVATE_PAT + 4),
+			vgt->vgt_id,
+			__vreg(vgt, _REG_GEN8_PRIVATE_PAT), __vreg(vgt, _REG_GEN8_PRIVATE_PAT + 4));
+}
+
 static inline char *reg_show_reg_owner(struct pgt_device *pdev, int i)
 {
 	char *str;

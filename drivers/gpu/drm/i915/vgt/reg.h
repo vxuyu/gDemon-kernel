@@ -984,6 +984,8 @@ union _TRANS_CONFIG
 #define _REG_DE_PIPE_IIR(pipe) (0x44408 + (0x10 * (pipe)))
 #define _REG_DE_PIPE_IER(pipe) (0x4440c + (0x10 * (pipe)))
 
+#define _REG_GEN8_PRIVATE_PAT  0x40e0
+
 #define _REG_RING_PDP_UDW(base, n)      (base + 0x270 + ((n) * 8 + 4))
 #define _REG_RING_PDP_LDW(base, n)      (base + 0x270 + (n) * 8)
 

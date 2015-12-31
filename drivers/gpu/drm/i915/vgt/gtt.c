@@ -310,6 +310,70 @@ static void gtt_entry_clear_present(gtt_entry_t *e)
 }
 
 /*
+For Gen8 platform.
+PAT: bit 7, PCD: bit 4, PWT: bit 3.
+index: index = 4*PAT+2*PCD+PWT
+*/
+static unsigned long gen8_get_pat_index(gtt_entry_t *e)
+{
+	u8 index = 0;
+
+	if (_PAGE_PWT & e->val64)
+		index |= (1 << 0);
+
+	if (_PAGE_PCD & e->val64)
+		index |= (1 << 1);
+
+	if (_PAGE_PAT & e->val64)
+		index |= (1 << 2);
+
+	return index;
+}
+
+static void gen8_set_pat_index(gtt_entry_t *e, unsigned long index)
+{
+	e->val64 &= ~(_PAGE_PWT | _PAGE_PCD | _PAGE_PAT);
+
+	if (index & (1 << 0))
+		e->val64 |= _PAGE_PWT;
+
+	if (index & (1 << 1))
+		e->val64 |= _PAGE_PCD;
+
+	if (index & (1 << 2))
+		e->val64 |= _PAGE_PAT;
+}
+
+static inline bool translate_ppat(struct vgt_device *vgt,
+		gtt_entry_t *p, gtt_entry_t *m)
+{
+	struct vgt_gtt_pte_ops *ops = vgt->pdev->gtt.pte_ops;
+	struct vgt_ppat_table *pt = &vgt->ppat_table;
+	u8 p_index, m_index;
+
+	if (pt->is_vaild == false)
+		return true;
+
+	p_index = ops->get_pat_index(p);
+	if (p_index >= VGT_MAX_PPAT_TABLE_SIZE) {
+		vgt_err("VM(%d): ppat index(%d) is over size(%d).\n",
+				vgt->vm_id, p_index, VGT_MAX_PPAT_TABLE_SIZE);
+		return false;
+	}
+
+	m_index = pt->mapping_table[p_index];
+	if (m_index == -1) {
+		vgt_err("VM(%d): ppat index(%d) is missing mapping.\n",
+				vgt->vm_id, p_index);
+		gen8_dump_ppat_registers(vgt);
+		return false;
+	}
+
+	ops->set_pat_index(m, m_index);
+	return true;
+}
+
+/*
  * Per-platform GMA routines.
  */
 static unsigned long gma_to_ggtt_pte_index(unsigned long gma)
@@ -359,6 +423,8 @@ struct vgt_gtt_pte_ops gen8_gtt_pte_ops = {
 	.test_pse = gen8_gtt_test_pse,
 	.get_pfn = gen8_gtt_get_pfn,
 	.set_pfn = gen8_gtt_set_pfn,
+	.get_pat_index = gen8_get_pat_index,
+	.set_pat_index = gen8_set_pat_index,
 };
 
 struct vgt_gtt_gma_ops gen8_gtt_gma_ops = {
@@ -390,7 +456,7 @@ static bool gtt_entry_p2m(struct vgt_device *vgt, gtt_entry_t *p, gtt_entry_t *m
 
         ops->set_pfn(m, mfn);
 
-        return true;
+	return translate_ppat(vgt, p, m);
 }
 
 /*

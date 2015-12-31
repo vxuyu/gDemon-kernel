@@ -856,6 +856,11 @@ void state_vreg_init(struct vgt_device *vgt)
 		 */
 		__vreg(vgt, FPGA_DBG) &= ~FPGA_DBG_RM_NOCLAIM;
 	}
+
+	if (vgt->vgt_id != 0) {
+		if (IS_BDWPLUS(vgt->pdev))
+			gen8_ppat_update_mapping_table(vgt);
+	}
 }
 
 /* TODO: figure out any security holes by giving the whole initial state */

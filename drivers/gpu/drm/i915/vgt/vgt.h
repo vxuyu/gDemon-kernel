@@ -237,6 +237,16 @@ struct vgt_tailq {
 };
 #define vgt_tailq_idx(idx) ((idx) & VGT_TAILQ_IDX_MASK)
 
+#define VGT_MAX_PPAT_TABLE_SIZE 8
+
+struct vgt_ppat_table {
+	u8 mapping_table[VGT_MAX_PPAT_TABLE_SIZE];
+	bool is_vaild; /* indicate if ppat exist, not translate if zero. */
+};
+
+bool gen8_ppat_update_mapping_table(struct vgt_device *vgt);
+void gen8_dump_ppat_registers(struct vgt_device *vgt);
+
 struct vgt_device {
 	enum pipe pipe_mapping[I915_MAX_PIPES];
 	int vgt_id;		/* 0 is always for dom0 */
@@ -248,6 +258,8 @@ struct vgt_device {
 
 	struct gt_port		ports[I915_MAX_PORTS]; /* one port per PIPE */
 	struct vgt_i2c_edid_t	vgt_i2c_edid;	/* i2c bus state emulaton for reading EDID */
+
+	struct vgt_ppat_table	ppat_table;
 
 	uint64_t	aperture_base;
 	void		*aperture_base_va;

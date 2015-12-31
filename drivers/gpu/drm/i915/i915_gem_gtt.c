@@ -2914,6 +2914,32 @@ static void bdw_setup_private_ppat(struct drm_i915_private *dev_priv)
 	      GEN8_PPAT(6, GEN8_PPAT_WB | GEN8_PPAT_LLCELLC | GEN8_PPAT_AGE(2)) |
 	      GEN8_PPAT(7, GEN8_PPAT_WB | GEN8_PPAT_LLCELLC | GEN8_PPAT_AGE(3));
 
+	if (i915_host_mediate) {
+		/*
+		* Item 0, 1, 2, 3, 4 are host Linux PPAT, no order change.
+		* Item 5, 6, 7 are Windows PPAT.
+		*/
+		if (dev_priv->ellc_size == 0) {
+			pat = GEN8_PPAT(0, GEN8_PPAT_WB | GEN8_PPAT_LLC) |
+			GEN8_PPAT(1, GEN8_PPAT_WC | GEN8_PPAT_LLCELLC) |
+			GEN8_PPAT(2, GEN8_PPAT_WT | GEN8_PPAT_LLCELLC) |
+			GEN8_PPAT(3, GEN8_PPAT_UC)|
+			GEN8_PPAT(4, GEN8_PPAT_WB | GEN8_PPAT_LLCELLC | GEN8_PPAT_AGE(1))|
+			GEN8_PPAT(5, GEN8_PPAT_WC | GEN8_PPAT_LLCeLLC | GEN8_PPAT_AGE(1))|
+			GEN8_PPAT(6, GEN8_PPAT_WB | GEN8_PPAT_LLCeLLC | GEN8_PPAT_AGE(1))|
+			GEN8_PPAT(7, GEN8_PPAT_UC | GEN8_PPAT_LLCeLLC | GEN8_PPAT_AGE(1));
+		} else {
+			pat = GEN8_PPAT(0, GEN8_PPAT_WB | GEN8_PPAT_LLC) |
+			GEN8_PPAT(1, GEN8_PPAT_WC | GEN8_PPAT_LLCELLC) |
+			GEN8_PPAT(2, GEN8_PPAT_WT | GEN8_PPAT_LLCELLC) |
+			GEN8_PPAT(3, GEN8_PPAT_UC)|
+			GEN8_PPAT(4, GEN8_PPAT_WB | GEN8_PPAT_LLCELLC | GEN8_PPAT_AGE(1))|
+			GEN8_PPAT(5, GEN8_PPAT_WC | GEN8_PPAT_ELLC_OVERRIDE | GEN8_PPAT_AGE(1))|
+			GEN8_PPAT(6, GEN8_PPAT_WB | GEN8_PPAT_ELLC_OVERRIDE | GEN8_PPAT_AGE(1))|
+			GEN8_PPAT(7, GEN8_PPAT_UC | GEN8_PPAT_ELLC_OVERRIDE | GEN8_PPAT_AGE(1));
+		}
+	}
+
 	if (!USES_PPGTT(dev_priv->dev))
 		/* Spec: "For GGTT, there is NO pat_sel[2:0] from the entry,
 		 * so RTL will always use the value corresponding to
