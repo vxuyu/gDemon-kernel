@@ -984,7 +984,7 @@ igd_mmio_write(struct file* filp, struct kobject *kobj,
 				count;
 
 		memcpy(&data, buf, len);
-		if (vgt_native_mmio_read(off, &data, len, false) != true) {
+		if (vgt_native_mmio_write(off, &data, len, false) != true) {
 			vgt_unlock_dev(pdev, cpu);
 			return -EIO;
 		}
