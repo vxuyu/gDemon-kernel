@@ -733,7 +733,6 @@ static bool vgt_initialize_platform(struct pgt_device *pdev)
 		}
 
 		if (IS_SKL(pdev)) {
-			enable_panel_fitting = false;
 			vgt_get_memory_latency(pdev);
 			VGT_MMIO_WRITE(pdev, 0x4dfc, 0x1);
 		}

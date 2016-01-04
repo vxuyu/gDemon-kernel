@@ -731,8 +731,14 @@ bool set_panel_fitting(struct vgt_device *vgt, enum pipe pipe)
 		when the pipe horizontal source size is greater than 2048 pixels*/
 	if (IS_HSW(vgt->pdev))
 		pf_ctl =  PF_FILTER_MED_3x3 | PF_PIPE_SEL_IVB(real_pipe);
-	else /*after BDW the panel fitter is on the pipe, no need to assign.*/
+	else if (IS_BDW(vgt->pdev)) /*after BDW the panel fitter is on the pipe, no need to assign.*/
 		pf_ctl =  PF_FILTER_MED_3x3;
+	else {/* SKL+ */
+		pf_ctl = PS_SCALER_MODE_DYN | PS_FILTER_MEDIUM;
+		/* enable pipe scaler, disable plane scaler */
+		pf_ctl &= ~PS_PLANE_SEL_MASK;
+	}
+
 
 	/*enable panel fitting only when the source mode does not eqaul to the target mode*/
 	if (src_width != target_width || src_height != target_height ) {
@@ -745,6 +751,7 @@ bool set_panel_fitting(struct vgt_device *vgt, enum pipe pipe)
 
 	/* we need to increase Water Mark in down scaling case */
 	if (src_width > target_width || src_height > target_height) {
+		/* Test shows SKL look do not need re-calc WM for pipe during down-scaling */
 		wm_reg = real_pipe == PIPE_A ? WM0_PIPEA_ILK :
 			(real_pipe == PIPE_B ? WM0_PIPEB_ILK : WM0_PIPEC_IVB);
 		plane_wm = (__vreg(vgt_dom0, wm_reg) & _REGBIT_WM0_PIPE_PLANE_MASK)
@@ -765,12 +772,26 @@ bool set_panel_fitting(struct vgt_device *vgt, enum pipe pipe)
 		VGT_MMIO_WRITE(vgt->pdev, wm_reg, wm_value);
 	}
 
-	VGT_MMIO_WRITE(vgt->pdev, VGT_PIPESRC(real_pipe),  ((src_width -1) << 16) | (src_height - 1));
-	VGT_MMIO_WRITE(vgt->pdev, PF_WIN_POS(real_pipe), 0);
-	VGT_MMIO_WRITE(vgt->pdev, PF_CTL(real_pipe), pf_ctl);
-	/* PF ctrl is a double buffered registers and gets updated when window
-	 size registered is updated*/
-	VGT_MMIO_WRITE(vgt->pdev, PF_WIN_SZ(real_pipe),  (target_width << 16) | target_height);
+	if (IS_SKLPLUS(vgt->pdev)) {
+		VGT_MMIO_WRITE(vgt->pdev, VGT_PIPESRC(real_pipe),  ((src_width -1) << 16) | (src_height - 1));
+		VGT_MMIO_WRITE(vgt->pdev, PLANE_SIZE(real_pipe, 0), ((src_height-1) << 16) | (src_width-1));
+		VGT_MMIO_WRITE(vgt->pdev, PS_WIN_POS(real_pipe), 0);
+		VGT_MMIO_WRITE(vgt->pdev, PS_CTL(real_pipe), pf_ctl);
+		/* PS_CTL ctrl is a double buffered registers and gets updated when window
+		 size registered is updated*/
+		VGT_MMIO_WRITE(vgt->pdev, PS_WIN_SZ(real_pipe),  (target_width << 16) | target_height);
+
+		/* trigger pipe refresh */
+		VGT_MMIO_WRITE(vgt->pdev, VGT_DSPSURF(real_pipe), VGT_MMIO_READ(vgt->pdev, VGT_DSPSURF(real_pipe)));
+	}
+	else {
+		VGT_MMIO_WRITE(vgt->pdev, VGT_PIPESRC(real_pipe),  ((src_width -1) << 16) | (src_height - 1));
+		VGT_MMIO_WRITE(vgt->pdev, PF_WIN_POS(real_pipe), 0);
+		VGT_MMIO_WRITE(vgt->pdev, PF_CTL(real_pipe), pf_ctl);
+		/* PF ctrl is a double buffered registers and gets updated when window
+		 size registered is updated*/
+		VGT_MMIO_WRITE(vgt->pdev, PF_WIN_SZ(real_pipe),  (target_width << 16) | target_height);
+	}
 	return true;
 }
 
