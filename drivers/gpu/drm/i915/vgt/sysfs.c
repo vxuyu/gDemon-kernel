@@ -949,7 +949,7 @@ igd_mmio_read(struct file *filp, struct kobject *kobj,
 		len = (count > sizeof(unsigned long)) ? sizeof(unsigned long) :
 				count;
 
-		if (vgt_native_mmio_read(off, &data, len, false) != 0) {
+		if (vgt_native_mmio_read(off, &data, len, false) != true) {
 			vgt_unlock_dev(pdev, cpu);
 			return -EIO;
 		}
@@ -984,7 +984,7 @@ igd_mmio_write(struct file* filp, struct kobject *kobj,
 				count;
 
 		memcpy(&data, buf, len);
-		if (vgt_native_mmio_read(off, &data, len, false) != 0) {
+		if (vgt_native_mmio_read(off, &data, len, false) != true) {
 			vgt_unlock_dev(pdev, cpu);
 			return -EIO;
 		}
