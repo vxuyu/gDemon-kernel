@@ -3140,8 +3140,10 @@ int vgt_scan_vring(struct vgt_device *vgt, int ring_id)
 	stat->vring_scan_cycles += t1 - t0;
 
 err:
-	if (ret && vgt_cmd_audit)
+	if (ret && vgt_cmd_audit) {
+		vgt->force_removal = 1;
 		vgt_kill_vm(vgt);
+	}
 
 	return ret;
 }

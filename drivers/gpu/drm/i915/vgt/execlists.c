@@ -1890,7 +1890,7 @@ static void vgt_release_shadow_cmdbuf(struct vgt_device *vgt,
 }
 
 /* perform command buffer scan and shadowing */
-static void vgt_manipulate_cmd_buf(struct vgt_device *vgt,
+static int vgt_manipulate_cmd_buf(struct vgt_device *vgt,
 			struct execlist_context *el_ctx)
 {
 	struct reg_state_ctx_header *guest_state;
@@ -1967,14 +1967,16 @@ static void vgt_manipulate_cmd_buf(struct vgt_device *vgt,
 		vgt_create_shadow_indirect_ctx(vgt, el_ctx);
 	}
 
-	vgt_scan_vring(vgt, ring_id);
-
-	/* the function is used to update ring/buffer only. No real submission inside */
-	vgt_submit_commands(vgt, ring_id);
-
-	el_ctx->request_id = vgt->rb[ring_id].request_id;
-	el_ctx->last_scan_head = vring->tail;
-	vgt->rb[ring_id].active_ppgtt_mm = NULL;
+	if (!vgt_scan_vring(vgt, ring_id)) {
+		/* the function is used to update ring/buffer only. No real submission inside */
+		vgt_submit_commands(vgt, ring_id);
+		el_ctx->request_id = vgt->rb[ring_id].request_id;
+		el_ctx->last_scan_head = vring->tail;
+		vgt->rb[ring_id].active_ppgtt_mm = NULL;
+		return 0;
+	} else {
+		return -1;
+	}
 }
 
 void vgt_kick_off_execlists(struct vgt_device *vgt)
@@ -2081,8 +2083,10 @@ void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 		memcpy(&context_descs[i], &ctx->guest_context,
 				sizeof(struct ctx_desc_format));
 
-		if (vgt->vm_id)
-			vgt_manipulate_cmd_buf(vgt, ctx);
+		if (vgt->vm_id) {
+			if (vgt_manipulate_cmd_buf(vgt, ctx))
+				return;
+		}
 
 		vgt_update_shadow_ctx_from_guest(vgt, ctx);
 
