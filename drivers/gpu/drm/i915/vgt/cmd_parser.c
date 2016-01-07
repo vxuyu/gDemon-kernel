@@ -3089,7 +3089,11 @@ int vgt_scan_vring(struct vgt_device *vgt, int ring_id)
 		/* Ring is enabled */
 		vgt_dbg(VGT_DBG_CMD, "VGT-Parser.c vring is disabled. head %x tail %x ctl %x\n",
 			vring->head, vring->tail, vring->ctl);
-		return 0;
+		if (IS_HSW(vgt->pdev))
+			return 0;
+		vgt_err("Unexpected ring %d disabled in context\n", ring_id);
+		ret = -1;
+		goto err;
 	}
 
 	stat->vring_scan_cnt++;
