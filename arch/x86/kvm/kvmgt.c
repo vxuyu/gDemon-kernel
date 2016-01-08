@@ -518,8 +518,10 @@ static void kvmgt_hvm_exit(struct vgt_device *vgt)
 	struct kvmgt_hvm_info *info;
 
 	info = vgt->hvm_info;
-	kvmgt_protect_table_destroy(info->kvm);
-	vfree(info);
+	if (info) {
+		kvmgt_protect_table_destroy(info->kvm);
+		vfree(info);
+	}
 }
 
 static bool kvmgt_read_hva(struct vgt_device *vgt, void *hva,
