@@ -1029,4 +1029,6 @@ union _TRANS_CONFIG
 #define _REG_701C0(pipe, plane) (0x701c0 + pipe * 0x1000 + (plane - 1) * 0x100)
 #define _REG_701C4(pipe, plane) (0x701c4 + pipe * 0x1000 + (plane - 1) * 0x100)
 
+#define _RING_FAULT_REG(ring)	(0x4094 + 0x100*(ring))
+
 #endif	/* _VGT_REG_H_ */

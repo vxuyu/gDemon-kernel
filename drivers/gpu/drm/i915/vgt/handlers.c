@@ -3543,6 +3543,14 @@ reg_attr_t vgt_reg_info_general[] = {
 
 /* BDW */
 {0xe100, 4, F_RDR_MODE, 0, D_ALL, NULL, NULL},
+
+{0x4260, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
+{0x4264, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
+{0x4268, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
+{0x426c, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
+{0x4270, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
+
+{_RING_FAULT_REG(RING_BUFFER_RCS), 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
 };
 
 reg_attr_t vgt_reg_info_bdw[] = {
