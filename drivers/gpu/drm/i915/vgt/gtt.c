@@ -2411,3 +2411,39 @@ bool vgt_handle_guest_write_rootp_in_context(struct execlist_context *el_ctx, in
 
 	return rc;
 }
+
+/* ppgtt : ppgtt sync-up between guest/shadow */
+
+bool ppgtt_update_shadow_ppgtt_for_ctx(struct vgt_device *vgt,
+				struct execlist_context *el_ctx)
+{
+	bool rc = true;
+	struct reg_state_ctx_header *g_state;
+	struct vgt_mm *mm = el_ctx->ppgtt_mm;
+	gtt_entry_t ctx_rootp;
+	gtt_entry_t pt_ctx_rootp;
+	int i;
+
+	if (!vgt_require_shadow_context(vgt))
+		return rc;
+
+	g_state = (struct reg_state_ctx_header *)
+					el_ctx->ctx_pages[1].guest_page.vaddr;
+	/* compare the page table root pointer stored in guest context and
+	 * in shadow page table, update the mapping if it is not aligned
+	 */
+	for (i = 0; i < el_ctx->ppgtt_mm->page_table_entry_cnt; ++ i) {
+		ppgtt_get_rootp_from_ctx(g_state, &ctx_rootp, i);
+		ppgtt_get_guest_root_entry(mm, &pt_ctx_rootp, i);
+
+		if (ctx_rootp.val64 != pt_ctx_rootp.val64)
+			break;
+	}
+
+	if (i != el_ctx->ppgtt_mm->page_table_entry_cnt) {
+		if (vgt_el_create_shadow_ppgtt(vgt, el_ctx->ring_id, el_ctx))
+			rc = false;
+	}
+
+	return rc;
+}

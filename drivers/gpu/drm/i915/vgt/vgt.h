@@ -1866,6 +1866,10 @@ bool vgt_g2v_execlist_context_create(struct vgt_device *vgt);
 bool vgt_g2v_execlist_context_destroy(struct vgt_device *vgt);
 
 bool vgt_batch_ELSP_write(struct vgt_device *vgt, int ring_id);
+bool ppgtt_update_shadow_ppgtt_for_ctx(struct vgt_device *vgt,struct execlist_context *el_ctx);
+int vgt_el_create_shadow_ppgtt(struct vgt_device *vgt,
+				enum vgt_ring_id ring_id,
+				struct execlist_context *el_ctx);
 
 static inline void reset_el_structure(struct pgt_device *pdev,
 				enum vgt_ring_id ring_id)

@@ -588,26 +588,6 @@ static bool sctx_reg_state_wp_handler(void *gp, uint64_t pa, void *p_data, int b
 	return rc;
 }
 
-/* context shadow: context sync-up between guest/shadow */
-
-static inline bool ppgtt_update_shadow_ppgtt_for_ctx(struct vgt_device *vgt,
-				struct execlist_context *el_ctx)
-{
-	bool rc = true;
-	int i;
-
-	if (!vgt_require_shadow_context(vgt))
-		return rc;
-
-	for (i = 0; i < el_ctx->ppgtt_mm->page_table_entry_cnt; ++ i) {
-		vgt_dbg(VGT_DBG_EXECLIST, "Emulate the rootp[%d] change\n", i);
-		rc = vgt_handle_guest_write_rootp_in_context(el_ctx, i);
-		if (!rc)
-			break;
-	}
-	return rc;
-}
-
 #define CHECK_CTX_VAL(MMIO, GUEST, REF, SRC)				\
 do {									\
 	if(GUEST->MMIO.val != REF->MMIO.val)				\
@@ -1083,7 +1063,7 @@ static int vgt_el_destroy_shadow_context(struct vgt_device *vgt,
 	return 0;
 }
 
-static int vgt_el_create_shadow_ppgtt(struct vgt_device *vgt,
+int vgt_el_create_shadow_ppgtt(struct vgt_device *vgt,
 				enum vgt_ring_id ring_id,
 				struct execlist_context *el_ctx)
 {
