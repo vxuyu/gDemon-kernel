@@ -110,9 +110,6 @@ static int sanitize_enable_ppgtt(struct drm_device *dev, int enable_ppgtt)
 	has_full_ppgtt = INTEL_INFO(dev)->gen >= 7;
 	has_full_48bit_ppgtt = IS_BROADWELL(dev) || INTEL_INFO(dev)->gen >= 9;
 
-	if (intel_vgpu_active(dev))
-		has_full_ppgtt = false; /* emulation is too hard */
-
 	/*
 	 * We don't allow disabling PPGTT for gen9+ as it's a requirement for
 	 * execlists, the sole mechanism available to submit work.
@@ -145,7 +142,13 @@ static int sanitize_enable_ppgtt(struct drm_device *dev, int enable_ppgtt)
 		return 0;
 	}
 
-	if (INTEL_INFO(dev)->gen >= 8 && i915.enable_execlists)
+	if (INTEL_INFO(dev)->gen >= 8 && i915.enable_execlists &&
+		/* This is a temporary workaround.
+		 * Use Aliasing PPGTT when GVT-g enabled.
+		 * We'll remove it once bug is fixed, which is introduced
+		 * by enable 32/48 full PPGTT.
+		 *  */
+		!intel_vgpu_active(dev))
 		return has_full_48bit_ppgtt ? 3 : 2;
 	else
 		return has_aliasing_ppgtt ? 1 : 0;
