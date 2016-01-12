@@ -1268,7 +1268,7 @@ static inline void vgt_init_sched_info(struct vgt_device *vgt)
 	if (timer_based_qos) {
 
 		if (tbs_period_ms == -1) {
-			tbs_period_ms = IS_BDW(vgt->pdev) ?
+			tbs_period_ms = IS_BDWPLUS(vgt->pdev) ?
 				VGT_TBS_PERIOD_MIN : VGT_TBS_PERIOD_MAX;
 		}
 
