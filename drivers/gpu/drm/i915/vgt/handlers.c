@@ -2671,15 +2671,8 @@ static inline bool gen8_translate_ppat(struct vgt_device *vgt,
 	}
 
 	if (!found) {
-		vgt_err("fail to find guest PAT value from DOM0 PAT table.\n"
-			"ppat index: %d, ppat value: %lx. (cache targer: %lx, cache attribute: %lx)\n",
-			p_index, v_pat_value, v_tc, v_cache_attr);
 		return false;
 	}
-
-	vgt_warn("gen8_translate_ppat is not exactly match, mapping item: %d -> %d.\n"
-			"ppat value: %lx. (cache targer: %lx, cache attribute: %lx)\n",
-			p_index, *m_index, v_pat_value, v_tc, v_cache_attr);
 
 	return true;
 }
@@ -2690,20 +2683,21 @@ bool gen8_ppat_update_mapping_table(struct vgt_device *vgt)
 	struct vgt_ppat_table *pt = &vgt->ppat_table;
 	int i = 0;
 	bool ret = false;
+	int cnt_failed = 0;
 
 	pt->is_vaild = true;
 
 	for (; i < VGT_MAX_PPAT_TABLE_SIZE; i++) {
 		ret = gen8_translate_ppat(vgt, i, &(pt->mapping_table[i]));
-			if (ret)
-				vgt_info("ppat mapping table entry --> success: %d -> %d:\n",
-					i, pt->mapping_table[i]);
-			else
-				vgt_err("ppat mapping table entry: --> fail: %d -> %d:\n",
-					i, pt->mapping_table[i]);
+		if (ret == false) {
+			cnt_failed++;
+		}
 	}
 
 	gen8_dump_ppat_registers(vgt);
+
+	if (cnt_failed)
+		return false;
 
 	return true;
 }

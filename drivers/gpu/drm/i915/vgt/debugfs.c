@@ -238,17 +238,56 @@ static struct dentry *vgt_debugfs_create_blob(const char *name, mode_t mode,
 	return debugfs_create_file(name, mode, parent, p, &u32_array_fops);
 }
 
+inline void gen8_get_ppat_value_by_index(struct vgt_device *vgt, u8 index,
+		u8 *ppat_target_cache, u8 *ppat_cache_attr)
+{
+	u8 pat_index = index, pat_reg_index = 0;
+	unsigned long val = 0;
+	unsigned long pat_value = 0;
+
+	/* Find the Hi/Lo register for the index. */
+	pat_reg_index = pat_index / 4;
+	/* Find the offset within the register. */
+	pat_index -= pat_reg_index * 4;
+
+	val = __vreg(vgt, _REG_GEN8_PRIVATE_PAT + pat_reg_index * 4);
+	pat_value = (val >> (pat_index * 8)) & 0xf;
+
+	*ppat_target_cache = pat_value >> 2 & 0x3;
+	*ppat_cache_attr = pat_value & 0x3;
+}
+
 void gen8_dump_ppat_registers(struct vgt_device *vgt)
 {
-	vgt_info("Linux host ppat register:\n"
-			"    0x40e0: %08x\n"
-			"    0x40e4: %08x\n"
+	struct vgt_ppat_table *pt = &vgt->ppat_table;
+	int guest_index = 0, host_index = 0;
+	u8 guest_tc = 0, guest_ca = 0;
+	u8 host_tc = 0, host_ca = 0;
+
+	printk("--- VM(%d) ppat mapping table ---\n", vgt->vgt_id);
+
+	for (; guest_index < VGT_MAX_PPAT_TABLE_SIZE; guest_index++) {
+		host_index = pt->mapping_table[guest_index];
+
+		if (host_index == -1) {
+			printk("guest entry(%d) -> NA.\n", guest_index);
+		} else {
+			gen8_get_ppat_value_by_index(vgt, guest_index, &guest_tc, &guest_ca);
+			gen8_get_ppat_value_by_index(vgt_dom0, host_index, &host_tc, &host_ca);
+			printk("guest entry(%d) [tc: %d, ca: %d] -> host entry(%d) [tc: %d, ca: %d].\n",
+					guest_index, guest_tc, guest_ca,
+					host_index, host_tc, host_ca);
+		}
+	}
+
+	printk("Linux host ppat register:\n"
+			"    0x40e0: %08x, 0x40e4: %08x\n"
 			"Guest VM(%d) ppat register:\n"
-			"    0x40e0: %08x\n"
-			"    0x40e4: %08x\n",
+			"    0x40e0: %08x, 0x40e4: %08x\n",
 			__vreg(vgt_dom0, _REG_GEN8_PRIVATE_PAT), __vreg(vgt_dom0, _REG_GEN8_PRIVATE_PAT + 4),
 			vgt->vgt_id,
 			__vreg(vgt, _REG_GEN8_PRIVATE_PAT), __vreg(vgt, _REG_GEN8_PRIVATE_PAT + 4));
+
 }
 
 static inline char *reg_show_reg_owner(struct pgt_device *pdev, int i)
