@@ -38,12 +38,9 @@ static int i915_gem_vgtbuffer_get_pages(struct drm_i915_gem_object *obj)
 
 static void i915_gem_vgtbuffer_put_pages(struct drm_i915_gem_object *obj)
 {
-	/* backing storage is pinned */
-	BUG();
-}
-
-static void i915_gem_vgtbuffer_release(struct drm_i915_gem_object *obj)
-{
+	/* like stolen memory, this should only be called during free
+	 * after clearing pin count.
+	 */
 	sg_free_table(obj->pages);
 	kfree(obj->pages);
 }
@@ -51,7 +48,6 @@ static void i915_gem_vgtbuffer_release(struct drm_i915_gem_object *obj)
 static const struct drm_i915_gem_object_ops i915_gem_vgtbuffer_ops = {
 	.get_pages = i915_gem_vgtbuffer_get_pages,
 	.put_pages = i915_gem_vgtbuffer_put_pages,
-	.release = i915_gem_vgtbuffer_release,
 };
 
 #define GEN8_DECODE_PTE(pte) \
