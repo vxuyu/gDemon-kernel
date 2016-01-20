@@ -744,6 +744,16 @@ static bool vgt_initialize_platform(struct pgt_device *pdev)
 	return true;
 }
 
+static bool vgt_initialize_device_func(struct pgt_device *pdev)
+{
+	if (!IS_SKLPLUS(pdev))
+		pdev->vgt_get_pixel_format = vgt_get_pixel_format_preskl;
+	else
+		pdev->vgt_get_pixel_format = vgt_get_pixel_format_skl;
+
+	return true;
+}
+
 static bool vgt_initialize_pgt_device(struct pci_dev *dev, struct pgt_device *pdev)
 {
 	int i;
@@ -760,6 +770,8 @@ static bool vgt_initialize_pgt_device(struct pci_dev *dev, struct pgt_device *pd
 		vgt_err("failed to initialize platform\n");
 		return false;
 	}
+
+	vgt_initialize_device_func(pdev);
 
 	INIT_LIST_HEAD(&pdev->rendering_runq_head);
 	INIT_LIST_HEAD(&pdev->rendering_idleq_head);

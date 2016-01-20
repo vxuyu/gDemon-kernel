@@ -31,13 +31,6 @@
 #include <uapi/drm/drm_fourcc.h>
 #include <uapi/drm/i915_drm.h>
 
-#define FORMAT_NUM	16
-struct pixel_format {
-	int	drm_format;	/* Pixel format in DRM definition */
-	int	bpp;		/* Bits per pixel, 0 indicates invalid */
-	char	*desc;		/* The description */
-};
-
 /* non-supported format has bpp default to 0 */
 static struct pixel_format hsw_pixel_formats[FORMAT_NUM] = {
 	[0b0010]  = {DRM_FORMAT_C8, 8, "8-bit Indexed"},
@@ -48,45 +41,202 @@ static struct pixel_format hsw_pixel_formats[FORMAT_NUM] = {
 	[0b1110] = {DRM_FORMAT_XBGR8888, 32, "32-bit RGBX (8:8:8:8 MSB-X:B:G:R)"},
 };
 
-/* non-supported format has bpp default to 0 */
-static struct pixel_format skl_pixel_formats[FORMAT_NUM] = {
-	[0b1100]  = {DRM_FORMAT_C8, 8, "8-bit Indexed"},
-	[0b1110]  = {DRM_FORMAT_RGB565, 16, "16-bit BGRX (5:6:5 MSB-R:G:B)"},
-	[0b0100]  = {DRM_FORMAT_XRGB8888, 32, "32-bit BGRX (8:8:8:8 MSB-X:R:G:B)"},
-	[0b1010]  = {DRM_FORMAT_XRGB2101010, 32, "32-bit BGRX (2:10:10:10 MSB-X:R:G:B)"},
+static struct pixel_format skl_pixel_formats[] = {
+	{DRM_FORMAT_YUYV, 16, "16-bit packed YUYV (8:8:8:8 MSB-V:Y2:U:Y1)"},
+	{DRM_FORMAT_UYVY, 16, "16-bit packed UYVY (8:8:8:8 MSB-Y2:V:Y1:U)"},
+	{DRM_FORMAT_YVYU, 16, "16-bit packed YVYU (8:8:8:8 MSB-U:Y2:V:Y1)"},
+	{DRM_FORMAT_VYUY, 16, "16-bit packed VYUY (8:8:8:8 MSB-Y2:U:Y1:V)"},
+
+	{DRM_FORMAT_C8, 8, "8-bit Indexed"},
+	{DRM_FORMAT_RGB565, 16, "16-bit BGRX (5:6:5 MSB-R:G:B)"},
+	{DRM_FORMAT_ABGR8888, 32, "32-bit RGBA (8:8:8:8 MSB-A:B:G:R)"},
+	{DRM_FORMAT_XBGR8888, 32, "32-bit RGBX (8:8:8:8 MSB-X:B:G:R)"},
+
+	{DRM_FORMAT_ARGB8888, 32, "32-bit BGRA (8:8:8:8 MSB-A:R:G:B)"},
+	{DRM_FORMAT_XRGB8888, 32, "32-bit BGRX (8:8:8:8 MSB-X:R:G:B)"},
+	{DRM_FORMAT_XBGR2101010, 32, "32-bit RGBX (2:10:10:10 MSB-X:B:G:R)"},
+	{DRM_FORMAT_XRGB2101010, 32, "32-bit BGRX (2:10:10:10 MSB-X:R:G:B)"},
+
+	/* non-supported format has bpp default to 0 */
+	{0, 0, NULL},
 };
+
+#define FORMAT_NUM_SRRITE	(1 << 3)
+
+/* The formats described in the sprite format field are the 1st level of
+ * cases RGB and YUV formats are further refined by the color_order and
+ * yuv_order fields to cover the full set of possible formats.
+ */
+
+static struct pixel_format hsw_pixel_formats_sprite[FORMAT_NUM_SRRITE] = {
+	[0b000]  = {DRM_FORMAT_YUV422, 16, "YUV 16-bit 4:2:2 packed"},
+	[0b001]  = {DRM_FORMAT_XRGB2101010, 32, "RGB 32-bit 2:10:10:10"},
+	[0b010]  = {DRM_FORMAT_XRGB8888, 32, "RGB 32-bit 8:8:8:8"},
+	[0b100] = {DRM_FORMAT_AYUV, 32, "YUV 32-bit 4:4:4 packed (8:8:8:8 MSB-X:Y:U:V)"},
+};
+
+static int skl_format_to_drm(int format, bool rgb_order, bool alpha, int yuv_order)
+{
+	int skl_pixel_formats_index = 12;
+
+	switch (format) {
+	case PLANE_CTL_FORMAT_INDEXED:
+		skl_pixel_formats_index = 4;
+		break;
+	case PLANE_CTL_FORMAT_RGB_565:
+		skl_pixel_formats_index = 5;
+		break;
+	case PLANE_CTL_FORMAT_XRGB_8888:
+		if (rgb_order) {
+			if (alpha)
+				skl_pixel_formats_index = 6;
+			else
+				skl_pixel_formats_index = 7;
+		} else {
+			if (alpha)
+				skl_pixel_formats_index = 8;
+			else
+				skl_pixel_formats_index = 9;
+		}
+		break;
+	case PLANE_CTL_FORMAT_XRGB_2101010:
+		if (rgb_order)
+			skl_pixel_formats_index = 10;
+		else
+			skl_pixel_formats_index = 11;
+		break;
+	case PLANE_CTL_FORMAT_YUV422:
+		skl_pixel_formats_index = yuv_order >> 16;
+		if (skl_pixel_formats_index > 3)
+			return -EINVAL;
+		break;
+	default:
+		break;
+	}
+
+	return skl_pixel_formats_index;
+}
+
+int vgt_get_pixel_format_skl(u32 plane_ctl,
+	struct vgt_common_plane_format *com_plane_fmt, enum vgt_plane_type plane)
+{
+	com_plane_fmt->tiled = !!(plane_ctl & PLANE_CTL_TILED_MASK);
+	com_plane_fmt->fmt_index = skl_format_to_drm(
+		plane_ctl & PLANE_CTL_FORMAT_MASK,
+		plane_ctl & PLANE_CTL_ORDER_RGBX,
+		plane_ctl & PLANE_CTL_ALPHA_MASK,
+		plane_ctl & PLANE_CTL_YUV422_ORDER_MASK);
+
+	if (com_plane_fmt->fmt_index < 0)
+		return -EINVAL;
+
+	memcpy(&com_plane_fmt->gen_pixel_format,
+		&skl_pixel_formats[com_plane_fmt->fmt_index],
+		sizeof(struct pixel_format));
+
+	com_plane_fmt->stride_mask = SKL_PLANE_STRIDE_MASK;
+
+	return 0;
+}
+
+int vgt_get_pixel_format_preskl(u32 plane_ctl,
+	struct vgt_common_plane_format *common_plane, enum vgt_plane_type plane)
+{
+	u32 color_order, yuv_order;
+	int drm_format;
+
+	if (plane != PRIMARY_PLANE && plane != SPRITE_PLANE)
+		return -EINVAL;
+
+	if (plane == PRIMARY_PLANE) {
+		common_plane->tiled = !!(plane_ctl & DISPPLANE_TILED);
+		common_plane->fmt_index = (plane_ctl & DISPPLANE_PIXFORMAT_MASK)
+						>> _PRI_PLANE_FMT_SHIFT;
+
+		memcpy(&common_plane->gen_pixel_format,
+			&hsw_pixel_formats[common_plane->fmt_index],
+			sizeof(struct pixel_format));
+
+		common_plane->stride_mask = _PRI_PLANE_STRIDE_MASK;
+	} else {
+		common_plane->tiled = !!(plane_ctl & SPRITE_TILED);
+		common_plane->fmt_index = (plane_ctl & SPRITE_PIXFORMAT_MASK)
+						>> _SPRITE_FMT_SHIFT;
+		color_order = !!(plane_ctl & SPRITE_RGB_ORDER_RGBX);
+		yuv_order = (plane_ctl & SPRITE_YUV_BYTE_ORDER_MASK)
+				>> _SPRITE_YUV_ORDER_SHIFT;
+
+		memcpy(&common_plane->gen_pixel_format,
+			&hsw_pixel_formats_sprite[common_plane->fmt_index],
+			sizeof(struct pixel_format));
+		common_plane->stride_mask = _SPRITE_STRIDE_MASK;
+
+		drm_format = common_plane->gen_pixel_format.drm_format;
+		if (!color_order) {
+			if (drm_format == DRM_FORMAT_XRGB2101010)
+				drm_format = DRM_FORMAT_XBGR2101010;
+			else if (drm_format == DRM_FORMAT_XRGB8888)
+				drm_format = DRM_FORMAT_XBGR8888;
+		}
+
+		if (drm_format == DRM_FORMAT_YUV422) {
+			switch (yuv_order) {
+			case	0:
+				drm_format = DRM_FORMAT_YUYV;
+				break;
+			case	1:
+				drm_format = DRM_FORMAT_UYVY;
+				break;
+			case	2:
+				drm_format = DRM_FORMAT_YVYU;
+				break;
+			case	3:
+				drm_format = DRM_FORMAT_VYUY;
+				break;
+			default:
+				/* yuv_order has only 2 bits */
+				return -EINVAL;
+			}
+		}
+		common_plane->gen_pixel_format.drm_format = drm_format;
+	}
+
+	return 0;
+}
 
 int vgt_decode_primary_plane_format(struct vgt_device *vgt,
 	int pipe, struct vgt_primary_plane_format *plane)
 {
-	u32	val, fmt;
+	struct vgt_common_plane_format com_plane_fmt;
+	u32 val;
 
 	val = __vreg(vgt, VGT_DSPCNTR(pipe));
 	plane->enabled = !!(val & DISPLAY_PLANE_ENABLE);
 	if (!plane->enabled)
 		return 0;
 
-	if (IS_SKLPLUS(vgt->pdev)) {
-		plane->tiled = !!(val & PLANE_CTL_TILED_MASK);
-		fmt = (val & PLANE_CTL_FORMAT_MASK) >> 24;
-	} else {
-		plane->tiled = !!(val & DISPPLANE_TILED);
-		fmt = (val & DISPPLANE_PIXFORMAT_MASK) >> _PRI_PLANE_FMT_SHIFT;
+	if (!vgt->pdev->vgt_get_pixel_format) {
+		vgt_err("no vgt_get_pixel_format initialized\n");
+		return -EINVAL;
 	}
-
-	if ((IS_SKLPLUS(vgt->pdev) && !skl_pixel_formats[fmt].bpp)
-		|| (!IS_SKLPLUS(vgt->pdev) && !hsw_pixel_formats[fmt].bpp)) {
-		vgt_err("Non-supported pixel format (0x%x)\n", fmt);
+	if (vgt->pdev->vgt_get_pixel_format(val, &com_plane_fmt, PRIMARY_PLANE)) {
+		vgt_err("get pixel format error\n");
 		return -EINVAL;
 	}
 
-	plane->hw_format = fmt;
-	plane->bpp = hsw_pixel_formats[fmt].bpp;
-	plane->drm_format = hsw_pixel_formats[fmt].drm_format;
+	if (!com_plane_fmt.gen_pixel_format.bpp) {
+		vgt_err("Non-supported pixel format (0x%x)\n", com_plane_fmt.fmt_index);
+		return -EINVAL;
+	}
+
+	plane->hw_format = com_plane_fmt.fmt_index;
+	plane->bpp = com_plane_fmt.gen_pixel_format.bpp;
+	plane->drm_format = com_plane_fmt.gen_pixel_format.drm_format;
+	memcpy(plane->drm_fmt_desc, com_plane_fmt.gen_pixel_format.desc, MAX_DRM_STR_SZ);
 
 	plane->base = __vreg(vgt, VGT_DSPSURF(pipe)) & GTT_PAGE_MASK;
-	plane->stride = __vreg(vgt, VGT_DSPSTRIDE(pipe)) &
-				_PRI_PLANE_STRIDE_MASK;
+	plane->stride = __vreg(vgt, VGT_DSPSTRIDE(pipe)) & com_plane_fmt.stride_mask;
+
 	plane->width = (__vreg(vgt, VGT_PIPESRC(pipe)) & _PIPE_H_SRCSZ_MASK) >>
 				_PIPE_H_SRCSZ_SHIFT;
 	plane->width += 1;
@@ -161,84 +311,40 @@ int vgt_decode_cursor_plane_format(struct vgt_device *vgt,
 	return 0;
 }
 
-#define FORMAT_NUM_SRRITE	(1 << 3)
-
-/* The formats described in the sprite format field are the 1st level of
- * cases RGB and YUV formats are further refined by the color_order and
- * yuv_order fields to cover the full set of possible formats.
- */
-
-static struct pixel_format hsw_pixel_formats_sprite[FORMAT_NUM_SRRITE] = {
-	[0b000]  = {DRM_FORMAT_YUV422, 16, "YUV 16-bit 4:2:2 packed"},
-	[0b001]  = {DRM_FORMAT_XRGB2101010, 32, "RGB 32-bit 2:10:10:10"},
-	[0b010]  = {DRM_FORMAT_XRGB8888, 32, "RGB 32-bit 8:8:8:8"},
-	[0b100] = {DRM_FORMAT_AYUV, 32, "YUV 32-bit 4:4:4 packed (8:8:8:8 MSB-X:Y:U:V)"},
-};
-
 /* Non-supported format has bpp default to 0 */
 int vgt_decode_sprite_plane_format(struct vgt_device *vgt,
 	int pipe, struct vgt_sprite_plane_format *plane)
 {
-	u32 val, fmt;
+	struct vgt_common_plane_format com_plane_fmt;
+	u32 val;
 	u32 width;
-	u32 color_order, yuv_order;
-	int drm_format;
 
 	val = __vreg(vgt, VGT_SPRCTL(pipe));
 	plane->enabled = !!(val & SPRITE_ENABLE);
 	if (!plane->enabled)
 		return 0;
 
-	plane->tiled = !!(val & SPRITE_TILED);
-	color_order = !!(val & SPRITE_RGB_ORDER_RGBX);
-	yuv_order = (val & SPRITE_YUV_BYTE_ORDER_MASK) >>
-				_SPRITE_YUV_ORDER_SHIFT;
-
-	fmt = (val & SPRITE_PIXFORMAT_MASK) >> _SPRITE_FMT_SHIFT;
-	if (!hsw_pixel_formats_sprite[fmt].bpp) {
-		vgt_err("Non-supported pixel format (0x%x)\n", fmt);
+	if (!vgt->pdev->vgt_get_pixel_format) {
+		vgt_err("no vgt_get_pixel_format initialized\n");
 		return -EINVAL;
 	}
-	plane->hw_format = fmt;
-	plane->bpp = hsw_pixel_formats_sprite[fmt].bpp;
-	drm_format = hsw_pixel_formats_sprite[fmt].drm_format;
-
-	/* Order of RGB values in an RGBxxx buffer may be ordered RGB or
-	 * BGR depending on the state of the color_order field
-	 */
-	if (!color_order) {
-		if (drm_format == DRM_FORMAT_XRGB2101010)
-			drm_format = DRM_FORMAT_XBGR2101010;
-		else if (drm_format == DRM_FORMAT_XRGB8888)
-			drm_format = DRM_FORMAT_XBGR8888;
+	if (vgt->pdev->vgt_get_pixel_format(val, &com_plane_fmt, SPRITE_PLANE)) {
+		vgt_err("get pixel format error\n");
+		return -EINVAL;
 	}
 
-	if (drm_format == DRM_FORMAT_YUV422) {
-		switch (yuv_order){
-		case	0:
-			drm_format = DRM_FORMAT_YUYV;
-			break;
-		case	1:
-			drm_format = DRM_FORMAT_UYVY;
-			break;
-		case	2:
-			drm_format = DRM_FORMAT_YVYU;
-			break;
-		case	3:
-			drm_format = DRM_FORMAT_VYUY;
-			break;
-		default:
-			/* yuv_order has only 2 bits */
-			BUG();
-			break;
-		}
+	if (!com_plane_fmt.gen_pixel_format.bpp) {
+		vgt_err("Non-supported pixel format (0x%x)\n", com_plane_fmt.fmt_index);
+		return -EINVAL;
 	}
 
-	plane->drm_format = drm_format;
+	plane->hw_format = com_plane_fmt.fmt_index;
+	plane->bpp = com_plane_fmt.gen_pixel_format.bpp;
+	plane->drm_format = com_plane_fmt.gen_pixel_format.drm_format;
+	memcpy(plane->drm_fmt_desc, com_plane_fmt.gen_pixel_format.desc, MAX_DRM_STR_SZ);
 
 	plane->base = __vreg(vgt, VGT_SPRSURF(pipe)) & GTT_PAGE_MASK;
-	plane->width = __vreg(vgt, VGT_SPRSTRIDE(pipe)) &
-				_SPRITE_STRIDE_MASK;
+	plane->width = __vreg(vgt, VGT_SPRSTRIDE(pipe)) & com_plane_fmt.stride_mask;
 	plane->width /= plane->bpp / 8;	/* raw width in bytes */
 
 	val = __vreg(vgt, VGT_SPRSIZE(pipe));
@@ -279,7 +385,7 @@ static void vgt_dump_primary_plane_format(struct dump_buffer *buf,
 
 	dump_string(buf, "  bpp: %d\n", plane->bpp);
 	dump_string(buf, "  drm_format: 0x%08x: %s\n", plane->drm_format,
-		hsw_pixel_formats[plane->hw_format].desc);
+		plane->drm_fmt_desc);
 	dump_string(buf, "  base: 0x%x\n", plane->base);
 	dump_string(buf, "  x-off: %d\n", plane->x_offset);
 	dump_string(buf, "  y-off: %d\n", plane->y_offset);
@@ -329,8 +435,7 @@ static void vgt_dump_sprite_plane_format(struct dump_buffer *buf,
 
 	dump_string(buf, "  bpp: %d\n", plane->bpp);
 	dump_string(buf, "  drm_format: 0x%08x: %s\n",
-		plane->drm_format,
-		hsw_pixel_formats_sprite[plane->hw_format].desc);
+		plane->drm_format, plane->drm_fmt_desc);
 	dump_string(buf, "  base: 0x%x\n", plane->base);
 	dump_string(buf, "  x-off: %d\n", plane->x_offset);
 	dump_string(buf, "  y-off: %d\n", plane->y_offset);
@@ -414,8 +519,8 @@ int vgt_decode_fb_format(int vmid, struct vgt_fb_format *fb)
 	if (!fb)
 		return -EINVAL;
 
-	if (!IS_HSW(pdev) && !IS_BDW(pdev)) {
-		vgt_err("Only HSW or BDW supported now\n");
+	if (!IS_PRESKL(pdev) && !IS_SKL(pdev)) {
+		vgt_err("fb decode Supported until SKL\n");
 		return -EINVAL;
 	}
 

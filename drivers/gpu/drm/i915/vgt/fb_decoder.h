@@ -26,6 +26,8 @@
  */
 
 /* color space conversion and gamma correction are not included */
+
+#define MAX_DRM_STR_SZ 50
 struct vgt_primary_plane_format {
 	u8	enabled;	/* plane is enabled */
 	u8	tiled;		/* X-tiled */
@@ -38,6 +40,7 @@ struct vgt_primary_plane_format {
 	u32	width;		/* in pixels */
 	u32	height;		/* in lines */
 	u32	stride;		/* in bytes */
+	u8	drm_fmt_desc[MAX_DRM_STR_SZ];
 };
 
 struct vgt_sprite_plane_format {
@@ -53,6 +56,7 @@ struct vgt_sprite_plane_format {
 	u32	y_offset;	/* in lines */
 	u32	width;		/* in pixels */
 	u32	height;		/* in lines */
+	u8	drm_fmt_desc[MAX_DRM_STR_SZ];
 };
 
 struct vgt_cursor_plane_format {
@@ -71,6 +75,21 @@ struct vgt_cursor_plane_format {
 	u32	y_hot;		/* in pixels */
 };
 
+#define FORMAT_NUM	16
+struct pixel_format {
+	int	drm_format;	/* Pixel format in DRM definition */
+	int	bpp;		/* Bits per pixel, 0 indicates invalid */
+	char	*desc;		/* The description */
+};
+
+struct vgt_common_plane_format {
+	struct pixel_format gen_pixel_format;
+	u8 tiled;
+	int fmt_index;
+	int stride_mask;
+};
+
+enum vgt_plane_type;
 /* The virtual DDI port type definition.
  *
  * DDI port A for eDP is not supported.
@@ -141,4 +160,10 @@ int vgt_decode_cursor_plane_format(struct vgt_device *vgt,
 			   int pipe, struct vgt_cursor_plane_format *plane);
 int vgt_decode_sprite_plane_format(struct vgt_device *vgt,
 			   int pipe, struct vgt_sprite_plane_format *plane);
+int vgt_get_pixel_format_preskl(u32 plane_ctl,
+	struct vgt_common_plane_format *com_plane_fmt, enum vgt_plane_type plane);
+int vgt_get_pixel_format_skl(u32 plane_ctl,
+	struct vgt_common_plane_format *com_plane_fmt, enum vgt_plane_type plane);
+
+
 #endif

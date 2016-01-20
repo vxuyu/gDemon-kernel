@@ -57,6 +57,7 @@ struct vgt_device;
 #include "render.h"
 #include "sched.h"
 #include "execlists.h"
+#include "fb_decoder.h"
 
 extern struct vgt_device *vgt_dom0;
 extern struct pgt_device *perf_pgt;
@@ -488,6 +489,9 @@ struct pgt_device {
 	uint32_t el_read_ptr[MAX_ENGINES];
 
 	u32 memory_latency[2];
+
+	int (*vgt_get_pixel_format)(u32 plane_ctl,
+		struct vgt_common_plane_format *common_plane, enum vgt_plane_type plane);
 };
 
 /*
