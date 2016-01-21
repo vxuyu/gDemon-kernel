@@ -337,7 +337,8 @@ int create_vgt_instance(struct pgt_device *pdev, struct vgt_device **ptr_vgt, vg
 err:
 	vgt_clean_vgtt(vgt);
 err2:
-	hypervisor_hvm_exit(vgt);
+	if (vgt->vm_id)
+		hypervisor_hvm_exit(vgt);
 	if (vgt->aperture_base > 0)
 		free_vm_aperture_gm_and_fence(vgt);
 	vfree(vgt->state.vReg);
@@ -421,7 +422,9 @@ void vgt_release_instance(struct vgt_device *vgt)
 		}
 	}
 
-	hypervisor_hvm_exit(vgt);
+	if (vgt->vm_id)
+		hypervisor_hvm_exit(vgt);
+
 	vgt_lock_dev(pdev, cpu);
 
 	vgt->pdev->device[vgt->vgt_id] = NULL;
