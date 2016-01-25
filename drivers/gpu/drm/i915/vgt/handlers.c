@@ -3707,8 +3707,8 @@ reg_attr_t vgt_reg_info_bdw[] = {
 
 {0x1C054, 4, F_DOM0, 0, D_BDW_PLUS, NULL, NULL},
 /* BDW */
-{GEN8_PRIVATE_PAT_LO, 4, F_PT, 0, D_BDW_PLUS, NULL, gen8_ppat_write},
-{GEN8_PRIVATE_PAT_HI, 4, F_PT, 0, D_BDW_PLUS, NULL, gen8_ppat_write},
+{GEN8_PRIVATE_PAT_LO, 4, F_DOM0, 0, D_BDW_PLUS, NULL, gen8_ppat_write},
+{GEN8_PRIVATE_PAT_HI, 4, F_DOM0, 0, D_BDW_PLUS, NULL, gen8_ppat_write},
 
 {GAMTARBMODE, 4, F_DOM0, 0, D_BDW_PLUS, NULL, NULL},
 
