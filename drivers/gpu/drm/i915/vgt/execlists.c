@@ -730,6 +730,17 @@ static void update_shadow_regstate_from_guest(struct vgt_device *vgt,
 	if (shadow_cmd_buffer)
 		dest_ctx->rb_start.val = el_ctx->shadow_rb.shadow_rb_base;
 
+	if (shadow_indirect_ctx_bb) {
+		dest_ctx->rcs_indirect_ctx.val =
+			(dest_ctx->rcs_indirect_ctx.val &
+				(~INDIRECT_CTX_ADDR_MASK)) |
+				el_ctx->shadow_indirect_ctx.shadow_ctx_base;
+		dest_ctx->bb_per_ctx_ptr.val =
+			(dest_ctx->bb_per_ctx_ptr.val &
+				(~BB_PER_CTX_ADDR_MASK)) |
+				el_ctx->shadow_bb_per_ctx.shadow_bb_base;
+	}
+
 	ppgtt_update_shadow_ppgtt_for_ctx(vgt, el_ctx);
 }
 
