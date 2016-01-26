@@ -2987,6 +2987,81 @@ static int vgt_copy_rb_to_shadow(struct vgt_device *vgt,
 	return 0;
 }
 
+static int vgt_copy_indirect_ctx_to_shadow(struct vgt_device *vgt,
+				  struct execlist_context *el_ctx)
+
+{
+	uint32_t left_len = el_ctx->shadow_indirect_ctx.ctx_size;
+	unsigned long  vbase = el_ctx->shadow_indirect_ctx.guest_ctx_base;
+	unsigned long  sbase = el_ctx->shadow_indirect_ctx.shadow_ctx_base;
+	uint32_t ctx_offset = 0;
+	void *ip_sva = NULL;
+
+	if (!left_len)
+		return 0;
+
+	ASSERT(el_ctx->ring_id == 0);
+
+	while (left_len > 0) {
+		void *ip_va;
+		uint32_t ip_buf_len;
+		uint32_t copy_len;
+
+		ip_va = vgt_gma_to_va(vgt->gtt.ggtt_mm, vbase + ctx_offset);
+		if (ip_va == NULL) {
+			vgt_err("VM-%d: gma %lx is invalid in indirect ctx!\n",
+				vgt->vm_id, vbase + ctx_offset);
+			dump_stack();
+			return -EFAULT;
+		}
+
+		ip_buf_len = PAGE_SIZE - ((vbase + ctx_offset) & (PAGE_SIZE - 1));
+		if (left_len <= ip_buf_len)
+			copy_len = left_len;
+		else
+			copy_len = ip_buf_len;
+
+		ip_sva = rsvd_gma_to_sys_va(vgt->pdev, sbase + ctx_offset);
+		hypervisor_read_va(vgt, ip_va, ip_sva, copy_len, 1);
+
+		left_len -= copy_len;
+		ctx_offset = ctx_offset + copy_len;
+	}
+
+	return 0;
+}
+
+static int vgt_combine_indirect_ctx_bb(struct vgt_device *vgt,
+				  struct execlist_context *el_ctx)
+{
+	unsigned long sbase = el_ctx->shadow_indirect_ctx.shadow_ctx_base;
+	uint32_t ctx_size = el_ctx->shadow_indirect_ctx.ctx_size;
+	void *bb_start_sva;
+	uint32_t bb_per_ctx_start[CACHELINE_DWORDS] = {0x18800001, 0x0, 0x00000000};
+
+	if (!el_ctx->shadow_bb_per_ctx.guest_bb_base) {
+		vgt_err("invalid bb per ctx address\n");
+		return -1;
+	}
+
+	bb_per_ctx_start[1] = el_ctx->shadow_bb_per_ctx.guest_bb_base;
+	bb_start_sva = rsvd_gma_to_sys_va(vgt->pdev, sbase + ctx_size);
+	memcpy(bb_start_sva, bb_per_ctx_start, CACHELINE_BYTES);
+
+	return 0;
+}
+
+static void vgt_get_bb_per_ctx_shadow_base(struct vgt_device *vgt,
+				  struct execlist_context *el_ctx)
+{
+	unsigned long ctx_sbase = el_ctx->shadow_indirect_ctx.shadow_ctx_base;
+	uint32_t ctx_size = el_ctx->shadow_indirect_ctx.ctx_size;
+	void *va_bb = rsvd_gma_to_sys_va(vgt->pdev, ctx_sbase + ctx_size);
+
+	el_ctx->shadow_bb_per_ctx.shadow_bb_base = *((unsigned int *)va_bb + 1);
+	memset(va_bb, 0, CACHELINE_BYTES);
+}
+
 /*
  * Scan the guest ring.
  *   Return 0: success
@@ -2998,7 +3073,7 @@ int vgt_scan_vring(struct vgt_device *vgt, int ring_id)
 	vgt_ringbuffer_t *vring = &rs->vring;
 	int ret = 0;
 	cycles_t t0, t1;
-	uint32_t rb_base;
+	uint32_t rb_base, ctx_base;
 	struct vgt_statistics *stat = &vgt->stat;
 
 	t0 = get_cycles();
@@ -3031,8 +3106,33 @@ int vgt_scan_vring(struct vgt_device *vgt, int ring_id)
 		rs->last_scan_head = vring->tail;
 	}
 
+	if (ret)
+		goto err;
+
+
+	if (shadow_indirect_ctx_bb) {
+		ret = vgt_copy_indirect_ctx_to_shadow(vgt, rs->el_ctx);
+		ctx_base = rs->el_ctx->shadow_indirect_ctx.shadow_ctx_base;
+		if (ret == 0 && ctx_base) {
+			ret = vgt_combine_indirect_ctx_bb(vgt, rs->el_ctx);
+			if (ret)
+				goto err;
+			ret = __vgt_scan_vring(vgt, ring_id, 0,
+				rs->el_ctx->shadow_indirect_ctx.ctx_size +
+							CACHELINE_BYTES,
+				ctx_base,
+				rs->el_ctx->shadow_indirect_ctx.ctx_size +
+							CACHELINE_BYTES,
+				true);
+			vgt_get_bb_per_ctx_shadow_base(vgt, rs->el_ctx);
+		}
+
+	}
+
 	t1 = get_cycles();
 	stat->vring_scan_cycles += t1 - t0;
+
+err:
 	if (ret)
 		vgt_kill_vm(vgt);
 

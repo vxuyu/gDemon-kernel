@@ -194,6 +194,9 @@ module_param_named(shadow_cmd_buffer, shadow_cmd_buffer, int, 0400);
 int shadow_ctx_check = 0;
 module_param_named(shadow_ctx_check, shadow_ctx_check, int, 0600);
 
+int shadow_indirect_ctx_bb = 0;
+module_param_named(shadow_indirect_ctx_bb, shadow_indirect_ctx_bb, int, 0400);
+
 static struct vgt_ops __vgt_ops = {
 	.emulate_read = vgt_emulate_read,
 	.emulate_write = vgt_emulate_write,
@@ -955,6 +958,9 @@ static int vgt_initialize(struct pci_dev *dev)
 
 	if (!IS_BDWPLUS(pdev) || bypass_scan_mask)
 		shadow_cmd_buffer = 0;
+
+	/*shadow indirect ctx and per bb rely on shadow_cmd_buffer*/
+	shadow_indirect_ctx_bb &= shadow_cmd_buffer;
 
 	pdev->ctx_check = 0;
 	pdev->ctx_switch = 0;

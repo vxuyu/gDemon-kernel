@@ -193,6 +193,19 @@ struct shadow_ring_buffer {
 	uint32_t ring_size;
 };
 
+#define INDIRECT_CTX_ADDR_MASK 0xffffffc0
+#define INDIRECT_CTX_SIZE_MASK 0x3f
+struct shadow_indirect_context {
+	unsigned long guest_ctx_base;
+	unsigned long shadow_ctx_base;
+	uint32_t ctx_size;
+};
+
+#define BB_PER_CTX_ADDR_MASK 0xfffff000
+struct shadow_batch_buffer_per_ctx {
+	unsigned long guest_bb_base;
+	unsigned long shadow_bb_base;
+};
 /* Relocation for MI_BATCH_BUFFER_START to privilege batch buffers */
 
 /* one context can have one ring buffer, but multiple batch buffers.
@@ -241,6 +254,8 @@ struct execlist_context {
 
 	struct shadow_ring_buffer shadow_rb;
 	struct shadow_batch_buffer shadow_priv_bb;
+	struct shadow_indirect_context shadow_indirect_ctx;
+	struct shadow_batch_buffer_per_ctx shadow_bb_per_ctx;
 
 	struct hlist_node node;
 };

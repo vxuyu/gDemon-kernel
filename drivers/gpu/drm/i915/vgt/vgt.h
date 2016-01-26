@@ -100,6 +100,7 @@ extern bool vgt_lock_irq;
 extern int shadow_execlist_context;
 extern int shadow_cmd_buffer;
 extern int shadow_ctx_check;
+extern int shadow_indirect_ctx_bb;
 extern bool propagate_monitor_to_guest;
 extern bool irq_based_ctx_switch;
 extern int preallocated_shadow_pages;

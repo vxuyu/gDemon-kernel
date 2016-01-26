@@ -189,6 +189,8 @@ static inline enum vgt_ring_id vgt_get_ringid_from_lrca(struct vgt_device *vgt,
 static int vgt_create_shadow_rb(struct vgt_device *vgt, struct execlist_context *el_ctx);
 static void vgt_destroy_shadow_rb(struct vgt_device *vgt, struct execlist_context *el_ctx);
 static void vgt_release_shadow_cmdbuf(struct vgt_device *vgt, struct shadow_batch_buffer *p);
+static int vgt_create_shadow_indirect_ctx(struct vgt_device *vgt, struct execlist_context *el_ctx);
+static void vgt_destroy_shadow_indirect_ctx(struct vgt_device *vgt, struct execlist_context *el_ctx);
 
 /* a queue implementation
  *
@@ -727,6 +729,7 @@ static void update_shadow_regstate_from_guest(struct vgt_device *vgt,
 	/* update the shadow fields */
 	if (shadow_cmd_buffer)
 		dest_ctx->rb_start.val = el_ctx->shadow_rb.shadow_rb_base;
+
 	ppgtt_update_shadow_ppgtt_for_ctx(vgt, el_ctx);
 }
 
@@ -1193,6 +1196,14 @@ static struct execlist_context *vgt_create_execlist_context(
 			vgt_free_el_context(el_ctx);
 			return NULL;
 		}
+
+		ret = vgt_create_shadow_indirect_ctx(vgt, el_ctx);
+		if (ret) {
+			vgt_destroy_shadow_rb(vgt, el_ctx);
+			vgt_el_destroy_shadow_context(vgt, ring_id, el_ctx);
+			vgt_free_el_context(el_ctx);
+			return NULL;
+		}
 	}
 
 	vgt_el_create_shadow_ppgtt(vgt, ring_id, el_ctx);
@@ -1221,6 +1232,7 @@ static void vgt_destroy_execlist_context(struct vgt_device *vgt,
 
 	/* free the shadow cmd buffers */
 	vgt_destroy_shadow_rb(vgt, el_ctx);
+	vgt_destroy_shadow_indirect_ctx(vgt, el_ctx);
 	vgt_release_shadow_cmdbuf(vgt, &el_ctx->shadow_priv_bb);
 
 	vgt_el_destroy_shadow_context(vgt, ring_id, el_ctx);
@@ -1733,6 +1745,63 @@ static int vgt_create_shadow_rb(struct vgt_device *vgt,
 	return 0;
 }
 
+static int vgt_create_shadow_indirect_ctx(struct vgt_device *vgt,
+				 struct execlist_context *el_ctx)
+{
+	unsigned long shadow_hpa;
+	unsigned long shadow_gma;
+	uint32_t ctx_size;
+	unsigned long ctx_gma;
+	struct reg_state_ctx_header *reg_state;
+
+	if (!shadow_indirect_ctx_bb)
+		return 0;
+
+	ASSERT(el_ctx->shadow_indirect_ctx.guest_ctx_base == 0);
+
+	reg_state = vgt_get_reg_state_from_lrca(vgt,
+				el_ctx->guest_context.lrca);
+	ctx_size = reg_state->rcs_indirect_ctx.val & INDIRECT_CTX_SIZE_MASK;
+	if (!ctx_size)
+		return 0;
+
+	if (!(reg_state->bb_per_ctx_ptr.val & 0x1)) {
+		vgt_err("VM-%d: indirect ctx and per bb should work together\n", vgt->vm_id);
+		return -1;
+	}
+
+	/*indirect ctx only valid for RCS*/
+	if (el_ctx->ring_id) {
+		vgt_err("VM-%d: indirect ctx disallowed enable on ring %d\n", vgt->vm_id,
+			el_ctx->ring_id);
+		return -1;
+	}
+
+	el_ctx->shadow_bb_per_ctx.guest_bb_base =
+			reg_state->bb_per_ctx_ptr.val & BB_PER_CTX_ADDR_MASK;
+
+	ctx_gma = reg_state->rcs_indirect_ctx.val & INDIRECT_CTX_ADDR_MASK;
+
+	/* extra cache line size here for combining bb per ctx,
+	 * take indirect ctx as ring and bb per ctx as it's privilege bb
+	 */
+	shadow_hpa = rsvd_aperture_alloc(vgt->pdev, (ctx_size + 1) * CACHELINE_BYTES);
+	if (shadow_hpa == 0) {
+		vgt_err("VM-%d: Failed to allocate gm for shadow indirect ctx!\n",
+			vgt->vm_id);
+		return -1;
+	}
+
+	shadow_gma = aperture_2_gm(vgt->pdev, shadow_hpa);
+	el_ctx->shadow_indirect_ctx.guest_ctx_base = ctx_gma;
+
+	el_ctx->shadow_indirect_ctx.shadow_ctx_base = shadow_gma;
+	el_ctx->shadow_indirect_ctx.ctx_size = ctx_size * CACHELINE_BYTES;
+
+	return 0;
+}
+
+
 static void vgt_destroy_shadow_rb(struct vgt_device *vgt,
 				  struct execlist_context *el_ctx)
 {
@@ -1752,6 +1821,31 @@ static void vgt_destroy_shadow_rb(struct vgt_device *vgt,
 	el_ctx->shadow_rb.guest_rb_base = 0;
 	el_ctx->shadow_rb.shadow_rb_base = 0;
 	el_ctx->shadow_rb.ring_size = 0;
+
+	return;
+}
+
+static void vgt_destroy_shadow_indirect_ctx(struct vgt_device *vgt,
+				  struct execlist_context *el_ctx)
+{
+	unsigned long hpa;
+
+	if (!shadow_indirect_ctx_bb)
+		return;
+
+	if (el_ctx->shadow_indirect_ctx.ctx_size == 0)
+		return;
+
+	ASSERT(el_ctx->ring_id == 0);
+	ASSERT(el_ctx->shadow_indirect_ctx.shadow_ctx_base);
+	hpa = phys_aperture_base(vgt->pdev) +
+			el_ctx->shadow_indirect_ctx.shadow_ctx_base;
+	rsvd_aperture_free(vgt->pdev, hpa,
+			   el_ctx->shadow_indirect_ctx.ctx_size + CACHELINE_BYTES);
+
+	el_ctx->shadow_indirect_ctx.guest_ctx_base = 0;
+	el_ctx->shadow_indirect_ctx.shadow_ctx_base = 0;
+	el_ctx->shadow_indirect_ctx.ctx_size = 0;
 
 	return;
 }
@@ -1852,6 +1946,14 @@ static void vgt_manipulate_cmd_buf(struct vgt_device *vgt,
 	if (el_ctx->shadow_rb.ring_size != _RING_CTL_BUF_SIZE(vring->ctl)) {
 		vgt_destroy_shadow_rb(vgt, el_ctx);
 		vgt_create_shadow_rb(vgt, el_ctx);
+	}
+
+	if (el_ctx->shadow_indirect_ctx.ctx_size !=
+			(guest_state->rcs_indirect_ctx.val &
+				INDIRECT_CTX_SIZE_MASK) *
+					CACHELINE_BYTES) {
+		vgt_destroy_shadow_indirect_ctx(vgt, el_ctx);
+		vgt_create_shadow_indirect_ctx(vgt, el_ctx);
 	}
 
 	vgt_scan_vring(vgt, ring_id);
