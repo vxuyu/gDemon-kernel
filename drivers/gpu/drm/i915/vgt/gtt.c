@@ -597,9 +597,6 @@ void vgt_clean_guest_page(struct vgt_device *vgt, guest_page_t *guest_page)
 
 	if (guest_page->writeprotection)
 		hypervisor_unset_wp_pages(vgt, guest_page);
-
-	if (guest_page == vgt->gtt.last_partial_ppgtt_access_gpt)
-		vgt->gtt.last_partial_ppgtt_access_index = -1;
 }
 
 guest_page_t *vgt_find_guest_page(struct vgt_device *vgt, unsigned long gfn)
@@ -686,6 +683,7 @@ static void ppgtt_free_shadow_page(ppgtt_spt_t *spt)
 
 	vgt_clean_shadow_page(&spt->shadow_page);
 	vgt_clean_guest_page(spt->vgt, &spt->guest_page);
+	list_del_init(&spt->partial_access_list_head);
 
 	mempool_free(spt, spt->vgt->pdev->gtt.mempool);
 }
@@ -745,6 +743,7 @@ static ppgtt_spt_t *ppgtt_alloc_shadow_page(struct vgt_device *vgt,
 
 	spt->vgt = vgt;
 	spt->guest_page_type = type;
+	INIT_LIST_HEAD(&spt->partial_access_list_head);
 	atomic_set(&spt->refcount, 1);
 
 	/*
@@ -1022,6 +1021,63 @@ fail:
 	return false;
 }
 
+static struct partial_entry_t *find_partial_access_entry(ppgtt_spt_t *spt,
+		int index)
+{
+	struct list_head *pos, *n;
+	struct partial_entry_t *entry = NULL;
+
+	list_for_each_safe(pos, n, &spt->partial_access_list_head) {
+		entry = container_of(pos, struct partial_entry_t, list);
+		if (entry->index == index)
+			return entry;
+	}
+	return NULL;
+}
+
+static struct partial_entry_t *alloc_partial_entry(ppgtt_spt_t *spt, int index,
+		gtt_entry_t we, bool hi)
+{
+	struct partial_entry_t *entry = kzalloc(sizeof(struct partial_entry_t),
+			GFP_ATOMIC);
+
+	if (!entry) {
+		vgt_err("failed to allocate partial entry\n");
+		return NULL;
+	}
+	entry->index = index;
+	entry->hi = hi;
+	entry->entry = we;
+	list_add_tail(&entry->list, &spt->partial_access_list_head);
+	return entry;
+}
+
+static void free_partial_entry(struct partial_entry_t *p_entry)
+{
+	list_del_init(&p_entry->list);
+	kfree(p_entry);
+}
+
+static void sync_partial_entries(ppgtt_spt_t *spt)
+{
+	struct list_head *pos, *n;
+	struct partial_entry_t *entry = NULL;
+	gtt_entry_t we;
+	int offset = 0;
+
+	list_for_each_safe(pos, n, &spt->partial_access_list_head) {
+		entry = container_of(pos, struct partial_entry_t, list);
+		ppgtt_get_guest_entry(spt, &we, entry->index);
+		offset = entry->hi ? 1 : 0;
+		we.val32[offset] = entry->entry.val32[offset];
+		ppgtt_set_guest_entry(spt, &we, entry->index);
+
+		trace_gpt_change(spt->vgt->vm_id, "sync partial entries", spt,
+					we.type, we.val64, entry->index);
+		free_partial_entry(entry);
+	}
+}
+
 static bool vgt_sync_oos_page(struct vgt_device *vgt, oos_page_t *oos_page)
 {
 	struct vgt_device_info *info = &vgt->pdev->device_info;
@@ -1215,28 +1271,6 @@ static inline bool can_do_out_of_sync(guest_page_t *gpt)
 		&& gpt->write_cnt >= 2;
 }
 
-bool ppgtt_check_partial_access(struct vgt_device *vgt)
-{
-	struct vgt_vgtt_info *gtt = &vgt->gtt;
-
-	if (gtt->last_partial_ppgtt_access_index == -1)
-		return true;
-
-	if (!gtt->warn_partial_ppgtt_access_once) {
-		vgt_warn("Incomplete PPGTT page table access sequence.\n");
-		gtt->warn_partial_ppgtt_access_once = true;
-	}
-
-	if (!ppgtt_handle_guest_write_page_table(
-			gtt->last_partial_ppgtt_access_gpt,
-			&gtt->last_partial_ppgtt_access_entry,
-			gtt->last_partial_ppgtt_access_index))
-		return false;
-
-	gtt->last_partial_ppgtt_access_index = -1;
-	return true;
-}
-
 static bool ppgtt_handle_guest_write_page_table_bytes(void *gp,
 		uint64_t pa, void *p_data, int bytes)
 {
@@ -1245,9 +1279,9 @@ static bool ppgtt_handle_guest_write_page_table_bytes(void *gp,
 	struct vgt_device *vgt = spt->vgt;
 	struct vgt_gtt_pte_ops *ops = vgt->pdev->gtt.pte_ops;
 	struct vgt_device_info *info = &vgt->pdev->device_info;
-	struct vgt_vgtt_info *gtt = &vgt->gtt;
-	gtt_entry_t we, se;
+	gtt_entry_t we;
 	unsigned long index;
+	struct partial_entry_t *p_entry = NULL;
 
 	bool partial_access = (bytes != info->gtt_entry_size);
 	bool hi = (partial_access && (pa & (info->gtt_entry_size - 1)));
@@ -1257,12 +1291,37 @@ static bool ppgtt_handle_guest_write_page_table_bytes(void *gp,
 	ppgtt_get_guest_entry(spt, &we, index);
 	memcpy((char *)&we.val64 + (pa & (info->gtt_entry_size - 1)), p_data, bytes);
 
-	if (partial_access && hi) {
-		trace_gpt_change(vgt->vm_id, "partial access - LOW",
-				NULL, we.type, *(u32 *)(p_data), index);
+	if (partial_access) {
+		trace_gpt_change(vgt->vm_id,
+			hi ? "partial access - HIGH" : "partial access - LOW",
+			NULL, we.type, *(u32 *)(p_data), index);
 
-		ppgtt_set_guest_entry(spt, &we, index);
-		return true;
+		p_entry = find_partial_access_entry(spt, index);
+		if (!p_entry) {
+			p_entry = alloc_partial_entry(spt, index, we, hi);
+			if (!p_entry) {
+				vgt_err("failed to alloc partial entry\n");
+				return false;
+			}
+			return true;
+		} else if (p_entry->hi == hi) {
+			/* same DW was updated twice, don't care*/
+			memcpy((char *)&p_entry->entry.val64 +
+				(pa & (info->gtt_entry_size - 1)),
+				p_data, bytes);
+			return true;
+		}
+
+		/*
+		 * both DWs were updated,
+		 * we can restore the partial entry,
+		 * and continue to update shadow table
+		 */
+		we = p_entry->entry;
+		memcpy((char *)&we.val64 +
+			(pa & (info->gtt_entry_size - 1)),
+			p_data, bytes);
+		free_partial_entry(p_entry);
 	}
 
 	ops->test_pse(&we);
@@ -1283,6 +1342,11 @@ static bool ppgtt_handle_guest_write_page_table_bytes(void *gp,
 		if (can_do_out_of_sync(gpt)) {
 			if (!gpt->oos_page)
 				ppgtt_allocate_oos_page(vgt, gpt);
+
+			/* since we have oos page here, we will commit all the
+			 * partial entries and remove them from the list
+			 */
+			sync_partial_entries(spt);
 
 			if (!ppgtt_set_guest_page_oos(vgt, gpt)) {
 				/* should not return false since we can handle it*/
@@ -2046,8 +2110,6 @@ bool vgt_init_vgtt(struct vgt_device *vgt)
 
 	INIT_LIST_HEAD(&gtt->mm_list_head);
 	INIT_LIST_HEAD(&gtt->oos_page_list_head);
-
-	gtt->last_partial_ppgtt_access_index = -1;
 
 	if (!vgt_expand_shadow_page_mempool(vgt->pdev)) {
 		vgt_err("fail to expand the shadow page mempool.");

@@ -226,10 +226,6 @@ struct vgt_vgtt_info {
 	DECLARE_HASHTABLE(el_ctx_hash_table, VGT_HASH_BITS);
 	atomic_t n_write_protected_guest_page;
 	struct list_head oos_page_list_head;
-	int last_partial_ppgtt_access_index;
-	gtt_entry_t last_partial_ppgtt_access_entry;
-	struct guest_page *last_partial_ppgtt_access_gpt;
-	bool warn_partial_ppgtt_access_once;
 	struct page *scratch_page;
 	unsigned long scratch_page_mfn;
 
@@ -248,8 +244,6 @@ extern bool vgt_g2v_destroy_ppgtt_mm(struct vgt_device *vgt, int page_table_leve
 
 extern struct vgt_mm *gen8_find_ppgtt_mm(struct vgt_device *vgt,
                 int page_table_level, void *root_entry);
-
-extern bool ppgtt_check_partial_access(struct vgt_device *vgt);
 
 typedef bool guest_page_handler_t(void *gp, uint64_t pa, void *p_data, int bytes);
 
@@ -277,12 +271,21 @@ struct oos_page {
 };
 typedef struct oos_page oos_page_t;
 
+struct partial_entry_t {
+	int index;
+	gtt_entry_t entry;
+	bool hi;
+	struct list_head list;
+};
+
+
 typedef struct {
 	shadow_page_t shadow_page;
 	guest_page_t guest_page;
 	gtt_type_t guest_page_type;
 	atomic_t refcount;
 	struct vgt_device *vgt;
+	struct list_head partial_access_list_head;
 } ppgtt_spt_t;
 
 extern bool vgt_init_guest_page(struct vgt_device *vgt, guest_page_t *guest_page,
