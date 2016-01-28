@@ -72,6 +72,11 @@
  */
 #define F_PT			VGT_OT_NONE | VGT_REG_PASSTHROUGH
 
+/*
+ * read only pass through registers, not allowed write but allow guest read HW
+ */
+#define F_PT_RO			(VGT_OT_NONE | VGT_REG_PT_READONLY)
+
 struct vgt_device;
 
 typedef bool (*vgt_mmio_read)(struct vgt_device *vgt, unsigned int offset,
@@ -126,6 +131,8 @@ enum vgt_owner_type {
 #define VGT_REG_STICKY		(1 << 13)
 /* Accessed through GPU commands */
 #define VGT_REG_CMD_ACCESS	(1 << 14)
+/* read only pass through register */
+#define VGT_REG_PT_READONLY    (1 << 15)
 /* index into another auxillary table. Maximum 256 entries now */
 #define VGT_REG_INDEX_SHIFT	16
 #define VGT_REG_INDEX_MASK	(0xFFFF << VGT_REG_INDEX_SHIFT)

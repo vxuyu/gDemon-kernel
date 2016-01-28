@@ -136,7 +136,7 @@ static unsigned long vgt_get_reg(struct vgt_device *vgt, unsigned int reg)
 {
 	/* check whether to update vreg from HW */
 //	if (reg_hw_status(pdev, reg) &&
-	if (reg_hw_access(vgt, reg))
+	if (reg_hw_access(vgt, reg) || reg_pt_readonly(vgt->pdev, reg))
 		return vgt_get_passthrough_reg(vgt, reg);
 	else
 		return __vreg(vgt, reg);
@@ -160,7 +160,7 @@ static unsigned long vgt_get_reg_64(struct vgt_device *vgt, unsigned int reg)
 {
 	/* check whether to update vreg from HW */
 //	if (reg_hw_status(pdev, reg) &&
-	if (reg_hw_access(vgt, reg))
+	if (reg_hw_access(vgt, reg) || reg_pt_readonly(vgt->pdev, reg))
 		return vgt_get_passthrough_reg_64(vgt, reg);
 	else
 		return __vreg64(vgt, reg);
@@ -640,6 +640,8 @@ static void vgt_set_reg_attr(struct pgt_device *pdev,
 	}
 
 	reg_set_owner(pdev, reg, attr->flags & VGT_REG_OWNER);
+	if (attr->flags & VGT_REG_PT_READONLY)
+		reg_set_pt_readonly(pdev, reg);
 	if (attr->flags & VGT_REG_PASSTHROUGH)
 		reg_set_passthrough(pdev, reg);
 	if (attr->flags & VGT_REG_ADDR_FIX ) {

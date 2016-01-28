@@ -321,6 +321,8 @@ static inline char *reg_show_reg_type(struct pgt_device *pdev, int i)
 		return "PT";
 	else if (reg_virt(pdev, i))
 		return "Virt";
+	else if (reg_pt_readonly(pdev, i))
+		return "PT_RO";
 	else
 		return "";
 }

@@ -530,6 +530,7 @@ struct pgt_device {
 #define reg_virt(pdev, reg)		(pdev->reg_info[REG_INDEX(reg)] & VGT_REG_VIRT)
 #define reg_mode_ctl(pdev, reg)		(pdev->reg_info[REG_INDEX(reg)] & VGT_REG_MODE_CTL)
 #define reg_passthrough(pdev, reg)	(pdev->reg_info[REG_INDEX(reg)] & VGT_REG_PASSTHROUGH)
+#define reg_pt_readonly(pdev, reg)	(pdev->reg_info[REG_INDEX(reg)] & VGT_REG_PT_READONLY)
 #define reg_need_switch(pdev, reg)	(pdev->reg_info[REG_INDEX(reg)] & VGT_REG_NEED_SWITCH)
 #define reg_is_tracked(pdev, reg)	(pdev->reg_info[REG_INDEX(reg)] & VGT_REG_TRACKED)
 #define reg_is_accessed(pdev, reg)	(pdev->reg_info[REG_INDEX(reg)] & VGT_REG_ACCESSED)
@@ -639,6 +640,13 @@ static inline void reg_set_passthrough(struct pgt_device *pdev,
 {
 	ASSERT_NUM(!reg_is_tracked(pdev, reg), reg);
 	pdev->reg_info[REG_INDEX(reg)] |= VGT_REG_PASSTHROUGH;
+}
+
+static inline void reg_set_pt_readonly(struct pgt_device *pdev,
+	vgt_reg_t reg)
+{
+	ASSERT_NUM(!reg_is_tracked(pdev, reg), reg);
+	pdev->reg_info[REG_INDEX(reg)] |= VGT_REG_PT_READONLY;
 }
 
 static inline void reg_set_tracked(struct pgt_device *pdev,

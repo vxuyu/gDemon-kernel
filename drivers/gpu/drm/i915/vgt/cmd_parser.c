@@ -824,6 +824,7 @@ static int cmd_reg_handler(struct parser_exec_state *s,
 	if ((reg_is_render(pdev, offset) &&
 		!reg_addr_fix(pdev, offset) && offset != 0x24d0) ||
 				reg_passthrough(pdev, offset) ||
+				reg_pt_readonly(pdev, offset) ||
 		(!vgt->vm_id && reg_is_config(pdev, offset))) {
 		rc = 0;
 	} else if (offset == _REG_DE_RRMR || offset == FORCEWAKE_MT) {
