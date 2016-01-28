@@ -813,7 +813,7 @@ static int cmd_reg_handler(struct parser_exec_state *s,
 	struct pgt_device *pdev = vgt->pdev;
 	int rc = -1;
 
-	if (!IS_BDW(s->vgt->pdev))
+	if (IS_HSW(s->vgt->pdev))
 		return 0;
 
 	if (!reg_is_mmio(pdev, offset + 3)) {
@@ -1566,9 +1566,6 @@ static inline int cmd_address_audit(struct parser_exec_state *s, unsigned long g
 	int max_surface_size = vgt->pdev->device_info.max_surface_size;
 	int i;
 	int rc = 0;
-
-	if (!IS_BDW(s->vgt->pdev))
-		return 0;
 
 	if (op_size > max_surface_size) {
 		vgt_err("cmd_parser: misusage of the address audit or malicious %s detected!\n", s->info->name);
