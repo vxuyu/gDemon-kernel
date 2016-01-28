@@ -498,6 +498,7 @@ bool initial_phys_states(struct pgt_device *pdev)
 	}
 	printk("gttmmio_base_va: 0x%llx\n", (uint64_t)pdev->gttmmio_base_va);
 
+	pdev->gen_cache_type = GEN_CACHE_UC;
 	/*
 	 * From now on, the vgt driver can invoke the
 	 * VGT_MMIO_READ()/VGT_MMIO_WRITE()hypercalls, and any access to the

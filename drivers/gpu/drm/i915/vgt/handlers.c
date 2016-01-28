@@ -2726,6 +2726,26 @@ static bool gen8_ppat_write(struct vgt_device *vgt, unsigned int offset,
 	return ret;
 }
 
+static bool vgt_reg_write_flash_tlb_handler(struct vgt_device *vgt, unsigned int offset,
+			void *p_data, unsigned int bytes)
+{
+	struct pgt_device *pdev = vgt->pdev;
+	bool rc = false;
+
+	if ((bytes != 4) || ((offset & (bytes - 1)) != 0)) {
+		vgt_err("VM(%d) vgt_reg_write_flash_tlb_handler: invalid offset(%x) or bytes(%d)\n",
+				vgt->vm_id, offset, bytes);
+		return false;
+	}
+
+	rc = default_mmio_write(vgt, offset, p_data, bytes);
+
+	if (vgt->pdev->gen_cache_type == GEN_CACHE_WC)
+		VGT_MMIO_WRITE(pdev, offset, __vreg(vgt, offset));
+
+	return rc;
+}
+
 /*
  * Track policies of all captured registers
  *
@@ -2794,7 +2814,7 @@ reg_attr_t vgt_reg_info_general[] = {
 {CCID, 4, F_RDR_ADRFIX, 0xFFFFF000, D_ALL, NULL, NULL},
 {0x12198, 4, F_RDR_ADRFIX, 0xFFFFF000, D_ALL, NULL, NULL},
 
-{GEN7_CXT_SIZE, 4, F_PT, 0, D_ALL, NULL, NULL},
+{GEN7_CXT_SIZE, 4, F_VIRT, 0, D_ALL, NULL, NULL},
 
 {_REG_RCS_TAIL, 4, F_RDR, 0, D_ALL, ring_mmio_read, ring_mmio_write},
 {_REG_RCS_HEAD, 4, F_RDR, 0, D_ALL, ring_mmio_read, ring_mmio_write},
@@ -3429,15 +3449,15 @@ reg_attr_t vgt_reg_info_general[] = {
 {GEN7_ERR_INT, 4, F_VIRT, 0, D_ALL, err_int_r, err_int_w},
 {0x120010, 4, F_VIRT, 0, D_ALL, NULL, NULL},
 {0x9008, 4, F_DOM0, 0, D_ALL, NULL, NULL},
-{GFX_FLSH_CNTL_GEN6, 4, F_PT, 0, D_ALL, NULL, NULL},
+{GFX_FLSH_CNTL_GEN6, 4, F_VIRT, 0, D_ALL, NULL, vgt_reg_write_flash_tlb_handler},
 
 	/* -------un-categorized regs--------- */
 {0x3c, 4, F_DOM0, 0, D_ALL, NULL, NULL},
 {0x860, 4, F_VIRT, 0, D_ALL, NULL, NULL},
 /* no definition on this. from Linux */
-{ECOSKPD, 4, F_PT, 0, D_ALL, NULL, NULL},
-{0x121d0, 4, F_PT, 0, D_ALL, NULL, NULL},
-{GEN6_BLITTER_ECOSKPD, 4, F_PT, 0, D_ALL, NULL, NULL},
+{ECOSKPD, 4, F_VIRT, 0, D_ALL, NULL, NULL},
+{0x121d0, 4, F_VIRT, 0, D_ALL, NULL, NULL},
+{GEN6_BLITTER_ECOSKPD, 4, F_VIRT, 0, D_ALL, NULL, NULL},
 {0x41d0, 4, F_VIRT, 0, D_ALL, NULL, NULL},
 {GAC_ECO_BITS, 4, F_VIRT, 0, D_ALL, NULL, NULL},
 {_REG_2D_CG_DIS, 4, F_VIRT, 0, D_ALL, NULL, NULL},
@@ -3694,9 +3714,9 @@ reg_attr_t vgt_reg_info_bdw[] = {
 
 	/* -------un-categorized regs--------- */
 /* no definition on this. from Linux */
-{0x1c1d0, 4, F_PT, 0, D_BDW_PLUS, NULL, NULL},
-{GEN6_MBCUNIT_SNPCR, 4, F_PT, 0, D_BDW_PLUS, NULL, NULL},
-{GEN7_MISCCPCTL, 4, F_PT, 0, D_BDW_PLUS, NULL, NULL},
+{0x1c1d0, 4, F_VIRT, 0, D_BDW_PLUS, NULL, NULL},
+{GEN6_MBCUNIT_SNPCR, 4, F_DOM0, 0, D_BDW_PLUS, NULL, NULL},
+{GEN7_MISCCPCTL, 4, F_DOM0, 0, D_BDW_PLUS, NULL, NULL},
 
 {0x1C054, 4, F_DOM0, 0, D_BDW_PLUS, NULL, NULL},
 /* BDW */
@@ -3801,7 +3821,7 @@ reg_attr_t vgt_reg_info_bdw[] = {
 {0xb118, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
 {0xb100, 4, F_RDR, 0, D_BDW, NULL, NULL},
 {0xb10c, 4, F_RDR, 0, D_BDW, NULL, NULL},
-{0xb110, 4, F_PT, 0, D_BDW, NULL, NULL},
+{0xb110, 4, F_DOM0, 0, D_BDW, NULL, NULL},
 
 /* NON-PRIV */
 {0x24d0, 4, F_RDR, 0, D_BDW_PLUS, NULL, vgt_write_force_nonpriv},
@@ -3810,10 +3830,10 @@ reg_attr_t vgt_reg_info_bdw[] = {
 
 
 {0x83a4, 4, F_RDR, 0, D_BDW, NULL, NULL},
-{0x4dd4, 4, F_PT, 0, D_BDW_PLUS, NULL, NULL},
+{0x4dd4, 4, F_DOM0, 0, D_BDW_PLUS, NULL, NULL},
 
 /* UCG */
-{0x8430, 4, F_PT, 0, D_BDW, NULL, NULL},
+{0x8430, 4, F_RDR, 0, D_BDW, NULL, NULL},
 
 {0x110000, 4, F_VIRT, 0, D_BDW_PLUS, NULL, NULL},
 

@@ -464,6 +464,10 @@ struct pgt_device {
 
 	u8 gen_dev_type;
 
+#define GEN_CACHE_UC 0U
+#define GEN_CACHE_WC 1U
+	u8 gen_cache_type;
+
 	u8 enable_ppgtt : 1;
 	u8 in_ctx_switch : 1;
 	u8 enable_execlist : 1;

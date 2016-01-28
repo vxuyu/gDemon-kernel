@@ -819,6 +819,18 @@ bool vgt_initial_mmio_setup (struct pgt_device *pdev)
 	pdev->initial_mmio_state[REG_INDEX(WRPLL_CTL1)] &= ~(1 << 31);
 	pdev->initial_mmio_state[REG_INDEX(WRPLL_CTL2)] &= ~(1 << 31);
 
+	pdev->initial_mmio_state[REG_INDEX(GEN6_MBCUNIT_SNPCR)] = 0x201b40;
+	VGT_MMIO_WRITE(pdev, GEN6_MBCUNIT_SNPCR, 0x201b40);
+
+	pdev->initial_mmio_state[REG_INDEX(GEN7_MISCCPCTL)] = 0x2fd;
+	VGT_MMIO_WRITE(pdev, GEN7_MISCCPCTL, 0x2fd);
+
+	pdev->initial_mmio_state[REG_INDEX(0xb110)] = 0x40000000;
+	VGT_MMIO_WRITE(pdev, 0xb110, 0x40000000);
+
+	pdev->initial_mmio_state[REG_INDEX(0x4dd4)] = 0x67f1427f;
+	VGT_MMIO_WRITE(pdev, 0x4dd4, 0x67f1427f);
+
 	return true;
 }
 
