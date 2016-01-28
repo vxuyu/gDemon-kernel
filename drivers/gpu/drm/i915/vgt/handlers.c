@@ -3630,8 +3630,6 @@ reg_attr_t vgt_reg_info_bdw[] = {
 
 {_REG_VCS2_MI_MODE, 4, F_RDR_MODE, 0, D_BDW_PLUS, NULL, NULL},
 {_REG_VCS2_INSTPM, 4, F_RDR_MODE, 0, D_BDW_PLUS, NULL, NULL},
-/* TODO: need a handler */
-{0x1c050, 4, F_PT, 0, D_BDW_PLUS, NULL, NULL},
 
 {_REG_VCS2_TIMESTAMP, 8, F_PT, 0, D_BDW_PLUS, NULL, NULL},
 
