@@ -3509,6 +3509,7 @@ reg_attr_t vgt_reg_info_general[] = {
 {0x44070, 4, F_DOM0, 0, D_ALL, NULL, NULL},
 
 /*command accessed registers, supplement for reg audit in cmd parser*/
+{0x215c, 4, F_RDR, 0, D_HSW_PLUS, NULL, NULL},
 {0x2178, 4, F_RDR, 0, D_ALL, NULL, NULL},
 {0x217c, 4, F_RDR, 0, D_ALL, NULL, NULL},
 {0x12178, 4, F_RDR, 0, D_ALL, NULL, NULL},
