@@ -197,6 +197,9 @@ module_param_named(shadow_ctx_check, shadow_ctx_check, int, 0600);
 int shadow_indirect_ctx_bb = 1;
 module_param_named(shadow_indirect_ctx_bb, shadow_indirect_ctx_bb, int, 0400);
 
+int vgt_cmd_audit = 1;
+module_param_named(vgt_cmd_audit, vgt_cmd_audit, int, 0400);
+
 static struct vgt_ops __vgt_ops = {
 	.emulate_read = vgt_emulate_read,
 	.emulate_write = vgt_emulate_write,
