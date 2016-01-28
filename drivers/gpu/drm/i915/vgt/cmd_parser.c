@@ -1669,14 +1669,23 @@ static int vgt_cmd_handler_mi_op_2e(struct parser_exec_state *s)
 
 static int vgt_cmd_handler_mi_op_2f(struct parser_exec_state *s)
 {
-	struct vgt_device *vgt = s->vgt;
-	struct pgt_device *pdev = vgt->pdev;
+	int gmadr_bytes = s->vgt->pdev->device_info.gmadr_bytes_in_cmd;
+	int op_size = (1 << (cmd_val(s, 0) & BIT_RANGE_MASK(20, 19) >> 19)) *
+				sizeof(uint32_t);
+	unsigned long gma, gma_high;
+	int rc = 0;
 
-	if (IS_HSW(pdev))
-		return 0;
+	if (!(cmd_val(s, 0) & (1 << 22)))
+		return rc;
 
-	vgt_err("Unexpected %s in VM%d command buffer!\n", s->info->name, vgt->vm_id);
-	return -1;
+	gma = cmd_val(s, 1) & BIT_RANGE_MASK(31, 2);
+	if (gmadr_bytes == 8) {
+		gma_high = cmd_val(s, 2) & BIT_RANGE_MASK(15, 0);
+		gma = (gma_high << 32) | gma;
+	}
+	rc = cmd_address_audit(s, gma, op_size, false);
+
+	return rc;
 }
 
 static int vgt_cmd_handler_mi_store_data_index(struct parser_exec_state *s)
