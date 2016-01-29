@@ -2746,6 +2746,32 @@ static bool vgt_reg_write_flash_tlb_handler(struct vgt_device *vgt, unsigned int
 	return rc;
 }
 
+static bool vgt_reg_write_misc_ctl_handler(struct vgt_device *vgt, unsigned int offset,
+			void *p_data, unsigned int bytes)
+{
+	struct pgt_device *pdev = vgt->pdev;
+
+	if ((bytes != 4) || ((offset & (bytes - 1)) != 0)) {
+		vgt_err("VM(%d) vgt_reg_write_misc_ctl_handler: invalid offset(%x) or bytes(%d)\n",
+				vgt->vm_id, offset, bytes);
+		return false;
+	}
+
+	if (offset == 0x4ddc)
+		__vreg(vgt, offset) = 0x8000003c;
+	else if (offset == 0x42080)
+		__vreg(vgt, offset) = 0x8000;
+	else
+		ASSERT(0);
+
+	/* TODO: need detect stepping info after pdev contain such information
+	 *  0x4ddc enabled after C0, 0x42080 enabled after E0
+	 */
+	VGT_MMIO_WRITE(pdev, offset, __vreg(vgt, offset));
+
+	return true;
+}
+
 /*
  * Track policies of all captured registers
  *
@@ -3870,8 +3896,8 @@ reg_attr_t vgt_reg_info_skl[] = {
 {0xa210, 4, F_DOM0, 0, D_SKL_PLUS, NULL, NULL},
 {GEN9_MEDIA_PG_IDLE_HYSTERESIS, 4, F_DOM0, 0, D_SKL_PLUS, NULL, NULL},
 {GEN9_RENDER_PG_IDLE_HYSTERESIS, 4, F_DOM0, 0, D_SKL_PLUS, NULL, NULL},
-{0x4ddc, 4, F_PT, 0, D_SKL, NULL, NULL},
-{0x42080, 4, F_PT, 0, D_SKL_PLUS, NULL, NULL},
+{0x4ddc, 4, F_VIRT, 0, D_SKL, NULL, vgt_reg_write_misc_ctl_handler},
+{0x42080, 4, F_VIRT, 0, D_SKL_PLUS, NULL, vgt_reg_write_misc_ctl_handler},
 {0x45504, 4, F_DOM0, 0, D_SKL, NULL, NULL},
 {0x45520, 4, F_DOM0, 0, D_SKL, NULL, NULL},
 {0x46000, 4, F_DPY, 0, D_SKL, NULL, NULL},
