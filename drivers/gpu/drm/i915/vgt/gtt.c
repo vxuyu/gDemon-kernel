@@ -2494,18 +2494,22 @@ bool ppgtt_update_shadow_ppgtt_for_ctx(struct vgt_device *vgt,
 	/* compare the page table root pointer stored in guest context and
 	 * in shadow page table, update the mapping if it is not aligned
 	 */
-	for (i = 0; i < el_ctx->ppgtt_mm->page_table_entry_cnt; ++ i) {
-		ppgtt_get_rootp_from_ctx(g_state, &ctx_rootp, i);
-		ppgtt_get_guest_root_entry(mm, &pt_ctx_rootp, i);
+	if (mm) {
+		for (i = 0; i < el_ctx->ppgtt_mm->page_table_entry_cnt; ++ i) {
+			ppgtt_get_rootp_from_ctx(g_state, &ctx_rootp, i);
+			ppgtt_get_guest_root_entry(mm, &pt_ctx_rootp, i);
 
-		if (ctx_rootp.val64 != pt_ctx_rootp.val64)
-			break;
-	}
+			if (ctx_rootp.val64 != pt_ctx_rootp.val64)
+				break;
+		}
 
-	if (i != el_ctx->ppgtt_mm->page_table_entry_cnt) {
+		if (i != el_ctx->ppgtt_mm->page_table_entry_cnt) {
+			if (vgt_el_create_shadow_ppgtt(vgt, el_ctx->ring_id, el_ctx))
+				rc = false;
+		}
+	} else {
 		if (vgt_el_create_shadow_ppgtt(vgt, el_ctx->ring_id, el_ctx))
 			rc = false;
 	}
-
 	return rc;
 }

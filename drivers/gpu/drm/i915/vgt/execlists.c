@@ -1217,8 +1217,6 @@ static struct execlist_context *vgt_create_execlist_context(
 		}
 	}
 
-	vgt_el_create_shadow_ppgtt(vgt, ring_id, el_ctx);
-
 	trace_ctx_lifecycle(vgt->vm_id, ring_id,
 			el_ctx->guest_context.lrca, "create");
 	return el_ctx;
