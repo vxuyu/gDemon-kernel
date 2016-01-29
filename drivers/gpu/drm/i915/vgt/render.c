@@ -219,6 +219,7 @@ vgt_reg_t vgt_gen9_render_regs[] = {
 	0x2580,
 	COMMON_SLICE_CHICKEN2,
 	0x7300,
+	0x20ec,
 
 	/*this register is from NONPRIV usage*/
 	GEN8_L3SQCREG4,

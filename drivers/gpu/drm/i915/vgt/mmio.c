@@ -833,6 +833,12 @@ bool vgt_initial_mmio_setup (struct pgt_device *pdev)
 	pdev->initial_mmio_state[REG_INDEX(0x4dd4)] = 0x67f1427f;
 	VGT_MMIO_WRITE(pdev, 0x4dd4, 0x67f1427f);
 
+	/* TODO: need detect stepping info after pdev contain such information
+	 *  0x20e0 only enabled bit 14 after D0
+	 */
+	pdev->initial_mmio_state[REG_INDEX(0x20e0)] = 0x40004000;
+	VGT_MMIO_WRITE(pdev, 0x20e0, 0x40004000);
+
 	return true;
 }
 
