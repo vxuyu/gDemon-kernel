@@ -324,6 +324,7 @@ bool vgt_emulate_read(struct vgt_device *vgt, uint64_t pa, void *p_data,int byte
 	cycles_t t0, t1;
 	struct vgt_statistics *stat = &vgt->stat;
 	int cpu;
+	unsigned char *va;
 
 	t0 = get_cycles();
 
@@ -356,8 +357,15 @@ bool vgt_emulate_read(struct vgt_device *vgt, uint64_t pa, void *p_data,int byte
 		return rc;
 	}
 
-	if (!reg_is_mmio(pdev, offset + bytes))
-		goto err_mmio;
+	if (!reg_is_mmio(pdev, offset + bytes)) {
+		va = hypervisor_gpa_to_va(vgt, pa);
+		if (va) {
+			hypervisor_read_va(vgt, va, p_data, bytes, 1);
+			vgt_unlock_dev_flags(pdev, cpu, flags);
+			return true;
+		} else
+			goto err_mmio;
+	}
 
 	mht = vgt_find_mmio_entry(offset);
 	if ( mht && mht->read ) {
@@ -421,6 +429,7 @@ bool vgt_emulate_write(struct vgt_device *vgt, uint64_t pa,
 	bool rc;
 	cycles_t t0, t1;
 	struct vgt_statistics *stat = &vgt->stat;
+	unsigned char *va;
 
 	vgt_lock_dev_flags(pdev, cpu, flags);
 
@@ -462,8 +471,15 @@ bool vgt_emulate_write(struct vgt_device *vgt, uint64_t pa,
 		return rc;
 	}
 
-	if (!reg_is_mmio(pdev, offset + bytes))
-		goto err_mmio;
+	if (!reg_is_mmio(pdev, offset + bytes)) {
+		va = hypervisor_gpa_to_va(vgt, pa);
+		if (va) {
+			hypervisor_write_va(vgt, va, p_data, bytes, 1);
+			vgt_unlock_dev_flags(pdev, cpu, flags);
+			return true;
+		} else
+			goto err_mmio;
+	}
 
 	if (reg_mode_ctl(pdev, offset)) {
 		old_vreg = __vreg(vgt, offset);
