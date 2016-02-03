@@ -731,6 +731,13 @@ static bool ring_pp_mode_write(struct vgt_device *vgt, unsigned int off,
 	if (ring_id == RING_BUFFER_VECS)
 		vgt->vebox_support = 1;
 
+	/* check if guest is trying to enable GuC */
+	if (GFX_MODE_BIT_SET_IN_MASK(mode, GFX_INTERRUPT_STEERING)) {
+		WARN_ONCE(1, "VM(%d): should send interrupt message to display engine instead of on-chip micro controller.\n",
+				vgt->vm_id);
+		return true;
+	}
+
 	/* check for execlist */
 	if (GFX_MODE_BIT_SET_IN_MASK(mode, _REGBIT_EXECLIST_ENABLE)) {
 		bool ring_execlist = !!(mode & _REGBIT_EXECLIST_ENABLE);
@@ -750,7 +757,18 @@ static bool ring_pp_mode_write(struct vgt_device *vgt, unsigned int off,
 	ring_ppgtt_mode(vgt, ring_id, off, mode);
 	return true;
 }
+static bool dma_ctrl_write(struct vgt_device *vgt, unsigned int off,
+			void *p_data, unsigned int bytes)
+{
+	u32 mode = *(u32 *)p_data;
 
+	if (GFX_MODE_BIT_SET_IN_MASK(mode, START_DMA)) {
+		WARN_ONCE(1, "VM(%d): Guest is trying to enable GuC which is not supported by iGVT-g\n", vgt->vm_id);
+		return true;
+	}
+
+	return true;
+}
 static bool dpy_trans_ddi_ctl_write(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes)
 {
@@ -4066,6 +4084,7 @@ reg_attr_t vgt_reg_info_skl[] = {
 
 {0xc403c, 4, F_VIRT, 0, D_SKL, NULL, NULL},
 {0xb004, 4, F_DOM0, 0, D_SKL, NULL, NULL},
+{DMA_CTRL, 4, F_DOM0, 0, D_SKL_PLUS, NULL, dma_ctrl_write},
 };
 
 static void vgt_passthrough_execlist(struct pgt_device *pdev)
