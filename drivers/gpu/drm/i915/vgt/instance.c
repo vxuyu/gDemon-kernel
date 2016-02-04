@@ -504,6 +504,8 @@ static void vgt_reset_ringbuffer(struct vgt_device *vgt, unsigned long ring_bitm
 	vgt_state_ring_t *rb;
 	int bit;
 
+	ASSERT((IS_PREBDW(vgt->pdev)));
+
 	for_each_set_bit(bit, &ring_bitmap, sizeof(ring_bitmap)) {
 		if (bit >= vgt->pdev->max_engines)
 			break;

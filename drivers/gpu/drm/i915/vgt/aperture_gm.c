@@ -293,11 +293,15 @@ int alloc_vm_rsvd_aperture(struct vgt_device *vgt)
 		struct vgt_rsvd_ring *ring = &pdev->ring_buffer[i];
 
 		rb = &vgt->rb[i];
-		rb->context_save_area = aperture_2_gm(pdev,
-				rsvd_aperture_alloc(pdev, SZ_CONTEXT_AREA_PER_RING) );
+		if (IS_PREBDW(pdev)) {
+			rb->context_save_area = aperture_2_gm(pdev,
+					rsvd_aperture_alloc(pdev, SZ_CONTEXT_AREA_PER_RING));
+			vgt_info("VM%d Ring%d context_save_area is allocated at gm(%llx)\n",
+					vgt->vm_id, i, rb->context_save_area);
+		} else {
+			rb->context_save_area = 0;
+		}
 
-		printk("VM%d Ring%d context_save_area is allocated at gm(%llx)\n", vgt->vm_id, i,
-				rb->context_save_area);
 		rb->active_vm_context = 0;
 
 		/*
@@ -305,7 +309,7 @@ int alloc_vm_rsvd_aperture(struct vgt_device *vgt)
 		 * only for non-dom0 instance. Dom0's context is updated when
 		 * NULL context is created
 		 */
-		if (vgt->vgt_id && (i == RING_BUFFER_RCS)) {
+		if (IS_PREBDW(pdev) && vgt->vgt_id && (i == RING_BUFFER_RCS)) {
 			memcpy((char *)v_aperture(pdev, rb->context_save_area),
 			       (char *)v_aperture(pdev, ring->null_context),
 			       SZ_CONTEXT_AREA_PER_RING);
@@ -323,10 +327,12 @@ void free_vm_rsvd_aperture(struct vgt_device *vgt)
 	vgt_state_ring_t *rb;
 	int i;
 
-	for (i=0; i< pdev->max_engines; i++) {
-		rb = &vgt->rb[i];
-		rsvd_aperture_free(pdev, rb->context_save_area + phys_aperture_base(pdev),
-				SZ_CONTEXT_AREA_PER_RING);
+	if (IS_PREBDW(pdev)) {
+		for (i = 0; i < pdev->max_engines; i++) {
+			rb = &vgt->rb[i];
+			rsvd_aperture_free(pdev, rb->context_save_area + phys_aperture_base(pdev),
+					SZ_CONTEXT_AREA_PER_RING);
+		}
 	}
 }
 

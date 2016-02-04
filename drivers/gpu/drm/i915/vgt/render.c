@@ -409,9 +409,15 @@ void vgt_ring_init(struct pgt_device *pdev, int id)
 	ring->pdev = pdev;
 	ring->id = id;
 	ring->size = VGT_RSVD_RING_SIZE;
-	ring->start = aperture_2_gm(pdev,
-			rsvd_aperture_alloc(pdev, ring->size));
-	ring->virtual_start = v_aperture(pdev, ring->start);
+
+	if (IS_PREBDW(pdev)) {
+		ring->start = aperture_2_gm(pdev,
+				rsvd_aperture_alloc(pdev, ring->size));
+		ring->virtual_start = v_aperture(pdev, ring->start);
+	} else {
+		ring->start = 0;
+		ring->virtual_start = NULL;
+	}
 	ring->head = 0;
 	ring->tail = 0;
 
