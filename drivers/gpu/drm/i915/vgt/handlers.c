@@ -2198,6 +2198,20 @@ static bool pf_write(struct vgt_device *vgt, unsigned int offset,
 	void *p_data, unsigned int bytes)
 {
 
+	u32 val = *(u32 *)p_data;
+
+	if(offset == _PS_1A_CTRL ||
+		offset == _PS_2A_CTRL ||
+		offset == _PS_1B_CTRL ||
+		offset == _PS_2B_CTRL ||
+		offset == _PS_1C_CTRL) {
+
+		if((val & PS_PLANE_SEL_MASK) != 0)
+			WARN_ONCE(1, "VM(%d): guest is trying to scaling a plane\n",
+					vgt->vm_id);
+			return true;
+	}
+
 	if (enable_panel_fitting) {
 		memcpy ((char *)vgt->state.vReg + offset, p_data, bytes);
 	} else {
