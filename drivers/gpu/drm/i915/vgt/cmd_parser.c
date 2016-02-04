@@ -1772,8 +1772,6 @@ static int batch_buffer_needs_scan(struct parser_exec_state *s)
 	struct pgt_device *pdev = s->vgt->pdev;
 
 	if (IS_BDW(pdev) || IS_SKL(pdev)) {
-		if (s->ring_id == RING_BUFFER_BCS)
-			return 0;
 		/* BDW decides privilege based on address space */
 		if (cmd_val(s, 0) & (1 << 8))
 			return 0;
