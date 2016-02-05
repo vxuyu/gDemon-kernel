@@ -51,6 +51,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/oom.h>
 
+static async_cookie_t async_fbdev_init_cfg_cookie;
 
 static int i915_getparam(struct drm_device *dev, void *data,
 			 struct drm_file *file_priv)
@@ -440,7 +441,8 @@ static int i915_load_modeset_init(struct drm_device *dev)
 	 * scanning against hotplug events. Hence do this first and ignore the
 	 * tiny window where we will loose hotplug notifactions.
 	 */
-	async_schedule(intel_fbdev_initial_config, dev_priv);
+	async_fbdev_init_cfg_cookie =
+		async_schedule(intel_fbdev_initial_config, dev_priv);
 
 	drm_kms_helper_poll_init(dev);
 
@@ -1276,6 +1278,14 @@ int i915_driver_open(struct drm_device *dev, struct drm_file *file)
  */
 void i915_driver_lastclose(struct drm_device *dev)
 {
+	/*
+	 * There is special case that try to access the ifdev->fb before
+	 * initialization of it, since the intel_fbdev_initial_config is
+	 * assigned into async queue during i915_driver_load, wait for
+	 * intel_fbdev_initial_config() to be completed.
+	 */
+	async_synchronize_cookie(async_fbdev_init_cfg_cookie + 1);
+
 	intel_fbdev_restore_mode(dev);
 	vga_switcheroo_process_delayed_switch();
 }
