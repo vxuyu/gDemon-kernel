@@ -285,6 +285,7 @@ struct vgt_device {
 
 	DECLARE_BITMAP(enabled_rings, MAX_ENGINES);
 	DECLARE_BITMAP(started_rings, MAX_ENGINES);
+	DECLARE_BITMAP(tlb_handle_pending, MAX_ENGINES);
 	struct vgt_vgtt_info gtt;
 
 	/* embedded context scheduler information */

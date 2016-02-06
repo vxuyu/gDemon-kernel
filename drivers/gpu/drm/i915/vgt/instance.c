@@ -299,6 +299,7 @@ int create_vgt_instance(struct pgt_device *pdev, struct vgt_device **ptr_vgt, vg
 	}
 	bitmap_zero(vgt->enabled_rings, MAX_ENGINES);
 	bitmap_zero(vgt->started_rings, MAX_ENGINES);
+	bitmap_zero(vgt->tlb_handle_pending, MAX_ENGINES);
 
 	for (i = 0; i < MAX_ENGINES; ++ i) {
 		vgt->rb[i].csb_write_ptr = DEFAULT_INV_SR_PTR;

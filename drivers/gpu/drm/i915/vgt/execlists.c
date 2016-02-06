@@ -2037,6 +2037,43 @@ bool vgt_idle_execlist(struct pgt_device *pdev, enum vgt_ring_id ring_id)
 	return true;
 }
 
+static inline bool handle_tlb_done(struct vgt_device *vgt, unsigned int offset)
+{
+	return (VGT_MMIO_READ(vgt->pdev, offset) == 0);
+}
+
+void handle_tlb_pending_event(struct vgt_device *vgt, enum vgt_ring_id ring_id)
+{
+	unsigned int offset;
+
+	if (test_and_clear_bit(ring_id, (void *)vgt->tlb_handle_pending)) {
+		switch (ring_id) {
+			case RING_BUFFER_RCS:
+				offset = 0x4260;
+				break;
+			case RING_BUFFER_BCS:
+				offset = 0x426c;
+				break;
+			case RING_BUFFER_VCS:
+				offset = 0x4264;
+				break;
+			case RING_BUFFER_VCS2:
+				offset = 0x4268;
+				break;
+			case RING_BUFFER_VECS:
+				offset = 0x4270;
+				break;
+			default:
+				return;
+		}
+		vgt_force_wake_get();
+		VGT_MMIO_WRITE(vgt->pdev, offset, 0x01);
+		if (wait_for_atomic(handle_tlb_done(vgt, offset), 50) != 0)
+			vgt_err("Timeout in handle ring (%d) tlb invalidate\n",
+				ring_id);
+		vgt_force_wake_put();
+	}
+}
 void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 {
 	int i;
@@ -2108,6 +2145,8 @@ void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 		else
 			context_descs[i].lrca = ctx->shadow_lrca;
 	}
+
+	handle_tlb_pending_event(vgt, ring_id);
 
 	elsp_reg = el_ring_mmio(ring_id, _EL_OFFSET_SUBMITPORT);
 	/* mark it submitted even if it failed the validation */

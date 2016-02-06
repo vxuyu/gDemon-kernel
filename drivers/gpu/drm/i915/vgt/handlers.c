@@ -2804,6 +2804,37 @@ static bool vgt_reg_write_misc_ctl_handler(struct vgt_device *vgt, unsigned int 
 	return true;
 }
 
+static bool vgt_reg_tlb_control_handler(struct vgt_device *vgt, unsigned int offset,
+			void *p_data, unsigned int bytes)
+{
+	bool rc = true;
+	unsigned int id = 0;
+
+	switch (offset) {
+		case 0x4260:
+			id = RING_BUFFER_RCS;
+			break;
+		case 0x4264:
+			id = RING_BUFFER_VCS;
+			break;
+		case 0x4268:
+			id = RING_BUFFER_VCS2;
+			break;
+		case 0x426c:
+			id = RING_BUFFER_BCS;
+			break;
+		case 0x4270:
+			id = RING_BUFFER_VECS;
+			break;
+		default:
+			rc = false;
+			break;
+	}
+	set_bit(id, (void *)vgt->tlb_handle_pending);
+
+	return rc;
+}
+
 /*
  * Track policies of all captured registers
  *
@@ -3621,11 +3652,11 @@ reg_attr_t vgt_reg_info_general[] = {
 /* BDW */
 {0xe100, 4, F_RDR_MODE, 0, D_ALL, NULL, NULL},
 
-{0x4260, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
-{0x4264, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
-{0x4268, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
-{0x426c, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
-{0x4270, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
+{0x4260, 4, F_VIRT, 0, D_BDW_PLUS, NULL, vgt_reg_tlb_control_handler},
+{0x4264, 4, F_VIRT, 0, D_BDW_PLUS, NULL, vgt_reg_tlb_control_handler},
+{0x4268, 4, F_VIRT, 0, D_BDW_PLUS, NULL, vgt_reg_tlb_control_handler},
+{0x426c, 4, F_VIRT, 0, D_BDW_PLUS, NULL, vgt_reg_tlb_control_handler},
+{0x4270, 4, F_VIRT, 0, D_BDW_PLUS, NULL, vgt_reg_tlb_control_handler},
 
 {_RING_FAULT_REG(RING_BUFFER_RCS), 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
 };
