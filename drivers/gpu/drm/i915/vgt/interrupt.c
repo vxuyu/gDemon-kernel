@@ -182,10 +182,10 @@ void reset_cached_interrupt_registers(struct pgt_device *pdev)
 
 	for (i = 0; i < IRQ_INFO_MAX; i++) {
 		info = hstate->info[i];
-		if (!info)
+		if (!info || info->reg_base == GEN8_MASTER_IRQ)
 			continue;
 
-		reg_base = hstate->info[i]->reg_base;
+		reg_base = info->reg_base;
 
 		imr = regbase_to_imr(reg_base);
 		ier = regbase_to_ier(reg_base);
