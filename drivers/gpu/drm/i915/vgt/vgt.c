@@ -1428,8 +1428,10 @@ bool i915_start_vgt(struct pci_dev *pdev)
 	}
 
 
-	if (!vgt_check_host())
+	if (!vgt_check_host()) {
+		__symbol_put(vgt_pkdm->name);
 		return false;
+	}
 
 	vgt_param_check();
 
