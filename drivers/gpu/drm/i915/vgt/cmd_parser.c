@@ -855,10 +855,17 @@ static int vgt_cmd_handler_lri(struct parser_exec_state *s)
 	struct pgt_device *pdev = s->vgt->pdev;
 
 	for (i = 1; i < cmd_len; i += 2) {
-		if (IS_BDW(pdev) && (s->ring_id != RING_BUFFER_RCS))
-			rc |= (cmd_val(s, i) & BIT_RANGE_MASK(22, 18)) ? -1 : 0;
+		if (IS_BDW(pdev) && (s->ring_id != RING_BUFFER_RCS)) {
+			if (s->ring_id == RING_BUFFER_BCS &&
+				(cmd_val(s, i) & BIT_RANGE_MASK(22, 2)) == _REG_DE_RRMR)
+				rc |= 0;
+			else
+				rc |= (cmd_val(s, i) & BIT_RANGE_MASK(22, 18)) ? -1 : 0;
+		}
+
 		if (rc)
 			break;
+
 		rc |= cmd_reg_handler(s,
 			cmd_val(s, i) & BIT_RANGE_MASK(22, 2), i, "lri");
 	}
