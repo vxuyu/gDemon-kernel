@@ -51,7 +51,8 @@ static int vgt_restore_state(struct vgt_device *vgt, enum pipe pipe)
 		vgt_restore_sreg(vgt, VGT_DSPSTRIDE(pipe));
 		vgt_restore_sreg(vgt, VGT_DSPSURF(pipe));
 		vgt_restore_sreg(vgt, VGT_DSPTILEOFF(pipe));
-		vgt_restore_sreg(vgt, VGT_DSPLINOFF(pipe));
+		if (IS_HSW(vgt->pdev))
+			vgt_restore_sreg(vgt, VGT_DSPLINOFF(pipe));
 
 		vgt_restore_sreg(vgt, VGT_CURPOS(pipe));
 		vgt_restore_sreg(vgt, VGT_CURCNTR(pipe));
