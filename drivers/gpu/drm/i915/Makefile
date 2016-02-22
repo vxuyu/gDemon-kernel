@@ -128,3 +128,6 @@ i915-$(CONFIG_I915_VGT)  += $(VGT)/vgt.o	\
 			   $(VGT)/legacy/render_hsw.o
 
 CFLAGS_i915_trace_points.o := -I$(src)
+
+$(foreach fname, $(filter $(VGT)/%, $(i915-y)), $(src)/$(fname)):\
+	ccflags-$(CONFIG_I915_VGT) += -Werror
