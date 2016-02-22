@@ -908,7 +908,7 @@ int setup_gtt(struct pgt_device *pdev)
 		}
 
 		get_page(page);
-		set_memory_wc(page_address(page), 1);
+		set_memory_wc((unsigned long)page_address(page), 1);
 
 		(*pages)[i] = page;
 
