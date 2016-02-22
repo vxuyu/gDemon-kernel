@@ -335,7 +335,7 @@ void initialize_gm_fence_allocation_bitmaps(struct pgt_device *pdev)
 	struct vgt_device_info *info = &pdev->device_info;
 	unsigned long *gm_bitmap = pdev->gm_bitmap;
 
-	vgt_info("total aperture: 0x%x bytes, total GM space: 0x%llx bytes\n",
+	vgt_info("total aperture: 0x%llx bytes, total GM space: 0x%llx bytes\n",
 		phys_aperture_sz(pdev), gm_sz(pdev));
 
 	ASSERT(phys_aperture_sz(pdev) % SIZE_1MB == 0);

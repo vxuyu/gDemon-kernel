@@ -341,7 +341,7 @@ TRACE_EVENT(ctx_write_trap,
 				 "EXECLIST Context write trapped: guest_lrca: "
 				 "<0x%x>, shadow_lrca: <0x%x>, "
 				 "addr: <0x%llx> idx[0x%x], bytes %i, val_32: <0x%x>\n",
-				 guest_lrca, shadow_lrca, pa, ((pa & 0xfff) >> 2), bytes, val_32)
+				 guest_lrca, shadow_lrca, pa, (unsigned int)((pa & 0xfff) >> 2), bytes, val_32)
 		),
 
 		TP_printk("%s", __entry->buf)
