@@ -5,6 +5,7 @@ ccflags-$(CONFIG_KVMGT) += -Idrivers/gpu/drm/i915/vgt
 CFLAGS_x86.o := -I.
 CFLAGS_svm.o := -I.
 CFLAGS_vmx.o := -I.
+CFLAGS_kvmgt.o := -Werror
 
 KVM := ../../../virt/kvm
 
