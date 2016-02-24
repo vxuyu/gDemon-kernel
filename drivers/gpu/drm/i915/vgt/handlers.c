@@ -3662,6 +3662,16 @@ reg_attr_t vgt_reg_info_general[] = {
 };
 
 reg_attr_t vgt_reg_info_bdw[] = {
+/* WA in indirect ctx */
+{0xe220, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
+{0xe230, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
+{0xe240, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
+{0xe260, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
+{0xe270, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
+{0xe280, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
+{0xe2a0, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
+{0xe2b0, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
+{0xe2c0, 4, F_RDR, 0, D_BDW_PLUS, NULL, NULL},
 
 /* Interrupt registers - GT */
 {_REG_VCS2_IMR, 4, F_RDR, 0, D_BDW_PLUS, NULL, vgt_reg_imr_handler},
