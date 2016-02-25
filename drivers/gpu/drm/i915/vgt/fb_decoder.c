@@ -229,6 +229,7 @@ int vgt_decode_primary_plane_format(struct vgt_device *vgt,
 		return -EINVAL;
 	}
 
+	plane->tiled = com_plane_fmt.tiled;
 	plane->hw_format = com_plane_fmt.fmt_index;
 	plane->bpp = com_plane_fmt.gen_pixel_format.bpp;
 	plane->drm_format = com_plane_fmt.gen_pixel_format.drm_format;
@@ -338,6 +339,7 @@ int vgt_decode_sprite_plane_format(struct vgt_device *vgt,
 		return -EINVAL;
 	}
 
+	plane->tiled = com_plane_fmt.tiled;
 	plane->hw_format = com_plane_fmt.fmt_index;
 	plane->bpp = com_plane_fmt.gen_pixel_format.bpp;
 	plane->drm_format = com_plane_fmt.gen_pixel_format.drm_format;
