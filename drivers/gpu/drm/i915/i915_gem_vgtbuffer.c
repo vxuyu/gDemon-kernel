@@ -27,6 +27,10 @@
 #include "intel_drv.h"
 #include <linux/swap.h>
 
+bool enable_vgtbuffer = false;
+module_param_named(enable_vgtbuffer, enable_vgtbuffer, bool, 0600);
+MODULE_PARM_DESC(enable_vgtbuffer, "Control the vgtbuffer ioctl available or not (default: false)");
+
 struct vgt_device;
 #include "fb_decoder.h"
 
@@ -209,6 +213,13 @@ i915_gem_vgtbuffer_ioctl(struct drm_device *dev, void *data,
 	struct drm_i915_gem_object *obj;
 	u32 handle;
 	int ret;
+
+	if (args->flags & I915_VGTBUFFER_CHECK_CAPABILITY) {
+		if (enable_vgtbuffer)
+			return 0;
+		else
+			return -EINVAL;
+	}
 
 	if (INTEL_INFO(dev)->gen < 7)
 		return -EPERM;

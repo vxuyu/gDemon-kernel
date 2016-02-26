@@ -1160,6 +1160,7 @@ struct drm_i915_gem_vgtbuffer {
 	__u32 flags;
 #define I915_VGTBUFFER_READ_ONLY (1<<0)
 #define I915_VGTBUFFER_QUERY_ONLY (1<<1)
+#define I915_VGTBUFFER_CHECK_CAPABILITY (1<<2)
 #define I915_VGTBUFFER_UNSYNCHRONIZED 0x80000000
 	/**
 	 * Returned handle for the object.
