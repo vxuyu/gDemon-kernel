@@ -2117,6 +2117,9 @@ void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 		memcpy(&context_descs[i], &ctx->guest_context,
 				sizeof(struct ctx_desc_format));
 
+		if (!ctx->ppgtt_mm)
+			vgt_el_create_shadow_ppgtt(vgt, ctx->ring_id, ctx);
+
 		if (vgt->vm_id) {
 			if (vgt_manipulate_cmd_buf(vgt, ctx))
 				return;
