@@ -1320,7 +1320,6 @@ static int vgt_handle_mi_display_flip(struct parser_exec_state *s)
 	enum vgt_plane_type plane;
 	int i, length, rc = 0;
 	struct fb_notify_msg msg;
-	uint32_t value;
 	int surf_size = 0;
 	uint32_t plane_select_mask, plane_select_shift;
 	uint32_t tile_mask, plane_tile_mask, stride_shift;
