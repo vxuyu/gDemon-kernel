@@ -72,9 +72,7 @@ static ssize_t vgt_create_instance_store(struct kobject *kobj, struct kobj_attri
 	} else
 		return -EINVAL;
 
-	mutex_lock(&vgt_sysfs_lock);
 	rc = (vp.vm_id > 0) ? vgt_add_state_sysfs(vp) : vgt_del_state_sysfs(vp);
-	mutex_unlock(&vgt_sysfs_lock);
 
 	return rc < 0 ? rc : count;
 }
@@ -1026,7 +1024,9 @@ static int vgt_add_state_sysfs(vgt_params_t vp)
 	if (vmid_2_vgt_device(vp.vm_id))
 		return -EINVAL;
 
+	mutex_lock(&vgt_sysfs_lock);
 	retval = create_vgt_instance(&default_device, &vgt, vp);
+	mutex_unlock(&vgt_sysfs_lock);
 
 	if (retval < 0)
 		return retval;
@@ -1098,7 +1098,9 @@ int vgt_del_state_sysfs(vgt_params_t vp)
 
 	kobject_put(&vgt->kobj);
 
+	mutex_lock(&vgt_sysfs_lock);
 	vgt_release_instance(vgt);
+	mutex_unlock(&vgt_sysfs_lock);
 
 	return 0;
 }
