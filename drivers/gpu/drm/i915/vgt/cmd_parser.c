@@ -702,7 +702,7 @@ static inline int get_cmd_length(struct cmd_info *info, uint32_t cmd)
 		unsigned int subop, length = info->len;
 		subop = (cmd & VGT_NOOP_ID_CMD_MASK) >>
 			VGT_NOOP_ID_CMD_SHIFT;
-		if (subop)
+		if (subop == OP_MI_DISPLAY_FLIP)
 			length = cmd & CMD_LENGTH_MASK;
 
 		return length;
