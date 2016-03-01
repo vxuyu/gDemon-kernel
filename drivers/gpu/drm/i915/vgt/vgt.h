@@ -1879,7 +1879,9 @@ void vgt_emulate_context_switch_event(struct pgt_device *pdev, enum vgt_ring_id 
 void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id);
 void vgt_kick_off_execlists(struct vgt_device *vgt);
 bool vgt_idle_execlist(struct pgt_device *pdev, enum vgt_ring_id ring_id);
-struct execlist_context * execlist_context_find(struct vgt_device *vgt, uint32_t guest_lrca);
+struct execlist_context *execlist_context_find(struct vgt_device *vgt, uint32_t guest_lrca);
+struct execlist_context *execlist_shadow_context_find(struct vgt_device *vgt,
+				uint32_t guest_lrca);
 
 bool vgt_g2v_execlist_context_create(struct vgt_device *vgt);
 bool vgt_g2v_execlist_context_destroy(struct vgt_device *vgt);

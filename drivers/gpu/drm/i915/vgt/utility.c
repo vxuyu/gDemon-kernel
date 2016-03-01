@@ -237,12 +237,18 @@ static void show_batchbuffer(struct pgt_device *pdev, int ring_id, u64 addr,
 	} else if (is_execlist_mode(pdev, ring_id)) {
 		struct execlist_context *el_ctx;
 		u32 lrca = VGT_MMIO_READ(pdev, _REG_CUR_DESC(ring_id));
+		bool has_shadow = vgt_require_shadow_context(vgt) &&
+					(!hvm_render_owner) &&
+					(shadow_execlist_context != PATCH_WITHOUT_SHADOW);
 
 		lrca >>= GTT_PAGE_SHIFT;
-		el_ctx = execlist_context_find(vgt, lrca);
+
+		if (has_shadow)
+			el_ctx = execlist_shadow_context_find(vgt, lrca);
+		else
+			el_ctx = execlist_context_find(vgt, lrca);
 		if (!el_ctx) {
-			printk("cannot find ctx with lrca 0x%x\n",
-				lrca);
+			printk("cannot find ctx with lrca 0x%x\n", lrca);
 			return;
 		}
 		mm = el_ctx->ppgtt_mm;

@@ -1343,6 +1343,20 @@ static void vgt_emulate_submit_execlist(struct vgt_device *vgt, int ring_id,
 	return;
 }
 
+struct execlist_context *execlist_shadow_context_find(struct vgt_device *vgt,
+				uint32_t shadow_lrca)
+{
+	int i;
+	struct execlist_context *el_ctx;
+
+	hash_for_each(vgt->gtt.el_ctx_hash_table, i, el_ctx, node) {
+		if (el_ctx->shadow_lrca == shadow_lrca)
+			return el_ctx;
+	}
+
+	return NULL;
+}
+
 struct execlist_context * execlist_context_find(struct vgt_device *vgt,
 				uint32_t guest_lrca)
 {
