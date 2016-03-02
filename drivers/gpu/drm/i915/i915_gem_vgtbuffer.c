@@ -252,7 +252,7 @@ i915_gem_vgtbuffer_ioctl(struct drm_device *dev, void *data,
 	}
 
 	/* drop reference from allocate - handle holds it now */
-	drm_gem_object_unreference(&obj->base);
+	drm_gem_object_unreference_unlocked(&obj->base);
 
 	args->handle = handle;
 	return 0;
