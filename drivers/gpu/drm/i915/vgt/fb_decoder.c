@@ -120,7 +120,7 @@ static int skl_format_to_drm(int format, bool rgb_order, bool alpha, int yuv_ord
 int vgt_get_pixel_format_skl(u32 plane_ctl,
 	struct vgt_common_plane_format *com_plane_fmt, enum vgt_plane_type plane)
 {
-	com_plane_fmt->tiled = !!(plane_ctl & PLANE_CTL_TILED_MASK);
+	com_plane_fmt->tiled = plane_ctl & PLANE_CTL_TILED_MASK;
 	com_plane_fmt->fmt_index = skl_format_to_drm(
 		plane_ctl & PLANE_CTL_FORMAT_MASK,
 		plane_ctl & PLANE_CTL_ORDER_RGBX,
@@ -495,6 +495,35 @@ static void vgt_show_fb_format(int vmid, struct vgt_fb_format *fb)
 	printk("-----------FB format (VM-%d)--------\n", vmid);
 	printk("%s", buf.buffer);
 	destroy_dump_buffer(&buf);
+}
+
+u8 vgt_get_tiling_mode(struct drm_device *dev, u32 tiling)
+{
+        u8 tiling_mode = I915_TILING_NONE;
+
+        if (IS_HASWELL(dev) || IS_BROADWELL(dev))
+                tiling_mode = (tiling ? I915_TILING_X : I915_TILING_NONE);
+        else if (IS_SKYLAKE(dev)) {
+                switch (tiling) {
+                case PLANE_CTL_TILED_LINEAR:
+                        tiling_mode = I915_TILING_NONE;
+                        break;
+                case PLANE_CTL_TILED_X:
+                        tiling_mode = I915_TILING_X;
+                        break;
+                case PLANE_CTL_TILED_Y:
+                        tiling_mode = I915_TILING_Y;
+                        break;
+                case PLANE_CTL_TILED_YF:
+                        tiling_mode = I915_TILING_YF;
+                        break;
+                default:
+                        DRM_DEBUG_DRIVER("skl: unsupported tile format:%x\n", tiling);
+                }
+        } else
+                DRM_DEBUG_DRIVER("unsupported platform!\n");
+
+        return tiling_mode;
 }
 
 /*

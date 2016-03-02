@@ -30,7 +30,7 @@
 #define MAX_DRM_STR_SZ 50
 struct vgt_primary_plane_format {
 	u8	enabled;	/* plane is enabled */
-	u8	tiled;		/* X-tiled */
+	u32	tiled;		/* tiling */
 	u8	bpp;		/* bits per pixel */
 	u32	hw_format;	/* format field in the PRI_CTL register */
 	u32	drm_format;	/* format in DRM definition */
@@ -84,7 +84,7 @@ struct pixel_format {
 
 struct vgt_common_plane_format {
 	struct pixel_format gen_pixel_format;
-	u8 tiled;
+	u32 tiled;
 	int fmt_index;
 	int stride_mask;
 };
@@ -164,6 +164,7 @@ int vgt_get_pixel_format_preskl(u32 plane_ctl,
 	struct vgt_common_plane_format *com_plane_fmt, enum vgt_plane_type plane);
 int vgt_get_pixel_format_skl(u32 plane_ctl,
 	struct vgt_common_plane_format *com_plane_fmt, enum vgt_plane_type plane);
+u8 vgt_get_tiling_mode(struct drm_device *dev, u32 tiling);
 
 
 #endif

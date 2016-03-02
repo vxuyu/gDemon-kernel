@@ -165,7 +165,7 @@ static int vgt_decode_information(struct drm_device *dev,
 		args->bpp = p->bpp;
 		args->hw_format = p->hw_format;
 		args->drm_format = p->drm_format;
-		args->tiled = p->tiled;
+		args->tiled = vgt_get_tiling_mode(dev, p->tiled);
 	} else if ((args->plane_id) == I915_VGT_PLANE_CURSOR) {
 		c = &pipe->cursor;
 		args->enabled = c->enabled;
@@ -241,7 +241,7 @@ i915_gem_vgtbuffer_ioctl(struct drm_device *dev, void *data,
 		return -EINVAL;
 	}
 
-	obj->tiling_mode = args->tiled ? I915_TILING_X : I915_TILING_NONE;
+	obj->tiling_mode = args->tiled;
 	obj->stride = args->tiled ? args->stride : 0;
 
 	ret = drm_gem_handle_create(file, &obj->base, &handle);
