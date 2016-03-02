@@ -1179,13 +1179,15 @@ static bool ppgtt_allocate_oos_page(struct vgt_device *vgt, guest_page_t *gpt)
 	struct pgt_device *pdev = vgt->pdev;
 	struct vgt_gtt_info *gtt = &pdev->gtt;
 	oos_page_t *oos_page = gpt->oos_page;
+	ppgtt_spt_t *spt = NULL;
 
 	/* oos_page should be NULL at this point */
 	ASSERT(!oos_page);
 
 	if (list_empty(&gtt->oos_page_free_list_head)) {
 		oos_page = container_of(gtt->oos_page_use_list_head.next, oos_page_t, list);
-		if (!ppgtt_set_guest_page_sync(vgt, oos_page->guest_page)
+		spt = guest_page_to_ppgtt_spt(oos_page->guest_page);
+		if (!ppgtt_set_guest_page_sync(spt->vgt, oos_page->guest_page)
 			|| !vgt_detach_oos_page(vgt, oos_page))
 			return false;
 		ASSERT(!list_empty(&gtt->oos_page_free_list_head));
