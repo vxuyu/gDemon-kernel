@@ -990,9 +990,9 @@ static inline void vgt_raise_emulation_request(struct vgt_device *vgt,
 	int vcpu)
 {
 	struct vgt_hvm_info *info = vgt->hvm_info;
+
 	set_bit(vcpu, info->ioreq_pending);
-	if (waitqueue_active(&info->io_event_wq))
-		wake_up(&info->io_event_wq);
+	wake_up(&info->io_event_wq);
 }
 
 static irqreturn_t vgt_hvm_io_req_handler(int irq, void* dev)
