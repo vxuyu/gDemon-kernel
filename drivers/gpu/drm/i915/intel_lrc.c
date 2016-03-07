@@ -726,23 +726,33 @@ static int logical_ring_wait_for_space(struct drm_i915_gem_request *req,
  * on a queue waiting for the ELSP to be ready to accept a new context submission. At that
  * point, the tail *inside* the context is updated and the ELSP written to.
  */
-static void
+static int
 intel_logical_ring_advance_and_submit(struct drm_i915_gem_request *request)
 {
-	struct intel_engine_cs *ring = request->ring;
+	struct intel_ringbuffer *ringbuf = request->ringbuf;
 	struct drm_i915_private *dev_priv = request->i915;
 
-	intel_logical_ring_advance(request->ringbuf);
+	intel_logical_ring_advance(ringbuf);
 
-	request->tail = request->ringbuf->tail;
+	request->tail = ringbuf->tail;
 
-	if (intel_ring_stopped(ring))
-		return;
+	/*
+	 * Here we add two extra NOOPs as padding to avoid
+	 * lite restore of a context with HEAD==TAIL.
+	 */
+	intel_logical_ring_emit(ringbuf, MI_NOOP);
+	intel_logical_ring_emit(ringbuf, MI_NOOP);
+	intel_logical_ring_advance(ringbuf);
+
+	if (intel_ring_stopped(request->ring))
+		return 0;
 
 	if (dev_priv->guc.execbuf_client)
 		i915_guc_submit(dev_priv->guc.execbuf_client, request);
 	else
 		execlists_context_queue(request);
+
+	return 0;
 }
 
 static void __wrap_ring_buffer(struct intel_ringbuffer *ringbuf)
@@ -1823,17 +1833,7 @@ static int gen8_emit_request(struct drm_i915_gem_request *request)
 	intel_logical_ring_emit(ringbuf, i915_gem_request_get_seqno(request));
 	intel_logical_ring_emit(ringbuf, MI_USER_INTERRUPT);
 	intel_logical_ring_emit(ringbuf, MI_NOOP);
-	intel_logical_ring_advance_and_submit(request);
-
-	/*
-	 * Here we add two extra NOOPs as padding to avoid
-	 * lite restore of a context with HEAD==TAIL.
-	 */
-	intel_logical_ring_emit(ringbuf, MI_NOOP);
-	intel_logical_ring_emit(ringbuf, MI_NOOP);
-	intel_logical_ring_advance(ringbuf);
-
-	return 0;
+	return intel_logical_ring_advance_and_submit(request);
 }
 
 static int intel_lr_context_render_state_init(struct drm_i915_gem_request *req)
