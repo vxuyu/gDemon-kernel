@@ -2991,13 +2991,14 @@ static int vgt_combine_indirect_ctx_bb(struct vgt_device *vgt,
 	unsigned long sbase = el_ctx->shadow_indirect_ctx.shadow_ctx_base;
 	uint32_t ctx_size = el_ctx->shadow_indirect_ctx.ctx_size;
 	void *bb_start_sva;
-	uint32_t bb_per_ctx_start[CACHELINE_DWORDS] = {0x18800001, 0x0, 0x00000000};
+	uint32_t bb_per_ctx_start[CACHELINE_DWORDS] = {0};
 
 	if (!el_ctx->shadow_bb_per_ctx.guest_bb_base) {
 		vgt_err("invalid bb per ctx address\n");
 		return -1;
 	}
 
+	bb_per_ctx_start[0] = 0x18800001;
 	bb_per_ctx_start[1] = el_ctx->shadow_bb_per_ctx.guest_bb_base;
 	bb_start_sva = rsvd_gma_to_sys_va(vgt->pdev, sbase + ctx_size);
 	memcpy(bb_start_sva, bb_per_ctx_start, CACHELINE_BYTES);
@@ -3072,17 +3073,22 @@ int vgt_scan_vring(struct vgt_device *vgt, int ring_id)
 		ret = vgt_copy_indirect_ctx_to_shadow(vgt, rs->el_ctx);
 		ctx_base = rs->el_ctx->shadow_indirect_ctx.shadow_ctx_base;
 		if (ret == 0 && ctx_base) {
+			uint32_t ctx_tail =
+				rs->el_ctx->shadow_indirect_ctx.ctx_size +
+							3 * sizeof(uint32_t);
+			uint32_t dummy_ctx_size =
+				((ctx_tail >> PAGE_SHIFT) + 1) << PAGE_SHIFT;
+			ASSERT(ctx_tail != dummy_ctx_size);
 			ret = vgt_combine_indirect_ctx_bb(vgt, rs->el_ctx);
 			if (ret)
 				goto err;
-			ret = __vgt_scan_vring(vgt, ring_id, 0,
-				rs->el_ctx->shadow_indirect_ctx.ctx_size +
-							CACHELINE_BYTES,
-				ctx_base,
-				rs->el_ctx->shadow_indirect_ctx.ctx_size +
-							CACHELINE_BYTES,
-				true);
-			vgt_get_bb_per_ctx_shadow_base(vgt, rs->el_ctx);
+			if (!__vgt_scan_vring(vgt, ring_id, 0, ctx_tail,
+				ctx_base, dummy_ctx_size, true)) {
+				vgt_get_bb_per_ctx_shadow_base(vgt, rs->el_ctx);
+			} else {
+				ret = -1;
+				vgt_err("error happen in indirect ctx scan\n");
+			}
 		}
 
 	}
