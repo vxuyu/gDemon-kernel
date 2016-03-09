@@ -308,7 +308,7 @@ __oprofile_add_ext_sample(unsigned long pc, struct pt_regs * const regs,
 		extern void gpu_perf_sample(void);
 		gpu_perf_sample();
 	}
-#ifdef  CONFIG_XEN_DOM0
+#if (defined CONFIG_XEN_DOM0) && IS_ENABLED(CONFIG_I915_VGT)
 	else {
 		/* Xen Domain0 */
 		extern void vgt_gpu_perf_sample(void);

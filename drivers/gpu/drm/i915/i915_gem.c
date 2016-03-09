@@ -156,9 +156,11 @@ i915_gem_get_aperture_ioctl(struct drm_device *dev, void *data,
 	if (!intel_vgpu_active(dev)) {
 		args->aper_size = dev_priv->gtt.base.total;
 		args->aper_available_size = args->aper_size - pinned;
+#if IS_ENABLED(CONFIG_I915_VGT)
 	} else {
 		args->aper_size = dev_priv->mm.vgt_low_gm_size + dev_priv->mm.vgt_high_gm_size;
 		args->aper_available_size = dev_priv->mm.vgt_low_gm_size + dev_priv->mm.vgt_high_gm_size - pinned;
+#endif
 	}
 
 	return 0;

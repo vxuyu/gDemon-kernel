@@ -32,7 +32,7 @@ module_param_named(enable_vgtbuffer, enable_vgtbuffer, bool, 0600);
 MODULE_PARM_DESC(enable_vgtbuffer, "Control the vgtbuffer ioctl available or not (default: false)");
 
 struct vgt_device;
-#include "fb_decoder.h"
+#include "vgt/fb_decoder.h"
 
 static int i915_gem_vgtbuffer_get_pages(struct drm_i915_gem_object *obj)
 {
