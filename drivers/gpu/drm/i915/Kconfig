@@ -50,7 +50,7 @@ config DRM_I915_PRELIMINARY_HW_SUPPORT
 
 config I915_VGT
 	bool "iGVT-g vGT driver of i915"
-	depends on DRM_I915
+	depends on DRM_I915 && X86_64
 	select IRQ_WORK
 	default y
 	help
