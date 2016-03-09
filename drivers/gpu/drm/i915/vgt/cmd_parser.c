@@ -738,18 +738,19 @@ static int vgt_cmd_handler_mi_set_context(struct parser_exec_state* s)
 	((1UL << ((a) + 1)) - (1UL << (b)))
 static int vgt_cmd_handler_lri_emulate(struct parser_exec_state *s)
 {
-	int i;
+	int i = 1;
 	int cmd_len = cmd_length(s);
 	unsigned int offset;
 	uint32_t val;
 
-	for (i = 1; i < cmd_len; i += 2) {
+	do {
 		offset = cmd_val(s, i) & BIT_RANGE_MASK(22, 2);
 		val = cmd_val(s, i + 1);
 
 		if (offset == _REG_DE_RRMR || offset == FORCEWAKE_MT)
 			break;
-	}
+		i += 2;
+	} while (i < cmd_len);
 
 	if (i == cmd_len) {
 		vgt_err("No DE_RRMR or MUL_FORCEWAKE in LRI?\n");
