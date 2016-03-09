@@ -627,6 +627,8 @@ static void update_guest_regstate_from_shadow(void *dest_page, void *src_page,
 	int regstate_size = sizeof(struct reg_state_ctx_header);
 	int pdp_offset = offsetof(struct reg_state_ctx_header, pdp3_UDW);
 	int rbctrl_offset = offsetof(struct reg_state_ctx_header, rb_ctrl);
+	int bbperctx_offset = offsetof(struct reg_state_ctx_header, bb_per_ctx_ptr);
+	int ictxoffset_offset = offsetof(struct reg_state_ctx_header, rcs_indirect_ctx_offset);
 
 	dest_ctx = (struct reg_state_ctx_header *)(dest_page);
 	src_ctx = (struct reg_state_ctx_header *)(src_page);
@@ -642,7 +644,13 @@ static void update_guest_regstate_from_shadow(void *dest_page, void *src_page,
 	dest_ctx->rb_start.addr = src_ctx->rb_start.addr;
 
 	memcpy(dest_page + rbctrl_offset, src_page + rbctrl_offset,
-	       pdp_offset - rbctrl_offset);
+	       bbperctx_offset - rbctrl_offset);
+
+	dest_ctx->bb_per_ctx_ptr.addr = src_ctx->bb_per_ctx_ptr.addr;
+	dest_ctx->rcs_indirect_ctx.addr = src_ctx->rcs_indirect_ctx.addr;
+
+	memcpy(dest_page + ictxoffset_offset, src_page + ictxoffset_offset,
+	       pdp_offset - ictxoffset_offset);
 
 	dest_ctx->pdp0_LDW.addr = src_ctx->pdp0_LDW.addr;
 	dest_ctx->pdp0_UDW.addr = src_ctx->pdp0_UDW.addr;
