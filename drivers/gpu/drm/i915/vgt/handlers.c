@@ -1383,7 +1383,7 @@ static bool pri_surf_mmio_write(struct vgt_device *vgt, unsigned int offset,
 	struct fb_notify_msg msg;
 	enum pipe pipe = VGT_DSPSURFPIPE(offset);
 	unsigned int real_offset;
-	vgt_reg_t ret_val;
+	vgt_reg_t ret_val = 0;
 	bool rc = true;
 
 	__vreg(vgt, offset) = *(vgt_reg_t*)p_data;
@@ -1426,7 +1426,7 @@ static bool spr_surf_mmio_write(struct vgt_device *vgt, unsigned int offset,
 	struct fb_notify_msg msg;
 	enum pipe pipe = VGT_SPRSURFPIPE(offset);
 	unsigned int real_offset;
-	vgt_reg_t ret_val;
+	vgt_reg_t ret_val = 0;
 	bool rc = true;
 
 	__vreg(vgt, offset) = *(vgt_reg_t*)p_data;
@@ -1464,7 +1464,7 @@ static bool cur_surf_mmio_write(struct vgt_device *vgt, unsigned int offset,
 {
 	enum pipe pipe = VGT_CURSURFPIPE(offset);
 	unsigned int real_offset;
-	vgt_reg_t ret_val;
+	vgt_reg_t ret_val = 0;
 	bool rc = true;
 
 	__vreg(vgt, offset) = *(vgt_reg_t*)p_data;
