@@ -1889,29 +1889,6 @@ static bool err_int_w(struct vgt_device *vgt, unsigned int offset,
 	return rc;
 }
 
-static vgt_reg_t get_sbi_reg_cached_value(struct vgt_device *vgt,
-	unsigned int sbi_offset)
-{
-	int i;
-	int num = vgt->sbi_regs.number;
-	vgt_reg_t value = 0;
-
-	for (i = 0; i < num; ++ i) {
-		if (vgt->sbi_regs.registers[i].offset == sbi_offset)
-			break;
-	}
-
-	if (i < num) {
-		value = vgt->sbi_regs.registers[i].value;
-	} else {
-		vgt_warn("vGT(%d): SBI reading did not find the cached value"
-			" for offset 0x%x. 0 will be returned!\n",
-			vgt->vgt_id, sbi_offset);
-	}
-
-	return value;
-}
-
 static void cache_sbi_reg_value(struct vgt_device *vgt, unsigned int sbi_offset,
 	vgt_reg_t value)
 {
@@ -1925,7 +1902,7 @@ static void cache_sbi_reg_value(struct vgt_device *vgt, unsigned int sbi_offset,
 
 	if (i == num) {
 		if (num < SBI_REG_MAX) {
-			vgt->sbi_regs.number ++;
+			vgt->sbi_regs.number++;
 		} else {
 			vgt_warn("vGT(%d): SBI caching meets maximum limits!\n",
 				vgt->vgt_id);
@@ -1935,6 +1912,31 @@ static void cache_sbi_reg_value(struct vgt_device *vgt, unsigned int sbi_offset,
 
 	vgt->sbi_regs.registers[i].offset = sbi_offset;
 	vgt->sbi_regs.registers[i].value = value;
+}
+
+static vgt_reg_t get_sbi_reg_cached_value(struct vgt_device *vgt,
+	unsigned int sbi_offset)
+{
+	int i;
+	int num = vgt->sbi_regs.number;
+	vgt_reg_t value = 0;
+
+	for (i = 0; i < num; ++i) {
+		if (vgt->sbi_regs.registers[i].offset == sbi_offset)
+			break;
+	}
+
+	if (i < num) {
+		value = vgt->sbi_regs.registers[i].value;
+	} else {
+		cache_sbi_reg_value(vgt, sbi_offset, 0);
+		vgt_dbg(VGT_DBG_DPY,
+			"vGT(%d): SBI reading did not find the cached value"
+			" for offset 0x%x. 0 will be returned!\n",
+			vgt->vgt_id, sbi_offset);
+	}
+
+	return value;
 }
 
 static bool sbi_mmio_data_read(struct vgt_device *vgt, unsigned int offset,
