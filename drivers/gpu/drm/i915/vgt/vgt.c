@@ -200,6 +200,11 @@ module_param_named(shadow_indirect_ctx_bb, shadow_indirect_ctx_bb, int, 0400);
 int vgt_cmd_audit = 1;
 module_param_named(vgt_cmd_audit, vgt_cmd_audit, int, 0400);
 
+bool vgt_hold_forcewake;
+module_param_named(vgt_hold_forcewake, vgt_hold_forcewake, bool, 0600);
+MODULE_PARM_DESC(vgt_hold_forcewake,
+		"VGT will hold the forcewake or not (default: false)");
+
 static struct vgt_ops __vgt_ops = {
 	.emulate_read = vgt_emulate_read,
 	.emulate_write = vgt_emulate_write,
@@ -835,6 +840,9 @@ void vgt_destroy(void)
 	int i;
 	unsigned long flags;
 
+	if (vgt_hold_forcewake)
+		vgt_force_wake_put();
+
 	vgt_cleanup_mmio_dev(pdev);
 
 	perf_pgt = NULL;
@@ -989,6 +997,9 @@ static int vgt_initialize(struct pci_dev *dev)
 	vgt_init_sysfs(pdev);
 
 	vgt_init_fb_notify();
+
+	if (vgt_hold_forcewake)
+		vgt_force_wake_get();
 
 	printk("vgt_initialize succeeds.\n");
 
