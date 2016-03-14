@@ -2104,7 +2104,7 @@ static bool pvinfo_write(struct vgt_device *vgt, unsigned int offset,
 
 			if (event != UEVENT_MAX){
 				rc = vgt_dpy_stat_notify(vgt, event);
-				if (rc < 0)
+				if (!rc)
 					break;
 			}
 
