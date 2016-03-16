@@ -100,6 +100,11 @@ EXPORT_SYMBOL_GPL(kvm_x86_ops);
 static bool ignore_msrs = 0;
 module_param(ignore_msrs, bool, S_IRUGO | S_IWUSR);
 
+#ifdef CONFIG_KVMGT
+bool passthrough_msrs = 0;
+module_param(passthrough_msrs, bool, S_IRUGO | S_IWUSR);
+#endif
+
 unsigned int min_timer_period_us = 500;
 module_param(min_timer_period_us, uint, S_IRUGO | S_IWUSR);
 

@@ -48,10 +48,28 @@ bool kvmgt_emulate_write(struct kvm *kvm, gpa_t gpa, const void *val, int len);
 
 pfn_t kvmgt_gfn_to_pfn_by_rmap(struct kvm *kvm, gfn_t gfn);
 
+extern bool passthrough_msrs;
 static inline bool kvmgt_is_passthrough_msr(u32 msr)
 {
+	/* If passthrough_msrs is true,
+	 * all unhandled msr read will be passthrough to HW,
+	 * all unhandled msr write will be ignored.
+	 */
+	if (passthrough_msrs)
+		return true;
+
 	switch (msr) {
+	case 0x31:
+	case 0x35:
+	case 0x39:
 	case 0x95: /* enable/disable cache cos */
+	case 0xce:
+	case 0xe7:
+	case 0xe8:
+	case 0x194:
+	case 0x606:
+	case 0x637:
+	case 0x641:
 	case 0xd00 ... 0xd03: /* eLLC cos ways mask */
 		return true;
 	default:
