@@ -55,6 +55,7 @@ struct i915_params i915 __read_mostly = {
 	.edp_vswing = 0,
 	.enable_guc_submission = false,
 	.guc_log_level = -1,
+	.gen9_pg_wa_enable = true,
 };
 
 module_param_named(modeset, i915.modeset, int, 0400);
@@ -195,3 +196,9 @@ MODULE_PARM_DESC(enable_guc_submission, "Enable GuC submission (default:false)")
 module_param_named(guc_log_level, i915.guc_log_level, int, 0400);
 MODULE_PARM_DESC(guc_log_level,
 	"GuC firmware logging level (-1:disabled (default), 0-3:enabled)");
+
+module_param_named(gen9_pg_wa_enable, i915.gen9_pg_wa_enable, bool, 0600);
+MODULE_PARM_DESC(gen9_pg_wa_enable,
+	"Enable gen9 power gating WA (1=enabled [default], 0=disabled)."
+	"When power gating WA enabled, Render and Media engine will not"
+	"be power gated when RC6");

@@ -4728,6 +4728,7 @@ static void gen9_enable_rc6(struct drm_device *dev)
 	 */
 	if (IS_BXT_REVID(dev, 0, BXT_REVID_A1) ||
 	    ((IS_SKL_GT3(dev) || IS_SKL_GT4(dev)) &&
+	     i915.gen9_pg_wa_enable &&
 	     IS_SKL_REVID(dev, 0, REVID_FOREVER)))
 		I915_WRITE(GEN9_PG_ENABLE, 0);
 	else
