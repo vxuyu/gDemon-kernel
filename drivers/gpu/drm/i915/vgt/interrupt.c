@@ -999,8 +999,14 @@ void inject_dom0_virtual_interrupt(void *info)
 
 static int vgt_inject_virtual_interrupt(struct vgt_device *vgt)
 {
-	if (vgt->vm_id)
-		hypervisor_inject_msi(vgt);
+	if (vgt->vm_id) {
+		if (hypervisor_inject_msi(vgt) < 0) {
+			if (!vgt->stat.irq_inject_fail)
+				vgt_err("vGT(%d): failed to inject vmsi\n",
+					vgt->vgt_id);
+			vgt->stat.irq_inject_fail++;
+		}
+	}
 	else
 		pend_dom0_virtual_interrupt(vgt);
 

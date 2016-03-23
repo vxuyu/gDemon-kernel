@@ -39,6 +39,7 @@ struct vgt_statistics {
 	u64	used_cycles;
 	u64	irq_num;
 	u64	events[EVENT_MAX];
+	u64	irq_inject_fail;
 
 	/* actually this is the number of pending
 	* interrutps, check this in vgt_check_pending_events,

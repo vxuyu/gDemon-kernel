@@ -84,7 +84,7 @@ static inline void *hypervisor_mfn_to_virt(int mfn)
 	return vgt_pkdm->from_mfn_to_virt(mfn);
 }
 
-static inline void hypervisor_inject_msi(struct vgt_device *vgt)
+static inline int hypervisor_inject_msi(struct vgt_device *vgt)
 {
 #define MSI_CAP_CONTROL (msi_cap_offset + 2)
 #define MSI_CAP_ADDRESS (msi_cap_offset + 4)
@@ -97,20 +97,17 @@ static inline void hypervisor_inject_msi(struct vgt_device *vgt)
 	u16 control = *(u16 *)(cfg_space + MSI_CAP_CONTROL);
 	u32 addr = *(u32 *)(cfg_space + MSI_CAP_ADDRESS);
 	u16 data = *(u16 *)(cfg_space + MSI_CAP_DATA);
-	int r;
 
 	/* Do not generate MSI if MSIEN is disable */
 	if (!(control & MSI_CAP_EN))
-		return;
+		return 0;
 
 	/* FIXME: currently only handle one MSI format */
 	ASSERT_NUM(!(control & 0xfffe), control);
 
 	vgt_dbg(VGT_DBG_IRQ, "vGT: VM(%d): hvm injections. address (%x) data(%x)!\n",
 			vgt->vm_id, addr, data);
-	r = vgt_pkdm->inject_msi(vgt->vm_id, addr, data);
-	if (r < 0)
-		vgt_err("vGT(%d): failed to inject vmsi\n", vgt->vgt_id);
+	return vgt_pkdm->inject_msi(vgt->vm_id, addr, data);
 }
 
 static inline int hypervisor_hvm_init(struct vgt_device *vgt)
