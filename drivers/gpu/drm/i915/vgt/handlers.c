@@ -2496,7 +2496,10 @@ static bool vgt_read_ctx_status_ptr(struct vgt_device *vgt, unsigned int offset,
 		return false;
 	};
 
-	if (vgt == current_render_owner(vgt->pdev)) {
+	if (ring_id >= vgt->pdev->max_engines)
+		WARN_ONCE(1, "vGT(%d) accessing ring%d offset 0x%x not supported\n",
+				vgt->vgt_id, ring_id, offset);
+	else if (vgt == current_render_owner(vgt->pdev)) {
 		/* update HW CSB status to guest if we are render owner
 		 * this is to make sure that guest always can get latest HW status,
 		 * even if we delay/did not send ctx switch events to guest.
