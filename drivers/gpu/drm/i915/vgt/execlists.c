@@ -317,12 +317,12 @@ static int vgt_el_slots_next_sched(vgt_state_ring_t *ring_state)
 		return -1;
 	} else {
 		while (ring_state->execlist_slots[head].status != EL_PENDING) {
-			head ++;
+			head++;
+			if (head == EL_QUEUE_SLOT_NUM)
+				head = 0;
 			if (head == tail) {
 				head = -1;
 				break;
-			} else if (head == EL_QUEUE_SLOT_NUM) {
-				head = 0;
 			}
 		}
 		return head;
