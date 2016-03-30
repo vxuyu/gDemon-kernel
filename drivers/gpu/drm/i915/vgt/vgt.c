@@ -163,6 +163,14 @@ module_param_named(enable_panel_fitting, enable_panel_fitting, bool, 0600);
 bool enable_reset = true;
 module_param_named(enable_reset, enable_reset, bool, 0600);
 
+/* possible value of preemption_policy:
+ * 0: (default) pre-emption and lite-restore are enabled.
+ * 1: pre-emption disabled, lite-restore enabled.
+ * 3: pre-emption disabled, lite-restore disabled.
+ */
+int preemption_policy = 1;
+module_param_named(preemption_policy, preemption_policy, int, 0600);
+
 /*
  * Below parameters allow two kinds of reset policy setting:
  * 1, Maximum allowed reset number in a specified duration.
@@ -378,6 +386,12 @@ static void vgt_processe_hi_priority_request(struct pgt_device *pdev)
 		vgt_get_irq_lock(pdev, flags);
 		vgt_forward_events(pdev);
 		vgt_put_irq_lock(pdev, flags);
+		vgt_unlock_dev(pdev, cpu);
+	}
+
+	if (!ctx_switch_requested(pdev)) {
+		vgt_lock_dev(pdev, cpu);
+		vgt_kick_off_execlists(current_render_owner(pdev));
 		vgt_unlock_dev(pdev, cpu);
 	}
 

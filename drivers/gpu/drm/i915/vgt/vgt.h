@@ -110,6 +110,10 @@ extern bool spt_out_of_sync;
 extern bool timer_based_qos;
 extern int tbs_period_ms;
 extern bool opregion_present;
+extern int preemption_policy;
+
+#define VGT_PREEMPTION_DISABLED   (1<<0)
+#define VGT_LITERESTORE_DISABLED  (1<<1)
 
 #define vgt_dbg(component, fmt, s...)	\
 	do { if (vgt_debug & component) printk(KERN_DEBUG "vGT debug:(%s:%d) " fmt, __FUNCTION__, __LINE__, ##s); } while (0)
@@ -1795,6 +1799,7 @@ extern void vgt_sched_update_prev(struct vgt_device *vgt, cycles_t time);
 extern void vgt_sched_update_next(struct vgt_device *vgt);
 extern void vgt_schedule(struct pgt_device *pdev);
 extern void vgt_request_force_removal(struct vgt_device *vgt);
+extern int vgt_el_slots_number(vgt_state_ring_t *ring_state);
 
 /* klog facility for buck printk */
 extern int vgt_klog_init(void);
@@ -1876,7 +1881,7 @@ void dump_el_status(struct pgt_device *pdev);
 
 void vgt_clear_submitted_el_record(struct pgt_device *pdev, enum vgt_ring_id ring_id);
 void vgt_emulate_context_switch_event(struct pgt_device *pdev, enum vgt_ring_id ring_id);
-void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id);
+int  vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id);
 void vgt_kick_off_execlists(struct vgt_device *vgt);
 bool vgt_idle_execlist(struct pgt_device *pdev, enum vgt_ring_id ring_id);
 struct execlist_context *execlist_context_find(struct vgt_device *vgt, uint32_t guest_lrca);

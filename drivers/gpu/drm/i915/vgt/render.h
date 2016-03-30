@@ -101,6 +101,7 @@ struct vgt_elsp_store {
 };
 
 #define EL_QUEUE_SLOT_NUM 6
+#include "execlists.h"
 
 typedef struct {
 	vgt_ringbuffer_t	vring;		/* guest view ring */
@@ -131,6 +132,7 @@ typedef struct {
 	uint64_t uhptr_id;
 	int el_slots_head;
 	int el_slots_tail;
+	struct ctx_desc_format el_last_submit[2]; /* 2 ctx of last submit el */
 	struct vgt_exec_list execlist_slots[EL_QUEUE_SLOT_NUM];
 	struct vgt_elsp_store elsp_store;
 	int csb_write_ptr;

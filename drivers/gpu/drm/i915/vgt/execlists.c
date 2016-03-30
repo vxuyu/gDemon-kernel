@@ -329,7 +329,7 @@ static int vgt_el_slots_next_sched(vgt_state_ring_t *ring_state)
 	}
 }
 
-static int vgt_el_slots_number(vgt_state_ring_t *ring_state)
+int vgt_el_slots_number(vgt_state_ring_t *ring_state)
 {
 	int num;
 	int head = ring_state->el_slots_head;
@@ -1692,12 +1692,22 @@ static void vgt_emulate_el_preemption(struct vgt_device *vgt, enum vgt_ring_id r
 	el_slot->el_ctxs[1] = NULL;
 }
 #endif
+static inline void update_last_submit_el(struct vgt_device *vgt,
+				int ring_id, struct ctx_desc_format *ctx0,
+				struct ctx_desc_format *ctx1)
+{
+	vgt_state_ring_t *rb_state = &vgt->rb[ring_id];
+
+	rb_state->el_last_submit[0] = *ctx0;
+	rb_state->el_last_submit[1] = *ctx1;
+}
 static inline bool vgt_hw_ELSP_write(struct vgt_device *vgt,
-				unsigned int reg,
+				int ring_id,
 				struct ctx_desc_format *ctx0,
 				struct ctx_desc_format *ctx1)
 {
 	int rc = true;
+	uint32_t reg = el_ring_mmio(ring_id, _EL_OFFSET_SUBMITPORT);
 
 	ASSERT(ctx0 && ctx1);
 
@@ -1717,6 +1727,7 @@ static inline bool vgt_hw_ELSP_write(struct vgt_device *vgt,
 	VGT_MMIO_WRITE(vgt->pdev, reg, ctx0->elm_low);
 
 	vgt_force_wake_put();
+	update_last_submit_el(vgt, ring_id, ctx0, ctx1);
 
 	return rc;
 }
@@ -2000,18 +2011,27 @@ static int vgt_manipulate_cmd_buf(struct vgt_device *vgt,
 
 void vgt_kick_off_execlists(struct vgt_device *vgt)
 {
-	int i;
+	int i, rc;
 	struct pgt_device *pdev = vgt->pdev;
 
 	for (i = 0; i < pdev->max_engines; i ++) {
 		int j;
 		int num = vgt_el_slots_number(&vgt->rb[i]);
-		if (num == 2)
+
+		if (num > 1)
 			vgt_dbg(VGT_DBG_EXECLIST,
 				"VM(%d) Ring-%d: Preemption is met while "
 				"kicking off execlists.\n", vgt->vm_id, i);
-		for (j = 0; j < num; ++ j)
-			vgt_submit_execlist(vgt, i);
+		for (j = 0; j < num; ++j) {
+			rc = vgt_submit_execlist(vgt, i);
+			if (rc < 0) {
+				if (rc != -EBUSY)
+					vgt_warn("Execlist submit fails, rc=%d. Total %d ELs"
+						" in queue and already submitted %d.\n",
+						-rc, num, j);
+				break;
+			}
+		}
 	}
 }
 
@@ -2059,11 +2079,76 @@ bool vgt_idle_execlist(struct pgt_device *pdev, enum vgt_ring_id ring_id)
 	return true;
 }
 
+bool is_context_running(struct vgt_device *vgt, int ring_id,
+	uint32_t context_id)
+{
+	uint32_t el_ring_base;
+	uint32_t el_status_reg;
+	struct execlist_status_format el_status;
+
+	el_ring_base = vgt_ring_id_to_EL_base(ring_id);
+	el_status_reg = el_ring_base + _EL_OFFSET_STATUS;
+	READ_STATUS_MMIO(vgt->pdev, el_status_reg, el_status);
+
+	if (context_id == el_status.context_id)
+		return true;
+	return false;
+}
+bool is_lite_restore_submission(struct vgt_device *vgt, int ring_id,
+				uint32_t ctx0_id)
+{
+	vgt_state_ring_t *rb_state = &vgt->rb[ring_id];
+	struct ctx_desc_format *last_submit = rb_state->el_last_submit;
+
+	/* there are 2 types lite-restore:
+	 * simple: A/0; A/X
+	 *    A/0 is the last submmited EL and also the one HW engine is working on,
+	 *    A/X is the EL which  will be submitted to HW.
+	 * complex: X/A(A is the current working-on context); A/X
+	 *    X/A is the last submmitted EL and the one HW engine is now working on,
+	 *    A/X is the EL which will be submitted to HW.
+	 */
+	 if (last_submit[0].valid &&
+		!last_submit[1].valid &&
+		last_submit[0].context_id == ctx0_id){
+		/* this is the simple type lite-restore */
+		return true;
+	}
+	if (last_submit[1].valid &&
+		last_submit[1].context_id == ctx0_id){
+		if (is_context_running(vgt, ring_id, ctx0_id)) {
+			/* this is the complex type lite-restore */
+			return true;
+		}
+	}
+	return false;
+}
+bool could_submit_el(struct vgt_device *vgt,
+				int ring_id, struct vgt_exec_list *execlist)
+{
+	vgt_state_ring_t *rb_state = &vgt->rb[ring_id];
+	struct ctx_desc_format *last_submit = rb_state->el_last_submit;
+
+	if (!(preemption_policy & VGT_PREEMPTION_DISABLED))
+		return true;
+
+	if (!last_submit[0].valid &&
+		!last_submit[1].valid)
+		return true;
+
+	if (!vgt_idle_execlist(vgt->pdev, ring_id)) {
+		if ((preemption_policy & VGT_LITERESTORE_DISABLED) ||
+			!is_lite_restore_submission(vgt, ring_id,
+			execlist->el_ctxs[0]->guest_context.context_id))
+			return false;
+	}
+	return true;
+}
+
 static inline bool handle_tlb_done(struct vgt_device *vgt, unsigned int offset)
 {
 	return (VGT_MMIO_READ(vgt->pdev, offset) == 0);
 }
-
 void handle_tlb_pending_event(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 {
 	unsigned int offset;
@@ -2096,29 +2181,28 @@ void handle_tlb_pending_event(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 		vgt_force_wake_put();
 	}
 }
-void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
+int vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 {
 	int i;
 	struct ctx_desc_format context_descs[2];
-	uint32_t elsp_reg;
 	int el_slot_idx;
 	vgt_state_ring_t *ring_state;
 	struct vgt_exec_list *execlist = NULL;
 	bool render_owner = is_current_render_owner(vgt);
 
 	if (!render_owner)
-		return;
+		return 0;
 
 	ring_state = &vgt->rb[ring_id];
 	el_slot_idx = vgt_el_slots_next_sched(ring_state);
-	if (el_slot_idx == -1) {
-		return;
-	}
+	if (el_slot_idx == -1)
+		return 0;
 	execlist = &vgt_el_queue_slot(vgt, ring_id, el_slot_idx);
-
-	if (execlist == NULL) {
+	if (execlist == NULL)
+		return -EINVAL;
+	if (!could_submit_el(vgt, ring_id, execlist)) {
 		/* no pending EL to submit */
-		return;
+		return -EBUSY;
 	}
 
 	for (i = 0; i < 2; ++ i) {
@@ -2129,7 +2213,7 @@ void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 		if (ctx == NULL) {
 			if (i == 0) {
 				vgt_err ("Wrong workload with ctx_0 NULL!\n");
-				return;
+				return -EINVAL;
 			}
 			memset(&context_descs[i], 0,
 			       sizeof(struct ctx_desc_format));
@@ -2143,8 +2227,8 @@ void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 			vgt_el_create_shadow_ppgtt(vgt, ctx->ring_id, ctx);
 
 		if (vgt->vm_id) {
-			if (vgt_manipulate_cmd_buf(vgt, ctx))
-				return;
+			if (vgt_manipulate_cmd_buf(vgt, ctx) < 0)
+				return -EINVAL;
 		}
 
 		vgt_update_shadow_ctx_from_guest(vgt, ctx);
@@ -2173,15 +2257,15 @@ void vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 
 	handle_tlb_pending_event(vgt, ring_id);
 
-	elsp_reg = el_ring_mmio(ring_id, _EL_OFFSET_SUBMITPORT);
 	/* mark it submitted even if it failed the validation */
 	execlist->status = EL_SUBMITTED;
 
 	if (vgt_validate_elsp_descs(vgt, &context_descs[0], &context_descs[1])) {
 		execlist->el_ctxs[0]->ctx_running = true;
-		vgt_hw_ELSP_write(vgt, elsp_reg, &context_descs[0],
+		vgt_hw_ELSP_write(vgt, ring_id, &context_descs[0],
 					&context_descs[1]);
 	}
+	return 0;
 }
 
 bool vgt_batch_ELSP_write(struct vgt_device *vgt, int ring_id)
@@ -2205,14 +2289,12 @@ bool vgt_batch_ELSP_write(struct vgt_device *vgt, int ring_id)
 	elsp_store->count = 0;
 
 	if (hvm_render_owner) {
-		uint32_t elsp_reg;
-		elsp_reg = el_ring_mmio(ring_id, _EL_OFFSET_SUBMITPORT);
 		if (!is_current_render_owner(vgt)) {
 			vgt_warn("VM-%d: ELSP submission but VM is not "
 			"render owner! But it will still be submitted.\n",
 				vgt->vm_id);
 		}
-		vgt_hw_ELSP_write(vgt, elsp_reg, ctx_descs[0], ctx_descs[1]);
+		vgt_hw_ELSP_write(vgt, ring_id, ctx_descs[0], ctx_descs[1]);
 		return true;
 	}
 
@@ -2254,8 +2336,12 @@ bool vgt_batch_ELSP_write(struct vgt_device *vgt, int ring_id)
 
 	vgt_emulate_submit_execlist(vgt, ring_id, el_ctxs[0], el_ctxs[1]);
 
-	if (!ctx_switch_requested(vgt->pdev) && is_current_render_owner(vgt))
-		vgt_submit_execlist(vgt, ring_id);
+	if (!ctx_switch_requested(vgt->pdev) && is_current_render_owner(vgt)) {
+		int rc = vgt_submit_execlist(vgt, ring_id);
+
+		if (rc < 0 && rc != -EBUSY)
+			return false;
+	}
 
 	return true;
 }
