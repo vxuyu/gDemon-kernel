@@ -128,6 +128,8 @@ static inline int add_patch_entry(struct parser_exec_state *s,
 	struct cmd_patch_info *patch;
 	int next;
 
+	ASSERT(s->shadow != INDIRECT_CTX_SHADOW);
+
 	if (addr == NULL) {
 		vgt_err("VM(%d) CMD_SCAN: NULL address to be patched\n",
 				s->vgt->vgt_id);
@@ -160,6 +162,8 @@ static inline int add_post_handle_entry(struct parser_exec_state *s,
 	struct cmd_handler_info *entry;
 	int next;
 
+	ASSERT(s->shadow != INDIRECT_CTX_SHADOW);
+
 	next = get_next_entry(list);
 	if (next == list->count) {
 		vgt_err("CMD_SCAN: no free post-handle entry\n");
@@ -190,6 +194,8 @@ static int add_tail_entry(struct parser_exec_state *s,
 	struct cmd_general_info *list = &rs->tail_list;
 	struct cmd_tail_info *entry;
 	int next;
+
+	ASSERT(s->shadow != INDIRECT_CTX_SHADOW);
 
 	next = get_next_entry(list);
 	if (next == list->count) {
@@ -2783,7 +2789,7 @@ static inline bool gma_out_of_range(unsigned long gma, unsigned long gma_head, u
 #define MAX_PARSER_ERROR_NUM	10
 
 static int __vgt_scan_vring(struct vgt_device *vgt, int ring_id, vgt_reg_t head,
-			vgt_reg_t tail, vgt_reg_t base, vgt_reg_t size, bool shadow)
+			vgt_reg_t tail, vgt_reg_t base, vgt_reg_t size, cmd_shadow_t shadow)
 {
 	unsigned long gma_head, gma_tail, gma_bottom;
 	struct parser_exec_state s;
@@ -2869,7 +2875,7 @@ static int __vgt_scan_vring(struct vgt_device *vgt, int ring_id, vgt_reg_t head,
 		}
 	}
 
-	if (!rc) {
+	if (!rc && shadow != INDIRECT_CTX_SHADOW) {
 		/*
 		 * Set flag to indicate the command buffer is end with user interrupt,
 		 * and save the instruction's offset in ring buffer.
@@ -3061,7 +3067,8 @@ int vgt_scan_vring(struct vgt_device *vgt, int ring_id)
 	if (ret == 0) {
 		ret = __vgt_scan_vring(vgt, ring_id, rs->last_scan_head,
 			vring->tail & RB_TAIL_OFF_MASK, rb_base,
-			_RING_CTL_BUF_SIZE(vring->ctl), shadow_cmd_buffer);
+			_RING_CTL_BUF_SIZE(vring->ctl),
+			shadow_cmd_buffer ? NORMAL_CMD_SHADOW : NO_CMD_SHADOW);
 
 		rs->last_scan_head = vring->tail;
 	}
@@ -3084,7 +3091,7 @@ int vgt_scan_vring(struct vgt_device *vgt, int ring_id)
 			if (ret)
 				goto err;
 			if (!__vgt_scan_vring(vgt, ring_id, 0, ctx_tail,
-				ctx_base, dummy_ctx_size, true)) {
+				ctx_base, dummy_ctx_size, INDIRECT_CTX_SHADOW)) {
 				vgt_get_bb_per_ctx_shadow_base(vgt, rs->el_ctx);
 			} else {
 				ret = -1;
