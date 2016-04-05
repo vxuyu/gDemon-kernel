@@ -389,7 +389,8 @@ static void vgt_processe_hi_priority_request(struct pgt_device *pdev)
 		vgt_unlock_dev(pdev, cpu);
 	}
 
-	if (!ctx_switch_requested(pdev)) {
+	if (!ctx_switch_requested(pdev) &&
+		pdev->enable_execlist) {
 		vgt_lock_dev(pdev, cpu);
 		vgt_kick_off_execlists(current_render_owner(pdev));
 		vgt_unlock_dev(pdev, cpu);
