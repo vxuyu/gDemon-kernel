@@ -2361,7 +2361,7 @@ bool vgt_g2v_destroy_ppgtt_mm(struct vgt_device *vgt, int page_table_level)
 	mm = gen8_find_ppgtt_mm(vgt, page_table_level, pdp);
 	if (!mm) {
 		vgt_err("fail to find ppgtt instance.\n");
-		return false;
+		return true;
 	}
 
 	vgt_destroy_mm(mm);

@@ -314,13 +314,52 @@ static bool handle_device_reset(struct vgt_device *vgt, unsigned int offset,
 		if (device_is_reseting(vgt->pdev))
 			return default_mmio_write(vgt, offset, p_data, bytes);
 	} else {
-		if (current_render_owner(vgt->pdev) == vgt)
+		if (current_render_owner(vgt->pdev) == vgt) {
 			vgt_request_force_removal(vgt);
+
+			vgt_info("VM %d: unlock before wait for force removal event\n",
+					vgt->vm_id);
+
+			spin_unlock(&vgt->pdev->lock);
+			if (vgt->force_removal)
+				wait_event_killable(vgt->pdev->destroy_wq, !vgt->force_removal);
+
+			vgt_info("VM %d: force removal event... wake up\n",
+					vgt->vm_id);
+
+			spin_lock(&vgt->pdev->lock);
+
+			vgt_info("VM %d: lock again afterforce removal event\n",
+					vgt->vm_id);
+
+
+		}
+
+		/*clean up during reset */
+		if (test_and_clear_bit(RESET_INPROGRESS, &vgt->reset_flags)) {
+
+			vgt_info("VM %d: vgt_clean_up begin.\n", vgt->vm_id);
+
+			/*unlock first, may sleep @ vfree in vgt_clean_vgtt*/
+			spin_unlock(&vgt->pdev->lock);
+			vgt_clean_vgtt(vgt);
+			vgt_clear_gtt(vgt);
+			state_sreg_init(vgt);
+			state_vreg_init(vgt);
+			vgt_init_vgtt(vgt);
+
+			vgt_info("VM %d: vgt_clean_up end.\n", vgt->vm_id);
+
+			spin_lock(&vgt->pdev->lock);
+
+			vgt_info("VM %d: lock.again\n", vgt->vm_id);
+		}
 	}
 
 	return true;
 }
 
+/*be noted that big lock is called inside handle_device_reset*/
 static bool gen6_gdrst_mmio_write(struct vgt_device *vgt, unsigned int offset,
 		void *p_data, unsigned int bytes)
 {
