@@ -1777,6 +1777,7 @@ static int batch_buffer_needs_scan(struct parser_exec_state *s)
 	return 1;
 }
 
+#define LITE_RESTORE_FLOOD_THRESHOLD 1000
 static int vgt_perform_bb_shadow(struct parser_exec_state *s)
 {
 	struct vgt_device *vgt = s->vgt;
@@ -1841,7 +1842,9 @@ static int vgt_perform_bb_shadow(struct parser_exec_state *s)
 		s_cmd_page->guest_gma = bb_guest_gma;
 		s_cmd_page->bound_gma = shadow_gma;
 
-		s->el_ctx->shadow_priv_bb.n_pages ++;
+		if (s->el_ctx->shadow_priv_bb.n_pages++ > LITE_RESTORE_FLOOD_THRESHOLD)
+			rsvd_aperture_runout_handler(vgt->pdev);
+
 		list_add_tail(&s_cmd_page->list,
 			      &s->el_ctx->shadow_priv_bb.pages);
 

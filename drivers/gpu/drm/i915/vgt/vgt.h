@@ -503,6 +503,8 @@ struct pgt_device {
 
 	int (*vgt_get_pixel_format)(u32 plane_ctl,
 		struct vgt_common_plane_format *common_plane, enum vgt_plane_type plane);
+
+	bool dummy_vm_switch;
 };
 
 /*
@@ -1133,7 +1135,7 @@ extern unsigned long rsvd_aperture_alloc(struct pgt_device *pdev,
 		unsigned long size);
 extern void rsvd_aperture_free(struct pgt_device *pdev, unsigned long start,
 		unsigned long size);
-
+extern void rsvd_aperture_runout_handler(struct pgt_device *pdev);
 #define reg_is_mmio(pdev, reg)	\
 	(reg >= 0 && reg < pdev->mmio_size)
 #define reg_is_gtt(pdev, reg)	\
