@@ -590,12 +590,46 @@ static bool vgt_set_device_type(struct pgt_device *pdev)
 	return false;
 }
 
+static void vgt_kernel_param_sanity_check(struct pgt_device *pdev)
+{
+	/* adjust and check all kernel parameters here */
+	// render_engine_reset
+	if (IS_BDW(pdev)) {
+		// ignore RCS reset request for BDW
+		render_engine_reset = 0;
+	}
+
+	// tbs_period_ms
+	if (tbs_period_ms == -1 || tbs_period_ms > VGT_TBS_PERIOD_MAX
+		|| tbs_period_ms < VGT_TBS_PERIOD_MIN) {
+		tbs_period_ms = IS_BDWPLUS(pdev) ?
+			VGT_TBS_PERIOD_MIN : VGT_TBS_PERIOD_MAX;
+	}
+
+	// preallocated_shadow_pages/prealocated_oos_page
+	if (IS_PREBDW(pdev)) {
+		if (preallocated_shadow_pages == -1)
+			preallocated_shadow_pages = 512;
+		if (preallocated_oos_pages == -1)
+			preallocated_oos_pages = 2048;
+
+	} else if (IS_BDW(pdev) || IS_SKL(pdev)) {
+		if (preallocated_shadow_pages == -1)
+			preallocated_shadow_pages = 8192;
+		if (preallocated_oos_pages == -1)
+			preallocated_oos_pages = 4096;
+	}
+}
+
+
 static bool vgt_initialize_device_info(struct pgt_device *pdev)
 {
 	struct vgt_device_info *info = &pdev->device_info;
 
 	if (!vgt_set_device_type(pdev))
 		return false;
+
+	vgt_kernel_param_sanity_check(pdev);
 
 	if (!IS_HSW(pdev) && !IS_BDW(pdev) && !IS_SKL(pdev)) {
 		vgt_err("Unsupported gen_dev_type(%s)!\n",

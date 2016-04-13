@@ -1291,22 +1291,6 @@ static inline void vgt_init_sched_info(struct vgt_device *vgt)
 	}
 
 	if (timer_based_qos) {
-
-		if (tbs_period_ms == -1) {
-			tbs_period_ms = IS_BDWPLUS(vgt->pdev) ?
-				VGT_TBS_PERIOD_MIN : VGT_TBS_PERIOD_MAX;
-		}
-
-		if (tbs_period_ms > VGT_TBS_PERIOD_MAX
-			|| tbs_period_ms < VGT_TBS_PERIOD_MIN) {
-			vgt_err("Invalid tbs_period=%d parameters. "
-				"Best value between <%d..%d>\n",
-				VGT_TBS_PERIOD_MIN, VGT_TBS_PERIOD_MAX,
-				tbs_period_ms);
-			tbs_period_ms = IS_BDW(vgt->pdev) ?
-				VGT_TBS_PERIOD_MIN : VGT_TBS_PERIOD_MAX;
-		}
-
 		ctx_tbs_period(vgt) = VGT_TBS_DEFAULT_PERIOD(tbs_period_ms);
 		vgt_info("VM-%d setup timebased schedule period %d ms\n",
 			vgt->vm_id, tbs_period_ms);

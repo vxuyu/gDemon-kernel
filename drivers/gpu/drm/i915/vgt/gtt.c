@@ -2209,20 +2209,12 @@ bool vgt_gtt_init(struct pgt_device *pdev)
 		pdev->gtt.mm_alloc_page_table = gen7_mm_alloc_page_table;
 		pdev->gtt.mm_free_page_table = gen7_mm_free_page_table;
 
-		if (preallocated_shadow_pages == -1)
-			preallocated_shadow_pages = 512;
-		if (preallocated_oos_pages == -1)
-			preallocated_oos_pages = 2048;
 	} else if (IS_BDW(pdev) || IS_SKL(pdev)) {
 		pdev->gtt.pte_ops = &gen8_gtt_pte_ops;
 		pdev->gtt.gma_ops = &gen8_gtt_gma_ops;
 		pdev->gtt.mm_alloc_page_table = gen8_mm_alloc_page_table;
 		pdev->gtt.mm_free_page_table = gen8_mm_free_page_table;
 
-		if (preallocated_shadow_pages == -1)
-			preallocated_shadow_pages = 8192;
-		if (preallocated_oos_pages == -1)
-			preallocated_oos_pages = 4096;
 	} else {
 		vgt_err("Unsupported platform.\n");
 		return false;
