@@ -1882,17 +1882,22 @@ bool ppgtt_update_shadow_ppgtt_for_ctx(struct vgt_device *vgt,struct execlist_co
 int vgt_el_create_shadow_ppgtt(struct vgt_device *vgt,
 				enum vgt_ring_id ring_id,
 				struct execlist_context *el_ctx);
-
-static inline void reset_el_structure(struct pgt_device *pdev,
+static inline void reset_phys_el_structure(struct pgt_device *pdev,
 				enum vgt_ring_id ring_id)
 {
 	el_read_ptr(pdev, ring_id) = DEFAULT_INV_SR_PTR;
-	vgt_clear_submitted_el_record(pdev, ring_id);
 	/* reset read ptr in MMIO as well */
 	VGT_MMIO_WRITE(pdev, el_ring_mmio(ring_id, _EL_OFFSET_STATUS_PTR),
 			((_CTXBUF_READ_PTR_MASK << 16) |
 			(DEFAULT_INV_SR_PTR << _CTXBUF_READ_PTR_SHIFT)));
 
+}
+
+static inline void reset_el_structure(struct pgt_device *pdev,
+				enum vgt_ring_id ring_id)
+{
+	vgt_clear_submitted_el_record(pdev, ring_id);
+	reset_phys_el_structure(pdev, ring_id);
 }
 
 #define ASSERT_VM(x, vgt)						\
