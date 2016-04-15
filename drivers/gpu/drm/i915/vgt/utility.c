@@ -136,10 +136,19 @@ void execlist_show_ring_debug(struct pgt_device *pdev, int ring_id)
 
 		vgt = pdev->device[i];
 
-		if (vgt == current_render_owner(pdev))
-			printk("VM%d(*):", vgt->vm_id);
-		else
-			printk("VM%d   :", vgt->vm_id);
+		if (vgt == current_render_owner(pdev)) {
+			printk("VM%d(*):\n", vgt->vm_id);
+			printk("stat(us): sche_in %lld, sche_out %lld, last_vblank %lld\n",
+				vgt->stat.schedule_in_time/(cpu_khz/1000),
+				vgt->stat.schedule_out_time/(cpu_khz/1000),
+				vgt->stat.last_vblank_time/(cpu_khz/1000));
+		} else {
+			printk("VM%d   :\n", vgt->vm_id);
+			printk("stat(us): sche_in %lld, sche_out %lld, last_vblank %lld\n",
+				vgt->stat.schedule_in_time/(cpu_khz/1000),
+				vgt->stat.schedule_out_time/(cpu_khz/1000),
+				vgt->stat.last_vblank_time/(cpu_khz/1000));
+		}
 	}
 
 	common_show_ring_debug(pdev, ring_id);

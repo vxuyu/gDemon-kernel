@@ -35,6 +35,8 @@ struct vgt_mmio_accounting_reg_stat {
 
 struct vgt_statistics {
 	u64	schedule_in_time;	/* TSC time when it is last scheduled in */
+	u64	schedule_out_time;
+	u64	last_vblank_time;
 	u64	allocated_cycles;
 	u64	used_cycles;
 	u64	irq_num;

@@ -1920,6 +1920,8 @@ void vgt_emulate_dpy_events(struct pgt_device *pdev)
 		vgt_emulate_vblank(vgt, PIPE_A);
 		vgt_emulate_vblank(vgt, PIPE_B);
 		vgt_emulate_vblank(vgt, PIPE_C);
+
+		vgt->stat.last_vblank_time = vgt_get_cycles();
 	}
 }
 

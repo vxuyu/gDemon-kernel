@@ -639,6 +639,7 @@ bool vgt_do_render_context_switch(struct pgt_device *pdev)
 	pdev->stat.context_switch_num ++;
 	t1 = vgt_get_cycles();
 	pdev->stat.ring_idle_wait += t1 - t0;
+	prev->stat.schedule_out_time = t1;
 
 	vgt_sched_update_prev(prev, t0);
 
