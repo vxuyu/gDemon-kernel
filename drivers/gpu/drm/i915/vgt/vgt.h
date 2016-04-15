@@ -126,6 +126,7 @@ extern int preemption_policy;
 #define VGT_DBG_IRQ		(1<<5)
 #define VGT_DBG_EDID		(1<<6)
 #define VGT_DBG_EXECLIST	(1<<7)
+#define VGT_DBG_RESET		(1<<8)
 #define VGT_DBG_ALL		(0xffff)
 
 #define SIZE_1KB		(1024UL)

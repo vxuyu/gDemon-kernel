@@ -285,7 +285,12 @@ static bool handle_device_reset(struct vgt_device *vgt, unsigned int offset,
 	vgt_info("VM %d is trying to reset device: %s.\n", vgt->vm_id,
 		ring_bitmap == 0xff ? "full reset" : "per-engine reset");
 
+	vgt->pdev->cur_reset_vm = vgt;
 	show_debug(vgt->pdev);
+	if (vgt_debug & VGT_DBG_RESET)
+		dump_all_el_contexts(vgt->pdev);
+	dump_el_status(vgt->pdev);
+	vgt->pdev->cur_reset_vm = NULL;
 
 	/* after this point, driver should re-initialize the device */
 	vgt->warn_untrack = 1;
