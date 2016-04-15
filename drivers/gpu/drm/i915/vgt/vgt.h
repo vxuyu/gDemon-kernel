@@ -457,6 +457,7 @@ struct pgt_device {
 	struct vgt_device *foreground_vm;		/* current visible domain on display. */
 	struct vgt_device *next_sched_vgt;
 	struct vgt_device *next_foreground_vm;
+	struct vgt_device *cur_reset_vm;	/* the VM who trigger reset */
 	struct list_head rendering_runq_head; /* reuse this for context scheduler */
 	struct list_head rendering_idleq_head; /* reuse this for context scheduler */
 	spinlock_t lock;
