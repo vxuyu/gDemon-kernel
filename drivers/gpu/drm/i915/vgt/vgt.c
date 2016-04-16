@@ -334,13 +334,6 @@ static void vgt_processe_lo_priority_request(struct pgt_device *pdev)
 		}
 	}
 
-	if (test_and_clear_bit(VGT_REQUEST_EMUL_DPY_EVENTS,
-			(void *)&pdev->request)) {
-		vgt_lock_dev(pdev, cpu);
-		vgt_emulate_dpy_events(pdev);
-		vgt_unlock_dev(pdev, cpu);
-	}
-
 	return;
 }
 
@@ -364,6 +357,13 @@ static void vgt_processe_hi_priority_request(struct pgt_device *pdev)
 			vgt_unlock_dev(pdev, cpu);
 			ctx_irq_received = true;
 		}
+	}
+
+	if (test_and_clear_bit(VGT_REQUEST_EMUL_DPY_EVENTS,
+		(void *)&pdev->request)) {
+		vgt_lock_dev(pdev, cpu);
+		vgt_emulate_dpy_events(pdev);
+		vgt_unlock_dev(pdev, cpu);
 	}
 
 	if (ctx_irq_received && ctx_switch_requested(pdev)) {
