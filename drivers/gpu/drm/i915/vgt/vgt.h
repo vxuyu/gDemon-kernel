@@ -1771,6 +1771,7 @@ extern int ring_ppgtt_mode(struct vgt_device *vgt, int ring_id, u32 off, u32 mod
 
 extern struct dentry *vgt_init_debugfs(struct pgt_device *pdev);
 extern int vgt_create_debugfs(struct vgt_device *vgt);
+extern void vgt_debugfs_symlink_module_param(void);
 
 /* command parser interface */
 #define MAX_CMD_BUDGET  0x7fffffff

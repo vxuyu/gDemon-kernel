@@ -46,19 +46,19 @@ struct kernel_dm *vgt_pkdm = NULL;
 bool opregion_present __read_mostly = false;
 
 bool hvm_render_owner = false;
-module_param_named(hvm_render_owner, hvm_render_owner, bool, 0600);
+module_param_named(hvm_render_owner, hvm_render_owner, bool, 0400);
 MODULE_PARM_DESC(hvm_render_owner, "Make HVM to be render owner after create (default: false)");
 
 bool hvm_dpy_owner = false;
-module_param_named(hvm_dpy_owner, hvm_dpy_owner, bool, 0600);
+module_param_named(hvm_dpy_owner, hvm_dpy_owner, bool, 0400);
 MODULE_PARM_DESC(hvm_dpy_owner, "Deprecated option! Please use hvm_boot_foreground or hvm_display_owner!");
 
 bool hvm_display_owner = false;
-module_param_named(hvm_display_owner, hvm_display_owner, bool, 0600);
+module_param_named(hvm_display_owner, hvm_display_owner, bool, 0400);
 MODULE_PARM_DESC(hvm_display_owner, "Make HVM to be display owner after create (default: false)");
 
 bool hvm_super_owner = false;
-module_param_named(hvm_super_owner, hvm_super_owner, bool, 0600);
+module_param_named(hvm_super_owner, hvm_super_owner, bool, 0400);
 MODULE_PARM_DESC(hvm_super_owner, "Make HVM to be GPU owner after create (default: false)");
 
 bool hvm_boot_foreground = false;
@@ -66,7 +66,7 @@ module_param_named(hvm_boot_foreground, hvm_boot_foreground, bool, 0600);
 MODULE_PARM_DESC(hvm_boot_foreground, "Make HVM to be foreground after create and visible on screen from booting (default: false)");
 
 bool vgt_primary = false;
-module_param_named(vgt_primary, vgt_primary, bool, 0600);
+module_param_named(vgt_primary, vgt_primary, bool, 0400);
 
 bool vgt_track_nest = true;
 module_param_named(track_nest, vgt_track_nest, bool, 0600);
@@ -81,18 +81,18 @@ bool vgt_enabled = true;
 module_param_named(vgt, vgt_enabled, bool, 0400);
 
 bool fastpath_dpy_switch = true;
-module_param_named(fastpath_dpy_switch, fastpath_dpy_switch, bool, 0600);
+module_param_named(fastpath_dpy_switch, fastpath_dpy_switch, bool, 0400);
 
 bool event_based_qos = false;
-module_param_named(event_based_qos, event_based_qos, bool, 0600);
+module_param_named(event_based_qos, event_based_qos, bool, 0400);
 MODULE_PARM_DESC(event_based_qos, "Use event based QoS scheduler (default: false)");
 
 int tbs_period_ms = -1;
 module_param_named(tbs_period_ms, tbs_period_ms, int, 0600);
-MODULE_PARM_DESC(event_based_qos, "Set the time based QoS scheduler timer in unit of ms (default: BDW 1ms, HSW 15ms)");
+MODULE_PARM_DESC(tbs_period_ms, "Set the time based QoS scheduler timer in unit of ms (default: BDW 1ms, HSW 15ms)");
 
 bool shadow_tail_based_qos = false;
-module_param_named(shadow_tail_based_qos, shadow_tail_based_qos, bool, 0600);
+module_param_named(shadow_tail_based_qos, shadow_tail_based_qos, bool, 0400);
 MODULE_PARM_DESC(shadow_tail_based_qos, "Use Shadow tail based QoS scheduler (default: false)");
 
 bool render_engine_reset = true;
@@ -104,7 +104,7 @@ module_param_named(propagate_monitor_to_guest, propagate_monitor_to_guest, bool,
 MODULE_PARM_DESC(propagate_monitor_to_guest, "Propagate monitor information to guest by XenGT, other than dom0 services to do so");
 
 bool irq_based_ctx_switch = true;
-module_param_named(irq_based_ctx_switch, irq_based_ctx_switch, bool, 0600);
+module_param_named(irq_based_ctx_switch, irq_based_ctx_switch, bool, 0400);
 MODULE_PARM_DESC(irq_based_ctx_switch, "Use user interrupt based context switch (default: true)");
 
 int preallocated_shadow_pages = -1;
@@ -143,13 +143,13 @@ module_param_named(enable_video_switch, enable_video_switch, int, 0600);
  * render/display may not work properly without enough GM space.
  */
 int dom0_low_gm_sz = 96;	//in MB.
-module_param_named(dom0_low_gm_sz, dom0_low_gm_sz, int, 0600);
+module_param_named(dom0_low_gm_sz, dom0_low_gm_sz, int, 0400);
 
 int dom0_high_gm_sz = 384;	//in MB.
-module_param_named(dom0_high_gm_sz, dom0_high_gm_sz, int, 0600);
+module_param_named(dom0_high_gm_sz, dom0_high_gm_sz, int, 0400);
 
 int dom0_fence_sz = 4;
-module_param_named(dom0_fence_sz, dom0_fence_sz, int, 0600);
+module_param_named(dom0_fence_sz, dom0_fence_sz, int, 0400);
 
 int bypass_scan_mask = 0;
 module_param_named(bypass_scan, bypass_scan_mask, int, 0600);
@@ -200,15 +200,15 @@ int shadow_cmd_buffer = 1;
 module_param_named(shadow_cmd_buffer, shadow_cmd_buffer, int, 0400);
 
 int shadow_ctx_check = 0;
-module_param_named(shadow_ctx_check, shadow_ctx_check, int, 0600);
+module_param_named(shadow_ctx_check, shadow_ctx_check, int, 0400);
 
 int shadow_indirect_ctx_bb = 1;
 module_param_named(shadow_indirect_ctx_bb, shadow_indirect_ctx_bb, int, 0400);
 
 int vgt_cmd_audit = 1;
-module_param_named(vgt_cmd_audit, vgt_cmd_audit, int, 0400);
+module_param_named(vgt_cmd_audit, vgt_cmd_audit, int, 0600);
 
-bool vgt_hold_forcewake;
+bool vgt_hold_forcewake = false;
 module_param_named(vgt_hold_forcewake, vgt_hold_forcewake, bool, 0600);
 MODULE_PARM_DESC(vgt_hold_forcewake,
 		"VGT will hold the forcewake or not (default: false)");
@@ -971,12 +971,15 @@ static int vgt_initialize(struct pci_dev *dev)
 
 	mutex_init(&pdev->hpd_work.hpd_mutex);
 	INIT_WORK(&pdev->hpd_work.work, vgt_hotplug_udev_notify_func);
-	
+
 	/* create debugfs interface */
 	if (!vgt_init_debugfs(pdev)) {
 		printk("vGT:failed to create debugfs\n");
 		goto err;
 	}
+
+	/* create symbol link for module parameters in /sys/kernel/debugfs/vgt/runtime dir */
+	vgt_debugfs_symlink_module_param();
 
 	/* init all mmio_device */
 	vgt_init_mmio_device(pdev);
@@ -1185,9 +1188,9 @@ int vgt_resume(struct pci_dev *pdev)
 void vgt_panic(void)
 {
         struct pgt_device *pdev = &default_device;
- 
+
         show_debug(pdev);
- 
+
         dump_stack();
         printk("________end of stack dump_________\n");
         panic("FATAL VGT ERROR\n");

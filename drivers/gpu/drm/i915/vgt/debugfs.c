@@ -1417,6 +1417,38 @@ int vgt_create_debugfs(struct vgt_device *vgt)
 	return 0;
 }
 
+#define VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(runtime_module_param, runtime_dir_entry, target_module_param) \
+	debugfs_create_symlink(#runtime_module_param, runtime_dir_entry, "/sys/module/i915/parameters/" #target_module_param)
+
+void vgt_debugfs_symlink_module_param(void)
+{
+	struct dentry *runtime_dir_entry = debugfs_create_dir("runtime", d_vgt_debug);
+	if (!runtime_dir_entry) {
+		vgt_err("Failed to create debugfs directory: runtime\n");
+		return ;
+	}
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(vgt_debug, runtime_dir_entry, debug);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(tbs_period_ms, runtime_dir_entry, tbs_period_ms);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(render_engine_reset, runtime_dir_entry, render_engine_reset);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(propagate_monitor_to_guest, runtime_dir_entry, propagate_monitor_to_guest);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(preallocated_shadow_pages, runtime_dir_entry, preallocated_shadow_pages);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(preallocated_oos_pages, runtime_dir_entry, preallocated_oos_pages);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(spt_out_of_sync, runtime_dir_entry, spt_out_of_sync);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(enable_video_switch, runtime_dir_entry, enable_video_switch);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(bypass_scan_mask, runtime_dir_entry, bypass_scan);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(bypass_dom0_addr_check, runtime_dir_entry, bypass_dom0_addr_check);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(enable_panel_fitting, runtime_dir_entry, enable_panel_fitting);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(enable_reset, runtime_dir_entry, enable_reset);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(preemption_policy, runtime_dir_entry, preemption_policy);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(reset_count_threshold, runtime_dir_entry, reset_count_threshold);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(reset_dur_threshold, runtime_dir_entry, reset_dur_threshold);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(reset_max_threshold, runtime_dir_entry, reset_max_threshold);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(shadow_ctx_check, runtime_dir_entry, shadow_ctx_check);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(shadow_indirect_ctx_bb, runtime_dir_entry, shadow_indirect_ctx_bb);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(vgt_cmd_audit, runtime_dir_entry, vgt_cmd_audit);
+	VGT_CREATE_SYMLINK_FOR_MODULE_PARAM(vgt_hold_forcewake, runtime_dir_entry, vgt_hold_forcewake);
+}
+
 /* debugfs_remove_recursive has no return value, this fuction
  * also return nothing */
 void vgt_destroy_debugfs(struct vgt_device *vgt)
