@@ -1162,7 +1162,6 @@ static void vgt_handle_ctx_switch_virt(struct vgt_irq_host_state *hstate,
 	struct ctx_st_ptr_format ctx_ptr_val;
 	int v_write_ptr;
 	int s_write_ptr;
-	bool csb_has_new_updates = false;
 
 	ring_id = event_to_ring_id(event);
 	ctx_ptr_reg = el_ring_mmio(ring_id, _EL_OFFSET_STATUS_PTR);
@@ -1170,10 +1169,9 @@ static void vgt_handle_ctx_switch_virt(struct vgt_irq_host_state *hstate,
 	v_write_ptr = ctx_ptr_val.status_buf_write_ptr;
 	s_write_ptr = vgt->rb[ring_id].csb_write_ptr;
 
-	if (v_write_ptr != s_write_ptr)
-		csb_has_new_updates = true;
+	if (hvm_render_owner || vgt->rb[ring_id].csb_has_update) {
 
-	if (hvm_render_owner || csb_has_new_updates) {
+		vgt->rb[ring_id].csb_has_update = false;
 
 		if (current_render_owner(vgt->pdev) != vgt) {
 			/* In any case, we should not go here! */
@@ -1183,8 +1181,6 @@ static void vgt_handle_ctx_switch_virt(struct vgt_irq_host_state *hstate,
 			ctx_ptr_val.dw, s_write_ptr);
 		}
 
-		ctx_ptr_val.status_buf_write_ptr = s_write_ptr;
-		__vreg(vgt, ctx_ptr_reg) = ctx_ptr_val.dw;
 		vgt_handle_default_event_virt(hstate, event, vgt);
 	}
 }
