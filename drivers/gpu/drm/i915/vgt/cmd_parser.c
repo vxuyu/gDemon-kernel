@@ -1000,10 +1000,20 @@ static inline unsigned long vgt_get_gma_from_bb_start(
 	if (g_gm_is_valid(vgt, ip_gma)) {
 		bb_start_gma = 0;
 		va = vgt_gma_to_va(vgt->gtt.ggtt_mm, ip_gma);
+		if (va == NULL) {
+			vgt_err("VM-%d(ring %d>: Failed to get va of guest gma 0x%lx!\n",
+				vgt->vm_id, ring_id, ip_gma);
+			return 0;
+		}
 		hypervisor_read_va(vgt, va, &cmd, 4, 1);
 		opcode = vgt_get_opcode(cmd, ring_id);
 		ASSERT(opcode == OP_MI_BATCH_BUFFER_START);
 		va = vgt_gma_to_va(vgt->gtt.ggtt_mm, ip_gma + 4);
+		if (va == NULL) {
+			vgt_err("VM-%d(ring %d>: Failed to get va of guest gma 0x%lx!\n",
+				vgt->vm_id, ring_id, ip_gma + 4);
+			return 0;
+		}
 		hypervisor_read_va(vgt, va, &bb_start_gma, 4, 1);
 	} else if (g_gm_is_reserved(vgt, ip_gma)) {
 		va = v_aperture(vgt->pdev, ip_gma);
