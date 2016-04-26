@@ -874,6 +874,7 @@ static ppgtt_spt_t *ppgtt_populate_shadow_page_by_guest_entry(struct vgt_device 
 	struct vgt_gtt_pte_ops *ops = vgt->pdev->gtt.pte_ops;
 	ppgtt_spt_t *s = NULL;
 	guest_page_t *g;
+	cycles_t t1, t2;
 
 	if (!gtt_type_is_pt(get_next_pt_type(we->type)))
 		goto fail;
@@ -884,6 +885,8 @@ static ppgtt_spt_t *ppgtt_populate_shadow_page_by_guest_entry(struct vgt_device 
 		ppgtt_get_shadow_page(s);
 	} else {
 		gtt_type_t type = get_next_pt_type(we->type);
+
+		t1= get_cycles();
 		s = ppgtt_alloc_shadow_page(vgt, type, ops->get_pfn(we));
 		if (!s)
 			goto fail;
@@ -893,6 +896,12 @@ static ppgtt_spt_t *ppgtt_populate_shadow_page_by_guest_entry(struct vgt_device 
 
 		if (!ppgtt_populate_shadow_page(s))
 			goto fail;
+
+		t2 = get_cycles();
+		if (GTT_TYPE_PPGTT_PTE_PT == type) {
+			vgt->stat.shadow_last_level_page_cnt++;
+			vgt->stat.shadow_last_level_page_cycles += t2 - t1;
+		}
 
 		trace_spt_change(vgt->vm_id, "new", s, s->guest_page.gfn, s->shadow_page.type);
 	}
@@ -1086,6 +1095,8 @@ static bool vgt_sync_oos_page(struct vgt_device *vgt, oos_page_t *oos_page)
 	ppgtt_spt_t *spt = guest_page_to_ppgtt_spt(oos_page->guest_page);
 	gtt_entry_t old, new, m;
 	int index;
+	int oos_pte_cnt;
+	cycles_t t1, t2;
 
 	trace_oos_change(vgt->vm_id, "sync", oos_page->id,
 			oos_page->guest_page, spt->guest_page_type);
@@ -1093,6 +1104,9 @@ static bool vgt_sync_oos_page(struct vgt_device *vgt, oos_page_t *oos_page)
 	old.type = new.type = get_entry_type(spt->guest_page_type);
 	old.pdev = new.pdev = pdev;
 	old.val64 = new.val64 = 0;
+
+	oos_pte_cnt = 0;
+	t1 = get_cycles();
 
 	for (index = 0; index < (GTT_PAGE_SIZE >> info->gtt_entry_size_shift); index++) {
 		ops->get_entry(oos_page->mem, &old, index, false, NULL);
@@ -1110,7 +1124,19 @@ static bool vgt_sync_oos_page(struct vgt_device *vgt, oos_page_t *oos_page)
 
 		ops->set_entry(oos_page->mem, &new, index, false, NULL);
 		ppgtt_set_shadow_entry(spt, &m, index);
+
+		oos_pte_cnt++;
 	}
+
+	t2 = get_cycles();
+
+	vgt->stat.oos_page_cnt++;
+	vgt->stat.oos_page_cycles += t2 - t1;
+
+	vgt->stat.oos_pte_cnt += oos_pte_cnt;
+	/* We use the cycles of 'sync oos page' to estimate the cycles of 'sync all the oos ptes in single page' for the sake of performance */
+	/* So you can always find that vgt->stat.oos_page_cycles == vgt->stat.oos_pte_cycles */
+	vgt->stat.oos_pte_cycles += t2 - t1;
 
 	oos_page->guest_page->write_cnt = 0;
 

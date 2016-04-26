@@ -685,7 +685,7 @@ static void vgt_dump_dpy_mmio(struct seq_file *m, struct pgt_device *pdev,
 		seq_printf(m, "\t\teDP select: %s\n", str);
 	}
 	seq_printf(m, "\n");
-	
+
 	if (is_current_display_owner(vgt)) {
 		return;
 	}
@@ -1397,6 +1397,12 @@ int vgt_create_debugfs(struct vgt_device *vgt)
 		debugfs_create_u64_node ("gpt_find_miss_cnt", 0444, perf_dir_entry, &(vgt->stat.gpt_find_miss_cnt));
 		debugfs_create_u64_node ("gpt_find_miss_cycles", 0444, perf_dir_entry, &(vgt->stat.gpt_find_miss_cycles));
 		debugfs_create_u64_node ("skip_bb_cnt", 0444, perf_dir_entry, &(vgt->stat.skip_bb_cnt));
+		debugfs_create_u64_node ("shadow_last_level_page_cnt", 0444, perf_dir_entry, &(vgt->stat.shadow_last_level_page_cnt));
+		debugfs_create_u64_node ("shadow_last_level_page_cycles", 0444, perf_dir_entry, &(vgt->stat.shadow_last_level_page_cycles));
+		debugfs_create_u64_node ("oos_page_cnt", 0444, perf_dir_entry, &(vgt->stat.oos_page_cnt));
+		debugfs_create_u64_node ("oos_page_cycles", 0444, perf_dir_entry, &(vgt->stat.oos_page_cycles));
+		debugfs_create_u64_node ("oos_pte_cnt", 0444, perf_dir_entry, &(vgt->stat.oos_pte_cnt));
+		debugfs_create_u64_node ("oos_pte_cycles", 0444, perf_dir_entry, &(vgt->stat.oos_pte_cycles));
 
 		/* cmd statistics for ring/batch buffers */
 		cmdstat_dir_entry = debugfs_create_dir("ring", perf_dir_entry);
