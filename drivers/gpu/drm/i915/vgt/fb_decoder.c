@@ -367,7 +367,6 @@ int vgt_decode_sprite_plane_format(struct vgt_device *vgt,
 {
 	struct vgt_common_plane_format com_plane_fmt;
 	u32 val;
-	u32 width;
 
 	val = __vreg(vgt, VGT_SPRCTL(pipe));
 	plane->enabled = !!(val & SPRITE_ENABLE);
@@ -395,18 +394,15 @@ int vgt_decode_sprite_plane_format(struct vgt_device *vgt,
 	memcpy(plane->drm_fmt_desc, com_plane_fmt.gen_pixel_format.desc, MAX_DRM_STR_SZ);
 
 	plane->base = __vreg(vgt, VGT_SPRSURF(pipe)) & GTT_PAGE_MASK;
-	plane->width = __vreg(vgt, VGT_SPRSTRIDE(pipe)) & com_plane_fmt.stride_mask;
-	plane->width /= plane->bpp / 8;	/* raw width in bytes */
+	plane->stride = vgt_get_stride(vgt, pipe, plane->tiled,
+					com_plane_fmt.stride_mask, plane->bpp);
 
 	val = __vreg(vgt, VGT_SPRSIZE(pipe));
 	plane->height = (val & _SPRITE_SIZE_HEIGHT_MASK) >>
 		_SPRITE_SIZE_HEIGHT_SHIFT;
-	width = (val & _SPRITE_SIZE_WIDTH_MASK) >> _SPRITE_SIZE_WIDTH_SHIFT;
+	plane->width = (val & _SPRITE_SIZE_WIDTH_MASK) >> _SPRITE_SIZE_WIDTH_SHIFT;
 	plane->height += 1;	/* raw height is one minus the real value */
-	width += 1;		/* raw width is one minus the real value */
-	if (plane->width != width)
-		vgt_warn("sprite_plane: plane->width=%d, width=%d\n",
-			plane->width, width);
+	plane->width += 1;		/* raw width is one minus the real value */
 
 	val = __vreg(vgt, VGT_SPRPOS(pipe));
 	plane->x_pos = (val & _SPRITE_POS_X_MASK) >> _SPRITE_POS_X_SHIFT;
