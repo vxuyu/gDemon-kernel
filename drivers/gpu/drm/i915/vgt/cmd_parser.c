@@ -1373,8 +1373,7 @@ static int vgt_handle_mi_display_flip(struct parser_exec_state *s)
 	}
 
 	{
-		if (!vgt_flip_parameter_check(s, plane_code, stride_val, surf_val))
-			goto wrong_command;
+		vgt_flip_parameter_check(s, plane_code, stride_val, surf_val);
 
 		GET_INFO_FOR_FLIP(pipe, plane,
 			ctrl_reg, surf_reg, stride_reg, stride_mask);
