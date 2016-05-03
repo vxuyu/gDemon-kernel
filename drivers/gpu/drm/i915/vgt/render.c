@@ -243,6 +243,9 @@ vgt_reg_t vgt_gen9_render_regs[] = {
 	0x24d8,
 	0x24dc,
 
+	_REG_VCS2_EXCC,
+	_REG_VECS_EXCC,
+
 	/* Execlist Status Registers */
 	_REG_RCS_EXECLIST_STATUS,
 	_REG_VCS_EXECLIST_STATUS,
