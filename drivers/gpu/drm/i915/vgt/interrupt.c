@@ -1740,12 +1740,14 @@ static void vgt_gen8_init_irq(
 		SET_BIT_INFO(hstate, 25, AUX_CHANNEL_B, IRQ_INFO_DE_PORT);
 		SET_BIT_INFO(hstate, 26, AUX_CHANNEL_C, IRQ_INFO_DE_PORT);
 		SET_BIT_INFO(hstate, 27, AUX_CHANNEL_D, IRQ_INFO_DE_PORT);
-		/*
-		 * Only support page flip interrupt on primary plane.
-		 */
+
 		SET_BIT_INFO(hstate, 3, PRIMARY_A_FLIP_DONE, IRQ_INFO_DE_PIPE_A);
 		SET_BIT_INFO(hstate, 3, PRIMARY_B_FLIP_DONE, IRQ_INFO_DE_PIPE_B);
 		SET_BIT_INFO(hstate, 3, PRIMARY_C_FLIP_DONE, IRQ_INFO_DE_PIPE_C);
+
+		SET_BIT_INFO(hstate, 4, SPRITE_A_FLIP_DONE, IRQ_INFO_DE_PIPE_A);
+		SET_BIT_INFO(hstate, 4, SPRITE_B_FLIP_DONE, IRQ_INFO_DE_PIPE_B);
+		SET_BIT_INFO(hstate, 4, SPRITE_C_FLIP_DONE, IRQ_INFO_DE_PIPE_C);
 	}
 
 	irq_based_ctx_switch = false;
@@ -2257,16 +2259,25 @@ void vgt_fini_irq(struct pci_dev *pdev)
 	hstate->installed = false;
 }
 
-void vgt_inject_flip_done(struct vgt_device *vgt, enum pipe pipe)
+void vgt_inject_flip_done(struct vgt_device *vgt, enum pipe pipe, enum vgt_plane_type plane)
 {
 	enum vgt_event_type event = EVENT_MAX;
 	if (current_display_owner(vgt->pdev) != vgt) {
 		if (pipe == PIPE_A) {
-			event = PRIMARY_A_FLIP_DONE;
+			if (plane == PRIMARY_PLANE)
+				event = PRIMARY_A_FLIP_DONE;
+			else if (plane == SPRITE_PLANE)
+				event = SPRITE_A_FLIP_DONE;
 		} else if (pipe == PIPE_B) {
-			event = PRIMARY_B_FLIP_DONE;
+			if (plane == PRIMARY_PLANE)
+				event = PRIMARY_B_FLIP_DONE;
+			else if (plane == SPRITE_PLANE)
+				event = SPRITE_B_FLIP_DONE;
 		} else if (pipe == PIPE_C) {
-			event = PRIMARY_C_FLIP_DONE;
+			if (plane == PRIMARY_PLANE)
+				event = PRIMARY_C_FLIP_DONE;
+			else if (plane == SPRITE_PLANE)
+				event = SPRITE_C_FLIP_DONE;
 		}
 
 		if (event != EVENT_MAX) {

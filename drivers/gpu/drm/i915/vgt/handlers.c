@@ -1446,7 +1446,7 @@ static bool pri_surf_mmio_write(struct vgt_device *vgt, unsigned int offset,
 	msg.pipe_id = VGT_DSPSURFPIPE(offset);
 	vgt_fb_notifier_call_chain(FB_DISPLAY_FLIP, &msg);
 
-	vgt_inject_flip_done(vgt, VGT_DSPSURFPIPE(offset));
+	vgt_inject_flip_done(vgt, VGT_DSPSURFPIPE(offset), PRIMARY_PLANE);
 
 	return rc;
 }
@@ -1486,6 +1486,8 @@ static bool spr_surf_mmio_write(struct vgt_device *vgt, unsigned int offset,
 	msg.plane_id = SPRITE_PLANE;
 	msg.pipe_id = VGT_SPRSURFPIPE(offset);
 	vgt_fb_notifier_call_chain(FB_DISPLAY_FLIP, &msg);
+
+	vgt_inject_flip_done(vgt, VGT_DSPSURFPIPE(offset), SPRITE_PLANE);
 
 	return rc;
 }

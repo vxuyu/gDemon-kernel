@@ -1655,7 +1655,7 @@ void *vgt_install_irq(struct pci_dev *pdev, struct drm_device *dev);
 int vgt_irq_init(struct pgt_device *pgt);
 void vgt_irq_exit(struct pgt_device *pgt);
 void vgt_reset_virtual_interrupt_registers(struct vgt_device *vgt);
-void vgt_inject_flip_done(struct vgt_device *vgt, enum pipe pipe);
+void vgt_inject_flip_done(struct vgt_device *vgt, enum pipe pipe, enum vgt_plane_type plane);
 
 bool vgt_rrmr_mmio_write(struct vgt_device *vgt, unsigned int offset,
         void *p_data, unsigned int bytes);

@@ -1433,7 +1433,7 @@ static int vgt_handle_mi_display_flip(struct parser_exec_state *s)
 			((value & ~plane_select_mask) |
 			 (real_plane_code << plane_select_shift)));
 
-		vgt_inject_flip_done(s->vgt, pipe);
+		vgt_inject_flip_done(s->vgt, pipe, plane);
 
 		return 0;
 	}
@@ -1447,7 +1447,7 @@ static int vgt_handle_mi_display_flip(struct parser_exec_state *s)
 
 	rc |= add_patch_entry(s, cmd_ptr(s, 0), MI_NOOP);
 
-	vgt_inject_flip_done(s->vgt, pipe);
+	vgt_inject_flip_done(s->vgt, pipe, plane);
 
 	return rc;
 
