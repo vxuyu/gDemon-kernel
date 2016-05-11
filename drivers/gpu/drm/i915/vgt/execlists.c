@@ -2079,7 +2079,7 @@ bool vgt_idle_execlist(struct pgt_device *pdev, enum vgt_ring_id ring_id)
 	return true;
 }
 
-bool is_context_running(struct vgt_device *vgt, int ring_id,
+static bool is_context_running(struct vgt_device *vgt, int ring_id,
 	uint32_t context_id)
 {
 	uint32_t el_ring_base;
@@ -2094,7 +2094,7 @@ bool is_context_running(struct vgt_device *vgt, int ring_id,
 		return true;
 	return false;
 }
-bool is_lite_restore_submission(struct vgt_device *vgt, int ring_id,
+static bool is_lite_restore_submission(struct vgt_device *vgt, int ring_id,
 				uint32_t ctx0_id)
 {
 	vgt_state_ring_t *rb_state = &vgt->rb[ring_id];
@@ -2123,7 +2123,7 @@ bool is_lite_restore_submission(struct vgt_device *vgt, int ring_id,
 	}
 	return false;
 }
-bool could_submit_el(struct vgt_device *vgt,
+static bool could_submit_el(struct vgt_device *vgt,
 				int ring_id, struct vgt_exec_list *execlist)
 {
 	vgt_state_ring_t *rb_state = &vgt->rb[ring_id];
@@ -2201,7 +2201,6 @@ int vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 	if (execlist == NULL)
 		return -EINVAL;
 	if (!could_submit_el(vgt, ring_id, execlist)) {
-		/* no pending EL to submit */
 		return -EBUSY;
 	}
 
