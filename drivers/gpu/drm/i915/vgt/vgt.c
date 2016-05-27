@@ -171,6 +171,9 @@ module_param_named(enable_reset, enable_reset, bool, 0600);
 int preemption_policy = 1;
 module_param_named(preemption_policy, preemption_policy, int, 0600);
 
+bool vblank_broadcast = 0;
+module_param_named(vblank_broadcast, vblank_broadcast, bool, 0600);
+
 /*
  * Below parameters allow two kinds of reset policy setting:
  * 1, Maximum allowed reset number in a specified duration.

@@ -2094,6 +2094,12 @@ static void vgt_init_events(
 		SET_POLICY_RDR(hstate, VCS_MI_FLUSH_DW);
 		SET_POLICY_RDR(hstate, VECS_MI_FLUSH_DW);
 	}
+
+	if (vblank_broadcast) {
+		SET_POLICY_ALL(hstate, PIPE_A_VBLANK);
+		SET_POLICY_ALL(hstate, PIPE_B_VBLANK);
+		SET_POLICY_ALL(hstate, PIPE_C_VBLANK);
+	}
 }
 
 static enum hrtimer_restart vgt_dpy_timer_fn(struct hrtimer *data)

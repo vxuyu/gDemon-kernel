@@ -111,6 +111,7 @@ extern bool timer_based_qos;
 extern int tbs_period_ms;
 extern bool opregion_present;
 extern int preemption_policy;
+extern bool vblank_broadcast;
 
 #define VGT_PREEMPTION_DISABLED   (1<<0)
 #define VGT_LITERESTORE_DISABLED  (1<<1)
@@ -1556,7 +1557,7 @@ static inline int vgt_pci_mmio_is_enabled(struct vgt_device *vgt)
 		_REGBIT_CFG_COMMAND_MEMORY;
 }
 
-#define VGT_DPY_EMUL_PERIOD	16000000	// 16 ms for now
+#define VGT_DPY_EMUL_PERIOD	16666667	// 16.6xxms, 60 per second.
 
 static inline void vgt_clear_all_vreg_bit(struct pgt_device *pdev, unsigned int value, unsigned int offset)
 {
