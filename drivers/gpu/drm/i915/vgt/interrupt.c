@@ -2112,7 +2112,8 @@ static enum hrtimer_restart vgt_dpy_timer_fn(struct hrtimer *data)
 	hstate = container_of(dpy_timer, struct vgt_irq_host_state, dpy_timer);
 	pdev = hstate->pdev;
 
-	vgt_raise_request(pdev, VGT_REQUEST_EMUL_DPY_EVENTS);
+	if (!vblank_broadcast)
+		vgt_raise_request(pdev, VGT_REQUEST_EMUL_DPY_EVENTS);
 
 	hrtimer_add_expires_ns(&dpy_timer->timer, dpy_timer->period);
 	return HRTIMER_RESTART;
