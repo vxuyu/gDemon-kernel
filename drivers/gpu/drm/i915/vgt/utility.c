@@ -431,9 +431,9 @@ void common_show_ring_buffer(struct pgt_device *pdev, int ring_id, int bytes,
 			return;
 		}
 
-		printk("Hang in (%s) batch buffer (%x)\n",
+		printk("Hang in (%s) batch buffer (%llx)\n",
 			ppgtt ? "PPGTT" : "GTT",
-			*(cur + 1));
+			(((u64)*(cur + 2)) << 32 | *(cur + 1)));
 
 		show_batchbuffer(pdev, ring_id,
 			batch_head,
