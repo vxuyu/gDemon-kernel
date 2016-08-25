@@ -846,10 +846,13 @@ static void vgt_patch_guest_context(struct execlist_context *el_ctx)
 	shadow_state = (struct reg_state_ctx_header *)
 			el_ctx->ctx_pages[1].shadow_page.vaddr;
 
+	/* we use guest ppgtt in ctx */
+	/*
 	ROOTP_CTX_STATE_2_CTX_STATE(guest_state, shadow_state, 0);
 	ROOTP_CTX_STATE_2_CTX_STATE(guest_state, shadow_state, 1);
 	ROOTP_CTX_STATE_2_CTX_STATE(guest_state, shadow_state, 2);
 	ROOTP_CTX_STATE_2_CTX_STATE(guest_state, shadow_state, 3);
+	*/
 
 	if (shadow_cmd_buffer)
 		guest_state->rb_start.val = el_ctx->shadow_rb.shadow_rb_base;
@@ -2228,8 +2231,10 @@ int vgt_submit_execlist(struct vgt_device *vgt, enum vgt_ring_id ring_id)
 		memcpy(&context_descs[i], &ctx->guest_context,
 				sizeof(struct ctx_desc_format));
 
+		/*
 		if (!ctx->ppgtt_mm)
 			vgt_el_create_shadow_ppgtt(vgt, ctx->ring_id, ctx);
+		*/
 
 		if (vgt->vm_id) {
 			if (vgt_manipulate_cmd_buf(vgt, ctx) < 0)

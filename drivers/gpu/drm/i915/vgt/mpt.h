@@ -28,6 +28,16 @@
 
 extern struct kernel_dm *vgt_pkdm;
 
+static inline int hypervisor_switch_gpu_iopt(struct vgt_device *vgt)
+{
+	return vgt_pkdm->switch_gpu_iopt(vgt->vm_id);
+}
+
+static inline unsigned long hypervisor_lookup_gpu_addr(unsigned long addr)
+{
+	return vgt_pkdm->lookup_gpu_addr(addr);
+}
+
 static inline unsigned long hypervisor_g2m_pfn(struct vgt_device *vgt,
 	unsigned long g_pfn)
 {

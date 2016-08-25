@@ -479,6 +479,18 @@ HYPERVISOR_xenpmu_op(unsigned int op, void *arg)
 	return _hypercall2(int, xenpmu_op, op, arg);
 }
 
+static inline int
+HYPERVISOR_switch_gpu_iopt(domid_t domid)
+{
+	return _hypercall1(int, switch_gpu_iopt, domid);
+}
+
+static inline unsigned long
+HYPERVISOR_lookup_gpu_addr(unsigned long addr)
+{
+	return _hypercall1(unsigned long, lookup_gpu_addr, addr);
+}
+
 static inline void
 MULTI_fpu_taskswitch(struct multicall_entry *mcl, int set)
 {

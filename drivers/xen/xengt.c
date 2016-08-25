@@ -1186,6 +1186,17 @@ static bool xen_write_va(struct vgt_device *vgt, void *va, void *val,
 	return true;
 }
 
+static int xen_switch_gpu_iopt(int vm_id)
+{
+	domid_t domid = vm_id;
+	return  HYPERVISOR_switch_gpu_iopt(domid);
+}
+
+static unsigned long xen_lookup_gpu_addr(unsigned long addr)
+{
+	return  HYPERVISOR_lookup_gpu_addr(addr);
+}
+
 static struct kernel_dm xengt_kdm = {
 	.name = "xengt_kdm",
 	.g2m_pfn = xen_g2m_pfn,
@@ -1204,6 +1215,8 @@ static struct kernel_dm xengt_kdm = {
 	.gpa_to_va = xen_gpa_to_va,
 	.read_va = xen_read_va,
 	.write_va = xen_write_va,
+	.switch_gpu_iopt = xen_switch_gpu_iopt,
+	.lookup_gpu_addr = xen_lookup_gpu_addr,
 };
 EXPORT_SYMBOL(xengt_kdm);
 

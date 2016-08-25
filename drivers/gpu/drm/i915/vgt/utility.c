@@ -51,7 +51,7 @@ void show_debug(struct pgt_device *pdev)
 	for (i = 0; i < pdev->max_engines; i++) {
 		printk("-----------ring-%d info-------------\n", i);
 		show_ring_debug(pdev, i);
-		show_ring_buffer(pdev, i, 16 * sizeof(vgt_reg_t));
+		show_ring_buffer(pdev, i, 64 * sizeof(vgt_reg_t));
 	}
 }
 
@@ -441,8 +441,8 @@ void common_show_ring_buffer(struct pgt_device *pdev, int ring_id, int bytes,
 			ppgtt);
 	}
 
-	if (pdev->cur_reset_vm == current_render_owner(pdev))
-		mmio_show_batchbuffer(pdev, ring_id, bytes);
+	// if (pdev->cur_reset_vm == current_render_owner(pdev))
+	mmio_show_batchbuffer(pdev, ring_id, bytes);
 
 }
 

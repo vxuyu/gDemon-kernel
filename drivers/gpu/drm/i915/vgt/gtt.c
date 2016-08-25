@@ -126,6 +126,17 @@ static inline gtt_type_t get_pse_type(gtt_type_t type) {
 /*
  * Per-platform GTT entry routines.
  */
+
+static void ggtt_entry_set_high_bit(gtt_entry_t *m)
+{
+	m->val64 |= (1UL << 37);
+}
+
+static void ggtt_entry_unset_high_bit(gtt_entry_t *m)
+{
+	m->val64 &= ~(1UL << 37);
+}
+
 static gtt_entry_t *gtt_get_entry32(void *pt, gtt_entry_t *e,
 		unsigned long index, bool hypervisor_access,
 		struct vgt_device *vgt)
@@ -184,6 +195,13 @@ static inline gtt_entry_t *gtt_get_entry64(void *pt, gtt_entry_t *e,
 		else
 			hypervisor_read_va(vgt, (u64 *)pt + index, &e->val64, 8, 1);
 	}
+
+	if (GTT_TYPE_GGTT_PTE == e->type) {
+		if (!pt) {
+			ggtt_entry_unset_high_bit(e);
+		}
+	}
+
 	return e;
 }
 
@@ -194,6 +212,12 @@ static inline gtt_entry_t *gtt_set_entry64(void *pt, gtt_entry_t *e,
 	struct vgt_device_info *info = &e->pdev->device_info;
 
 	ASSERT(info->gtt_entry_size == 8);
+
+	if (GTT_TYPE_GGTT_PTE == e->type) {
+		if (!pt) {
+			ggtt_entry_set_high_bit(e);
+		}
+	}
 
 	if (!pt)
 		vgt_write_gtt64(e->pdev, index, e->val64);
@@ -711,6 +735,8 @@ static bool ppgtt_write_protection_handler(void *gp, uint64_t pa, void *p_data, 
 	struct vgt_statistics *stat = &vgt->stat;
 	cycles_t t0, t1;
 
+	printk("xuyu (%s:%d) I should not be invoked!\n", __FUNCTION__, __LINE__);
+
 	if (bytes != 4 && bytes != 8)
 		return false;
 
@@ -891,8 +917,11 @@ static ppgtt_spt_t *ppgtt_populate_shadow_page_by_guest_entry(struct vgt_device 
 		if (!s)
 			goto fail;
 
+		/* we don't wp guest page table */
+		/*
 		if (!hypervisor_set_wp_pages(vgt, &s->guest_page))
 			goto fail;
+		*/
 
 		if (!ppgtt_populate_shadow_page(s))
 			goto fail;
@@ -1554,6 +1583,8 @@ void vgt_destroy_mm(struct vgt_mm *mm)
 	gtt_entry_t se;
 	int i;
 
+	// printk("xuyu (%s:%d) vgt: %d, vm: %d!\n", __FUNCTION__, __LINE__, mm->vgt->vgt_id, mm->vgt->vm_id);
+
 	if (!mm->initialized)
 		goto out;
 
@@ -1592,6 +1623,8 @@ struct vgt_mm *vgt_create_mm(struct vgt_device *vgt,
 	ppgtt_spt_t *spt;
 	gtt_entry_t ge, se;
 	int i;
+
+	// printk("xuyu (%s:%d) vgt: %d, vm: %d!\n", __FUNCTION__, __LINE__, vgt->vgt_id, vgt->vm_id);
 
 	mm = kzalloc(sizeof(*mm), GFP_ATOMIC);
 	if (!mm) {
@@ -2362,6 +2395,9 @@ bool vgt_g2v_create_ppgtt_mm(struct vgt_device *vgt, int page_table_level)
 
 	struct vgt_mm *mm;
 
+	// printk("xuyu (%s:%d) I did not do the job!\n", __FUNCTION__, __LINE__);
+	return true;
+
 	ASSERT(page_table_level == 4 || page_table_level == 3);
 
 	mm = gen8_find_ppgtt_mm(vgt, page_table_level, pdp);
@@ -2381,6 +2417,9 @@ bool vgt_g2v_destroy_ppgtt_mm(struct vgt_device *vgt, int page_table_level)
 {
 	u64 *pdp = (u64 *)&__vreg64(vgt, vgt_info_off(pdp0_lo));
 	struct vgt_mm *mm;
+
+	// printk("xuyu (%s:%d) I did not do the job!\n", __FUNCTION__, __LINE__);
+	return true;
 
 	ASSERT(page_table_level == 4 || page_table_level == 3);
 

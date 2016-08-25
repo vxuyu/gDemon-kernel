@@ -677,6 +677,9 @@ bool vgt_do_render_context_switch(struct pgt_device *pdev)
 	if (!pdev->enable_execlist && pdev->enable_ppgtt && next->gtt.active_ppgtt_mm_bitmap)
 		vgt_ppgtt_switch(next);
 
+	/* STEP-5.5: xuyu: switch the gpu iopt */
+	hypervisor_switch_gpu_iopt(next);
+
 	/* STEP-6: ctx switch ends, and then kicks of new tail */
 	vgt_kick_off_execution(next);
 
